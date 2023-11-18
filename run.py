@@ -17,7 +17,7 @@ from analysis.ddpSamples import analysis_samples
 toProcess=[]
 for s in args:
     toProcess.append(analysis_samples[s])
-data=createDataSet(toProcess)
+data=createDataSet(toProcess,'root://cmsxrootd.fnal.gov//')
 
 analysis(data)
  

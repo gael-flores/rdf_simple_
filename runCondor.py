@@ -1,5 +1,6 @@
 from optparse import OptionParser
 import os
+import time
 parser = OptionParser()
 parser.add_option("-o", "--eosdir", dest="eos",default='root://cmseos.fnal.gov//store/user/bachtis/analysis',
                   help="EOS output Directory")
@@ -14,8 +15,10 @@ for d in datasets:
     shell="""#!/bin/sh
     echo starting script
     tar -xzvf sandbox.tar.gz
-    sh ./setup.sh
+    source ./setup.sh
     python run.py {dataset}
+    echo python done
+
     OUTDIR={eos}
     echo "xrdcp output for condor to "
     echo $OUTDIR
@@ -53,4 +56,4 @@ for d in datasets:
     f.close()
     
     os.system('condor_submit {dataset}_condor.jdl'.format(dataset=d))
-
+    time.sleep(0.1)
