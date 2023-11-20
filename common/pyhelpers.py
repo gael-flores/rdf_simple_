@@ -3,7 +3,7 @@ import ROOT
 def loadSample(info,locator='root://cms-xrd-global.cern.ch//'):
     files=[]
     print(info['dataset'])
-    p = subprocess.Popen('/cvmfs/cms.cern.ch/common/dasgoclient -query="file dataset={}"'.format(info['dataset']), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    p = subprocess.Popen('/cvmfs/cms.cern.ch/common/dasgoclient -dasmaps=./ -query="file dataset={}"'.format(info['dataset']), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     for line in p.stdout.readlines():
         files.append(locator+(line.decode('ASCII').split('\n')[0]))
     retval = p.wait()

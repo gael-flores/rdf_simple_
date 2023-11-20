@@ -7,7 +7,7 @@ parser.add_option("-o", "--eosdir", dest="eos",default='root://cmseos.fnal.gov//
 (options, args) = parser.parse_args()
 
 datasets= args
-os.system('tar -czvf /tmp/sandbox.tar.gz .')
+os.system('tar --overwrite --exclude="common/__pycache__" --exclude="analysis/__pycache__"  -czvf /tmp/sandbox.tar.gz .')
 os.system('mv /tmp/sandbox.tar.gz .')
 
 
@@ -15,6 +15,7 @@ for d in datasets:
     shell="""#!/bin/sh
     echo starting script
     tar -xzvf sandbox.tar.gz
+    mkdir .dasmaps
     source ./setup.sh
     python run.py {dataset}
     echo python done
@@ -46,9 +47,9 @@ for d in datasets:
     should_transfer_files = YES
     Transfer_Input_Files = sandbox.tar.gz
     when_to_transfer_output = ON_EXIT
-    Output = {dataset}_$(Cluster)_$(Process).stdout
-    Error = {dataset}_$(Cluster)_$(Process).stderr
-    Log = {dataset}_$(Cluster)_$(Process).log
+    Output = condor_{dataset}_$(Cluster)_$(Process).stdout
+    Error = condor_{dataset}_$(Cluster)_$(Process).stderr
+    Log = condor_{dataset}_$(Cluster)_$(Process).log
     Queue 1
     """.format(dataset=d)
     f=open("{dataset}_condor.jdl".format(dataset=d),"w")
