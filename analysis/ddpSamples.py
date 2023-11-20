@@ -11,7 +11,8 @@ analysis_samples={
 'SingleMuon_2018D':{'dataset':'/SingleMuon/Run2018D-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD',
                     'triggers':['HLT_IsoMu27'],
                     'veto_triggers':[]},
-'ZH4G_M30_ctau10000':{'dataset':'/ZH_ZToLL_HTo2LongLivedTo4G_MH-125_MFF-30_ctau-1000cm_TuneCP5_fixedLifetime_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM',
+'ZH4G_M30_ctau1000':{'dataset':'/ZH_ZToLL_HTo2LongLivedTo4G_MH-125_MFF-30_ctau-1000cm_TuneCP5_fixedLifetime_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM',
                           'triggers':['HLT_IsoMu27'],
-                          'veto_triggers':[]}
+                          'veto_triggers':[],
+                          'sigma':1.0} #custom meta data see pyhelpers.py
 }

@@ -1,15 +1,20 @@
 import ROOT
+from common.pyhelpers import load_meta_data
 ROOT.gInterpreter.Declare('#include "analysis/ddp_vertex.h"')
 
 
 def zmumuH(data,phi_mass=[5,10,20,30]):
     actions=[]
 
-    #Declare dataframe
-    dataframe =ROOT.RDataFrame(data)
+    #Declare dataframe and load all meta data 
+    dataframe =load_meta_data(data)
+
+    ####################
+    #ANALYSIS CODE HERE#        
+    ####################
 
     #pass HLT
-    zmm = dataframe.Filter('HLT_IsoMu27==1','passed HLT')
+    zmm = dataframe.Filter('HLT_passed','passed HLT')
     #Apply Muon ID (no ISO)
     zmm = zmm.Define("good_muons",'Muon_looseId==1').Filter("Sum(good_muons)>1","At least two good muons")
     #Look for + and - muons
@@ -29,7 +34,7 @@ def zmumuH(data,phi_mass=[5,10,20,30]):
     #Correct Photon Isolation for both muons and photons
     zmm=zmm.Define("Photon_corrIso","correct_gammaIso_for_muons_and_photons(Zmumu_idx,Muon_pt,Muon_eta,Muon_phi,Photon_pt,Photon_eta,Photon_phi,Photon_pfRelIso03_all,Photon_IDNoIso)")
     #Define ID and isolation
-    zmm=zmm.Define("Photon_ID","Photon_IDNoIso==1 &&Photon_corrIso<0.15")
+    zmm=zmm.Define("Photon_ID","Photon_IDNoIso==1 &&Photon_corrIso<0.1")
     #At least one Photon
     zmm=zmm.Filter('Sum(Photon_ID==1)>0','At least one ID photon')
     #FSR recovery
@@ -112,15 +117,19 @@ def zmumuH(data,phi_mass=[5,10,20,30]):
         zmm4g=zmm4g.Define('best_4g_corr_mass_m{}'.format(mass),'raw_best_4g_m{}[19]'.format(mass))
      
         
-    actions.append(zmm2g.Snapshot('zmm2g','zmm2g.root',"best_2g.*"))
-    actions.append(zmm3g.Snapshot('zmm3g','zmm3g.root',"best_3g.*"))
-    actions.append(zmm4g.Snapshot('zmm4g','zmm4g.root',"best_4g.*"))
+    actions.append(zmm2g.Snapshot('zmm2g','zmm2g.root',"best_2g.*|sample_.*"))
+    actions.append(zmm3g.Snapshot('zmm3g','zmm3g.root',"best_3g.*|sample_.*"))
+    actions.append(zmm4g.Snapshot('zmm4g','zmm4g.root',"best_4g.*|sample_.*"))
+    r=zmm2g.Report()
+    r.Print()
     return actions
-
+    
 
 def analysis(data):
+    phi_mass=[5,10,20,30]
+
     actions = []
-    actions.append(zmumuH(data))
+    actions.append(zmumuH(data,phi_mass))
 
     
 
