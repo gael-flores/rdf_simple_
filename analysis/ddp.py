@@ -1,4 +1,6 @@
 import ROOT
+ROOT.gInterpreter.Declare('#include "analysis/ddp_vertex.h"')
+
 
 def zmumuH(data):
     #Declare dataframe
