@@ -5,6 +5,7 @@
 #include <Math/GenVector/PxPyPzM4D.h>
 #include "TVector3.h"
 #include "TMath.h"
+#include <algorithm>
 class VertexCalculator {
  private:
   TVector3 vertex_;
@@ -16,7 +17,15 @@ class VertexCalculator {
   bool verbose_ = false;
   
  public:
-  VertexCalculator() {}
+  VertexCalculator() {
+    vertex_= TVector3(0.0,0.0,0.0);
+    pt_=0;
+    phi_=0;
+    d0_=0;
+    ip3d_=0;
+    valid_=false;
+
+  }
   ~VertexCalculator() {} ;
   
   void setVertex(const TVector3& vertex){vertex_ = vertex;}
@@ -353,3 +362,369 @@ std::vector<float> getVertexInfo(const double pt1, const double eta1, const doub
 
 };
 
+
+bool compare_pair(const RVecF& q1,const RVecF& q2) {
+  //first invariant mass of pairs
+  unsigned int mass1 = q1[8]<62.5 ? 1:0;
+  unsigned int mass2 = q2[8]<62.5 ? 1:0;
+
+  unsigned int valid1 = q1[7]>0 ? 1:0;
+  unsigned int valid2 = q2[7]>0 ? 1:0;
+
+  unsigned int dxy1   = q1[6]>-8 ? 1:0;
+  unsigned int dxy2   = q2[6]>-8 ? 1:0;
+  ROOT::Math::PtEtaPhiMVector p1_0(q1[0],q1[1],q1[2],0.0);
+  ROOT::Math::PtEtaPhiMVector p1_1(q1[3],q1[4],q1[5],0.0);
+  ROOT::Math::PtEtaPhiMVector p1 = p1_0+p1_1;
+
+  ROOT::Math::PtEtaPhiMVector p2_0(q2[0],q2[1],q2[2],0.0);
+  ROOT::Math::PtEtaPhiMVector p2_1(q2[3],q2[4],q2[5],0.0);
+  ROOT::Math::PtEtaPhiMVector p2 = p2_0+p2_1;
+  
+  if (mass1>mass2)
+    return true;
+  else if (mass1<mass2)
+    return false;
+  else {
+    if (valid1>valid2)
+      return true;
+    else if (valid1<valid2)
+      return false;
+    else {
+      if (valid1==1) {
+	if(dxy1>dxy2)
+	  return true;
+	else if (dxy1<dxy2)
+	  return false;
+	else {
+	  if(p1.pt()>p2.pt())
+	    return true;
+	  else
+	    return false;
+	}
+      }
+      else {
+	if(p1.pt()>p2.pt())
+	  return true;
+	else
+	  return false;
+      }
+    }
+  }
+
+
+
+}
+
+RVecF best_2gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,float mass) {
+  RVec<RVecF> all_combos;
+  auto idx_cmb = ROOT::VecOps::Combinations(pt, 2);
+  for (size_t i = 0; i < idx_cmb[0].size(); i++) {
+    const auto i1 = idx_cmb[0][i];
+    const auto i2 = idx_cmb[1][i];
+    
+
+    RVecF result;
+    result.reserve(9);
+    VertexCalculator calc;
+    //four vector
+    ROOT::Math::PtEtaPhiMVector p0(pt[0],eta[0],phi[0],0.0);
+    ROOT::Math::PtEtaPhiMVector p1(pt[1],eta[1],phi[1],0.0);
+    float raw_m = (p0+p1).M();
+    std::vector<float> kin_fit= calc.getVertexInfo(pt[0],eta[0],phi[0],EE[0],EB[0],pt[1],eta[1],phi[1],EE[1],EB[1],mass); 
+  
+    result.emplace_back(kin_fit[0]);
+    result.emplace_back(kin_fit[1]);
+    result.emplace_back(kin_fit[2]);
+    result.emplace_back(kin_fit[3]);
+    result.emplace_back(kin_fit[4]);
+    result.emplace_back(kin_fit[5]);
+    result.emplace_back(kin_fit[6]);
+    result.emplace_back(kin_fit[7]);
+    result.emplace_back(raw_m);
+    all_combos.emplace_back(result);
+  }
+  auto sortedIndices = ROOT::VecOps::Argsort(all_combos,compare_pair);
+  return all_combos[sortedIndices[0]];
+}
+
+RVecF best_3gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,float mass) {
+  RVec<RVecF> all_combos;  
+  auto idx_cmb = ROOT::VecOps::Combinations(pt, 2);
+  for (size_t i = 0; i < idx_cmb[0].size(); i++) {
+    const auto i1 = idx_cmb[0][i];
+    const auto i2 = idx_cmb[1][i];
+    size_t other_i;
+    for (size_t j=0;j<3;++j) {
+      if (i1!=j&&i2!=j) {
+	other_i=j;
+	break;
+      }
+	
+    }
+
+    RVecF result;
+    result.reserve(13);
+    VertexCalculator calc;
+    //four vector
+    ROOT::Math::PtEtaPhiMVector p0(pt[0],eta[0],phi[0],0.0);
+    ROOT::Math::PtEtaPhiMVector p1(pt[1],eta[1],phi[1],0.0);
+    ROOT::Math::PtEtaPhiMVector p2(pt[2],eta[2],phi[2],0.0);
+    float raw_m = (p0+p1).M();
+    std::vector<float> kin_fit= calc.getVertexInfo(pt[0],eta[0],phi[0],EE[0],EB[0],pt[1],eta[1],phi[1],EE[1],EB[1],mass); 
+  
+    result.emplace_back(kin_fit[0]);
+    result.emplace_back(kin_fit[1]);
+    result.emplace_back(kin_fit[2]);
+    result.emplace_back(kin_fit[3]);
+    result.emplace_back(kin_fit[4]);
+    result.emplace_back(kin_fit[5]);
+    result.emplace_back(kin_fit[6]);
+    result.emplace_back(kin_fit[7]);
+    result.emplace_back(raw_m);
+    result.emplace_back(pt[other_i]);
+    result.emplace_back(eta[other_i]);
+    result.emplace_back(phi[other_i]);
+    result.emplace_back((p0+p1+p2).M());
+    all_combos.emplace_back(result);
+  }
+  auto sortedIndices = ROOT::VecOps::Argsort(all_combos,compare_pair);
+  return all_combos[sortedIndices[0]];
+}
+
+
+
+bool compare_quad(const RVecF& q1,const RVecF& q2) {
+      ROOT::Math::PtEtaPhiMVector p1_A1(q1[0],q1[1],q1[2],0.0);
+      ROOT::Math::PtEtaPhiMVector p1_A2(q1[3],q1[4],q1[5],0.0);
+      ROOT::Math::PtEtaPhiMVector p1_B1(q1[8],q1[9],q1[10],0.0);
+      ROOT::Math::PtEtaPhiMVector p1_B2(q1[11],q1[12],q1[13],0.0);
+      float sumpt1 = (p1_A1+p1_A2).pt()+(p1_B1+p1_B2).pt();
+
+      ROOT::Math::PtEtaPhiMVector p2_A1(q2[0],q2[1],q2[2],0.0);
+      ROOT::Math::PtEtaPhiMVector p2_A2(q2[3],q2[4],q2[5],0.0);
+      ROOT::Math::PtEtaPhiMVector p2_B1(q2[8],q2[9],q2[10],0.0);
+      ROOT::Math::PtEtaPhiMVector p2_B2(q2[11],q2[12],q2[13],0.0);
+      float sumpt2 = (p2_A1+p2_A2).pt()+(p2_B1+p2_B2).pt();
+
+
+  //first invariant mass of pairs
+  unsigned int mass1_1 = q1[16]<62.5 ? 1:0;
+  unsigned int mass1_2 = q1[17]<62.5 ? 1:0;
+  unsigned int mass2_1 = q2[16]<62.5 ? 1:0;
+  unsigned int mass2_2 = q2[17]<62.5 ? 1:0;
+
+  unsigned int valid1_1 = q1[7]>0 ? 1:0;
+  unsigned int valid1_2 = q1[15]>0 ? 1:0;
+  unsigned int valid2_1 = q2[7]>0 ? 1:0;
+  unsigned int valid2_2 = q2[15]>0 ? 1:0;
+
+  unsigned int dxy1_1   = q1[6]>-8 ? 1:0;
+  unsigned int dxy1_2   = q1[14]>-8 ? 1:0;
+  unsigned int dxy2_1   = q2[6]>-8 ? 1:0;
+  unsigned int dxy2_2    = q2[14]>-8 ? 1:0;
+
+
+
+  
+  if ((mass1_1+mass1_2)>(mass2_1+mass2_2)) {
+    return true;
+  }
+  else if ((mass1_1+mass1_2)<(mass2_1+mass2_2)) {
+    return false;
+  }
+  else {
+    if ((valid1_1+valid1_2)>(valid2_1+valid2_2))
+      return true;
+    else if ((valid1_1+valid1_2)<(valid2_1+valid2_2))
+      return false;
+    else {
+      //if both valid look at dxy
+      if ((valid1_1+valid1_2)==2) {
+	if ((dxy1_1+dxy1_2)>(dxy2_1+dxy2_2))
+	  return true;
+	else if ((dxy1_1+dxy1_2)<(dxy2_1+dxy2_2))
+	  return false;
+	else {
+	  if (sumpt1>sumpt2)
+	    return true;
+	  else
+	    return false;
+	}
+      }
+      else  {
+	  if (sumpt1>sumpt2)
+	    return true;
+	  else
+	    return false;
+      }
+    }
+  }
+
+}
+
+bool compare_quad_pairing(const std::vector<float>p1_A,const std::vector<float>p1_B,const std::vector<float>p2_A,const std::vector<float>p2_B) {
+      ROOT::Math::PtEtaPhiMVector p1_A1(p1_A[0],p1_A[1],p1_A[2],0.0);
+      ROOT::Math::PtEtaPhiMVector p1_A2(p1_A[3],p1_A[4],p1_A[5],0.0);
+      ROOT::Math::PtEtaPhiMVector p1_B1(p1_B[0],p1_B[1],p1_B[2],0.0);
+      ROOT::Math::PtEtaPhiMVector p1_B2(p1_B[3],p1_B[4],p1_B[5],0.0);
+
+      ROOT::Math::PtEtaPhiMVector p2_A1(p2_A[0],p2_A[1],p2_A[2],0.0);
+      ROOT::Math::PtEtaPhiMVector p2_A2(p2_A[3],p2_A[4],p2_A[5],0.0);
+      ROOT::Math::PtEtaPhiMVector p2_B1(p2_B[0],p2_B[1],p2_B[2],0.0);
+      ROOT::Math::PtEtaPhiMVector p2_B2(p2_B[3],p2_B[4],p2_B[5],0.0);
+      //first we see if the mass is everywhere below 125/2.
+      unsigned int p1_masscut_A = (p1_A1+p1_A2).M()<62.5 ? 1:0; 
+      unsigned int p1_masscut_B = (p1_B1+p1_B2).M()<62.5 ? 1:0; 
+      unsigned int p2_masscut_A = (p2_A1+p2_A2).M()<62.5 ? 1:0; 
+      unsigned int p2_masscut_B = (p2_B1+p2_B2).M()<62.5 ? 1:0; 
+
+      if ((p1_masscut_A+p1_masscut_B)>(p2_masscut_A+p2_masscut_B)) {
+	return true;
+      }
+      else if ((p1_masscut_A+p1_masscut_B)<(p2_masscut_A+p2_masscut_B)) {
+	return false;
+      } 
+      else {
+
+	if((p1_A[7]+p1_B[7])>(p2_A[7]+p2_B[7])) {
+	  return true;
+	}
+	else if ((p1_A[7]+p1_B[7])<(p2_A[7]+p2_B[7])) {
+	  return true;
+	} 
+	else if ((p1_A[7]+p1_B[7])==(p2_A[7]+p2_B[7])) {
+	  float p1_pt = (p1_A1+p1_A2).pt()+(p1_B1+p1_B2).pt();
+	  float p2_pt = (p2_A1+p2_A2).pt()+(p2_B1+p2_B2).pt();
+
+	  
+	  //if both invalid or half valid just group by higher SUM pt
+	  if ((p1_A[7]+p1_B[7])<2) {
+	    if (p1_pt>=p2_pt)
+	      return true;
+	    else
+	      return false;
+	  }
+	  else {
+	    
+	    //both valid if one of them is negative dxy pick the other
+	    unsigned int p1_A_dxy =p1_A[6]>-8.0 ? 1 :0; 
+	    unsigned int p1_B_dxy =p1_B[6]>-8.0 ? 1 :0; 
+	    unsigned int p2_A_dxy =p2_A[6]>-8.0 ? 1 :0; 
+	    unsigned int p2_B_dxy =p2_B[6]>-8.0 ? 1 :0; 
+	    if((p1_A_dxy+p1_B_dxy)>(p2_A_dxy+p2_B_dxy))
+	      return true;
+	    else if ((p1_A_dxy+p1_B_dxy)<(p2_A_dxy+p2_B_dxy))
+	      return false;
+	    else {
+	      //sum pt
+	      if (p1_pt>=p2_pt)
+		return true;
+	      else
+		return false;
+	    }
+	  }
+	} 
+      }
+      return true;
+} 
+
+
+RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,float mass) {
+  RVec<RVecF> all_combos;
+  auto idx_cmb = ROOT::VecOps::Combinations(pt, 4);
+  for (size_t i = 0; i < idx_cmb[0].size(); i++) {
+    const auto i1 = idx_cmb[0][i];
+    const auto i2 = idx_cmb[1][i];
+    const auto i3 = idx_cmb[2][i];
+    const auto i4 = idx_cmb[3][i];
+  
+
+    RVecF result;
+    result.reserve(20);
+    VertexCalculator calc;
+    //four vector
+    ROOT::Math::PtEtaPhiMVector p0(pt[i1],eta[i1],phi[i1],0.0);
+    ROOT::Math::PtEtaPhiMVector p1(pt[i2],eta[i2],phi[i2],0.0);
+    ROOT::Math::PtEtaPhiMVector p2(pt[i3],eta[i3],phi[i3],0.0);
+    ROOT::Math::PtEtaPhiMVector p3(pt[i4],eta[i4],phi[i4],0.0);
+    float raw_m = (p0+p1+p2+p3).M();
+    ROOT::Math::PtEtaPhiMVector pA = p0+p1;
+    ROOT::Math::PtEtaPhiMVector pB = p2+p3;
+  
+
+    //first pairing
+    std::vector<float> pairing1_A = calc.getVertexInfo(pt[i1],eta[i1],phi[i1],EE[i1],EB[i1],pt[i2],eta[i2],phi[i2],EE[i2],EB[i2],mass); 
+    std::vector<float> pairing1_B = calc.getVertexInfo(pt[i3],eta[i3],phi[i3],EE[i3],EB[i3],pt[i4],eta[i4],phi[i4],EE[i4],EB[i4],mass); 
+    
+    //second pairing
+    std::vector<float> pairing2_A = calc.getVertexInfo(pt[i1],eta[i1],phi[i1],EE[i1],EB[i1],pt[i3],eta[i3],phi[i3],EE[i3],EB[i3],mass); 
+    std::vector<float> pairing2_B = calc.getVertexInfo(pt[i2],eta[i2],phi[i2],EE[i2],EB[i2],pt[i4],eta[i4],phi[i4],EE[i4],EB[i4],mass); 
+    
+    //third pairing
+    std::vector<float> pairing3_A = calc.getVertexInfo(pt[i1],eta[i1],phi[i1],EE[i1],EB[i1],pt[i4],eta[i4],phi[i4],EE[i4],EB[i4],mass); 
+    std::vector<float> pairing3_B = calc.getVertexInfo(pt[i2],eta[i2],phi[i2],EE[i2],EB[i2],pt[i3],eta[i3],phi[i3],EE[i3],EB[i3],mass); 
+    
+    std::vector<float> best23_A;
+    std::vector<float> best23_B;
+    
+    
+    
+    if (compare_quad_pairing(pairing2_A,pairing2_B,pairing3_A,pairing3_B)) {
+      best23_A = pairing2_A;
+      best23_B = pairing2_B;
+      pA = p0+p2;
+      pB = p1+p3;
+      
+    }
+    else {
+      best23_A = pairing3_A;
+      best23_B = pairing3_B;
+      pA=p0+p3;
+      pB=p1+p2;
+    }
+    std::vector<float> best_A;
+    std::vector<float> best_B;
+    if (compare_quad_pairing(pairing1_A,pairing1_B,best23_A,best23_B)) {
+      best_A = pairing2_A;
+      best_B = pairing2_B;
+      pA=p0+p1;
+      pB=p2+p3;
+    }
+    else {
+      best_A = best23_A;
+      best_B = best23_B;
+    }
+
+    result.emplace_back(best_A[0]);
+    result.emplace_back(best_A[1]);
+    result.emplace_back(best_A[2]);
+    result.emplace_back(best_A[3]);
+    result.emplace_back(best_A[4]);
+    result.emplace_back(best_A[5]);
+    result.emplace_back(best_A[6]);
+    result.emplace_back(best_A[7]);
+    result.emplace_back(best_B[0]);
+    result.emplace_back(best_B[1]);
+    result.emplace_back(best_B[2]);
+    result.emplace_back(best_B[3]);
+    result.emplace_back(best_B[4]);
+    result.emplace_back(best_B[5]);
+    result.emplace_back(best_B[6]);
+    result.emplace_back(best_B[7]);
+    //raw masses
+    result.emplace_back(pA.M());
+    result.emplace_back(pB.M());
+    result.emplace_back(raw_m);
+    //corrected mass
+    ROOT::Math::PtEtaPhiMVector pc0(best_A[0],best_A[1],best_A[2],0.0);
+    ROOT::Math::PtEtaPhiMVector pc1(best_A[3],best_A[4],best_A[5],0.0);
+    ROOT::Math::PtEtaPhiMVector pc2(best_B[0],best_B[1],best_B[2],0.0);
+    ROOT::Math::PtEtaPhiMVector pc3(best_B[3],best_B[4],best_B[5],0.0);
+    result.emplace_back((pc0+pc1+pc2+pc3).M());
+    all_combos.emplace_back(result);
+  }
+  auto sortedIndices = ROOT::VecOps::Argsort(all_combos,compare_quad);
+
+  return all_combos[sortedIndices[0]];
+}

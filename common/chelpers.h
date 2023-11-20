@@ -138,4 +138,3 @@ float calculate_llgamma_mass(const RVec<size_t>& idx,RVecF mpt, RVecF meta, RVec
   return Z.M();
 }
 
- 

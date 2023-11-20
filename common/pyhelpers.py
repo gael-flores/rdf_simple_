@@ -1,5 +1,6 @@
 import subprocess
 import ROOT
+
 def loadSample(info,locator='root://cms-xrd-global.cern.ch//'):
     files=[]
     print(info['dataset'])
