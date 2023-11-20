@@ -5,7 +5,7 @@ Examples using Displaced Di-photon analysis
 - Set up the environment
   ```
   voms_proxy_init --voms cms --valid 100:00
-  source setupo.sh
+  source setup.sh
   ```
 - Add samples in analysis/ddpSamples.py
 - Modify the analysis code in the analysis/ddp.py. The running script is the `analysis()` function 
