@@ -1,6 +1,49 @@
 import ROOT
 from common.pyhelpers import load_meta_data
 ROOT.gInterpreter.Declare('#include "analysis/ddp_vertex.h"')
+def zeeH(data,phi_mass=[5,10,20,30]):
+    actions=[]
+
+    #Declare dataframe and load all meta data 
+    dataframe =load_meta_data(data)
+    ####################
+    #ANALYSIS CODE HERE#        
+    ####################
+
+    return actions
+
+def wenuH(data,phi_mass=[5,10,20,30]):
+    actions=[]
+
+    #Declare dataframe and load all meta data 
+    dataframe =load_meta_data(data)
+    ####################
+    #ANALYSIS CODE HERE#        
+    ####################
+
+    return actions
+
+def wmunuH(data,phi_mass=[5,10,20,30]):
+    actions=[]
+
+    #Declare dataframe and load all meta data 
+    dataframe =load_meta_data(data)
+    ####################
+    #ANALYSIS CODE HERE#        
+    ####################
+
+    return actions
+
+def ggH(data,phi_mass=[5,10,20,30]):
+    actions=[]
+
+    #Declare dataframe and load all meta data 
+    dataframe =load_meta_data(data)
+    ####################
+    #ANALYSIS CODE HERE#        
+    ####################
+
+    return actions
 
 
 def zmumuH(data,phi_mass=[5,10,20,30]):
@@ -130,6 +173,10 @@ def analysis(data):
 
     actions = []
     actions.append(zmumuH(data,phi_mass))
+    actions.append(zeeH(data,phi_mass))
+    actions.append(wmunuH(data,phi_mass))
+    actions.append(wenuH(data,phi_mass))
+    actions.append(ggH(data,phi_mass))
 
     
 
