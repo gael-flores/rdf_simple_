@@ -14,10 +14,13 @@ parser = OptionParser()
 from analysis.ddp import *
 from analysis.ddpSamples import analysis_samples
 
+
+#root://cmsxrootd.fnal.gov//
+
 toProcess=[]
 for s in args:
     toProcess.append(analysis_samples[s])
-data=createDataSet(toProcess,'root://cmsxrootd.fnal.gov//')
+data=createDataSet(toProcess)
 
 analysis(data)
  

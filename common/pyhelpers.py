@@ -12,6 +12,8 @@ def load_meta_data(data):
     #get the list of meta keys
     meta_keys =data.GetMetaData()[0].GetS('meta_keys').split(',')
     for key in meta_keys:
+        if len(key)<2:
+            continue
         dataframe=dataframe.DefinePerSample('sample_'+key,'rdfsampleinfo_.GetD("{}")'.format(key))
     return dataframe
 
