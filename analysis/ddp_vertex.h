@@ -426,13 +426,13 @@ RVecF best_2gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
 
     RVecF result;
     result.reserve(9);
-    VertexCalculator calc;
+    VertexCalculator *calc = new VertexCalculator();
     //four vector
     ROOT::Math::PtEtaPhiMVector p0(pt[0],eta[0],phi[0],0.0);
     ROOT::Math::PtEtaPhiMVector p1(pt[1],eta[1],phi[1],0.0);
     float raw_m = (p0+p1).M();
-    std::vector<float> kin_fit= calc.getVertexInfo(pt[0],eta[0],phi[0],EE[0],EB[0],pt[1],eta[1],phi[1],EE[1],EB[1],mass); 
-  
+    std::vector<float> kin_fit= calc->getVertexInfo(pt[0],eta[0],phi[0],EE[0],EB[0],pt[1],eta[1],phi[1],EE[1],EB[1],mass); 
+    delete calc;
     result.emplace_back(kin_fit[0]);
     result.emplace_back(kin_fit[1]);
     result.emplace_back(kin_fit[2]);
@@ -465,13 +465,15 @@ RVecF best_3gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
 
     RVecF result;
     result.reserve(13);
-    VertexCalculator calc;
+    VertexCalculator *calc = new VertexCalculator();
     //four vector
     ROOT::Math::PtEtaPhiMVector p0(pt[0],eta[0],phi[0],0.0);
     ROOT::Math::PtEtaPhiMVector p1(pt[1],eta[1],phi[1],0.0);
     ROOT::Math::PtEtaPhiMVector p2(pt[2],eta[2],phi[2],0.0);
     float raw_m = (p0+p1).M();
-    std::vector<float> kin_fit= calc.getVertexInfo(pt[0],eta[0],phi[0],EE[0],EB[0],pt[1],eta[1],phi[1],EE[1],EB[1],mass); 
+    std::vector<float> kin_fit= calc->getVertexInfo(pt[0],eta[0],phi[0],EE[0],EB[0],pt[1],eta[1],phi[1],EE[1],EB[1],mass); 
+
+    delete calc;
   
     result.emplace_back(kin_fit[0]);
     result.emplace_back(kin_fit[1]);
@@ -489,6 +491,7 @@ RVecF best_3gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
     all_combos.emplace_back(result);
   }
   auto sortedIndices = ROOT::VecOps::Argsort(all_combos,compare_pair);
+
   return all_combos[sortedIndices[0]];
 }
 
@@ -642,7 +645,7 @@ RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
 
     RVecF result;
     result.reserve(20);
-    VertexCalculator calc;
+    VertexCalculator *calc = new VertexCalculator();
     //four vector
     ROOT::Math::PtEtaPhiMVector p0(pt[i1],eta[i1],phi[i1],0.0);
     ROOT::Math::PtEtaPhiMVector p1(pt[i2],eta[i2],phi[i2],0.0);
@@ -654,21 +657,21 @@ RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
   
 
     //first pairing
-    std::vector<float> pairing1_A = calc.getVertexInfo(pt[i1],eta[i1],phi[i1],EE[i1],EB[i1],pt[i2],eta[i2],phi[i2],EE[i2],EB[i2],mass); 
-    std::vector<float> pairing1_B = calc.getVertexInfo(pt[i3],eta[i3],phi[i3],EE[i3],EB[i3],pt[i4],eta[i4],phi[i4],EE[i4],EB[i4],mass); 
+    std::vector<float> pairing1_A = calc->getVertexInfo(pt[i1],eta[i1],phi[i1],EE[i1],EB[i1],pt[i2],eta[i2],phi[i2],EE[i2],EB[i2],mass); 
+    std::vector<float> pairing1_B = calc->getVertexInfo(pt[i3],eta[i3],phi[i3],EE[i3],EB[i3],pt[i4],eta[i4],phi[i4],EE[i4],EB[i4],mass); 
     
     //second pairing
-    std::vector<float> pairing2_A = calc.getVertexInfo(pt[i1],eta[i1],phi[i1],EE[i1],EB[i1],pt[i3],eta[i3],phi[i3],EE[i3],EB[i3],mass); 
-    std::vector<float> pairing2_B = calc.getVertexInfo(pt[i2],eta[i2],phi[i2],EE[i2],EB[i2],pt[i4],eta[i4],phi[i4],EE[i4],EB[i4],mass); 
+    std::vector<float> pairing2_A = calc->getVertexInfo(pt[i1],eta[i1],phi[i1],EE[i1],EB[i1],pt[i3],eta[i3],phi[i3],EE[i3],EB[i3],mass); 
+    std::vector<float> pairing2_B = calc->getVertexInfo(pt[i2],eta[i2],phi[i2],EE[i2],EB[i2],pt[i4],eta[i4],phi[i4],EE[i4],EB[i4],mass); 
     
     //third pairing
-    std::vector<float> pairing3_A = calc.getVertexInfo(pt[i1],eta[i1],phi[i1],EE[i1],EB[i1],pt[i4],eta[i4],phi[i4],EE[i4],EB[i4],mass); 
-    std::vector<float> pairing3_B = calc.getVertexInfo(pt[i2],eta[i2],phi[i2],EE[i2],EB[i2],pt[i3],eta[i3],phi[i3],EE[i3],EB[i3],mass); 
+    std::vector<float> pairing3_A = calc->getVertexInfo(pt[i1],eta[i1],phi[i1],EE[i1],EB[i1],pt[i4],eta[i4],phi[i4],EE[i4],EB[i4],mass); 
+    std::vector<float> pairing3_B = calc->getVertexInfo(pt[i2],eta[i2],phi[i2],EE[i2],EB[i2],pt[i3],eta[i3],phi[i3],EE[i3],EB[i3],mass); 
     
     std::vector<float> best23_A;
     std::vector<float> best23_B;
     
-    
+    delete calc;
     
     if (compare_quad_pairing(pairing2_A,pairing2_B,pairing3_A,pairing3_B)) {
       best23_A = pairing2_A;

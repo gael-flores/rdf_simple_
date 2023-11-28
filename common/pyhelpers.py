@@ -51,11 +51,29 @@ def loadSample(info,locator='root://cms-xrd-global.cern.ch//'):
     return sample
 
 
-def createDataSet(samples,locator='root://cms-xrd-global.cern.ch//'):
+def split(a, n):
+    k, m = divmod(len(a), n)
+    return (a[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n))
+
+
+def createDataSet(samples,splitFactor=0,processPart=0,locator='root://cms-xrd-global.cern.ch//'):
     spec = ROOT.RDF.Experimental.RDatasetSpec()
     for s in samples:
         sl = loadSample(s,locator)
-        spec.AddSample(sl)
+        if splitFactor==0:
+            spec.AddSample(sl)
+        else:
+            #split the sample
+            fileNames = sl.GetFileNameGlobs()
+            print('all file names')
+            print(fileNames)
 
+            splitFileNames = list(split(fileNames,splitFactor))[processPart]
+            print('split file names')
+            print(splitFileNames)
+
+            if len(splitFileNames)>0:
+                sample = ROOT.RDF.Experimental.RSample(sl.GetSampleName()+'_{}'.format(processPart),'Events',splitFileNames,sl.GetMetaData())
+                spec.AddSample(sample)
     return spec
         

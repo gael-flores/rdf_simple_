@@ -163,8 +163,8 @@ def zmumuH(data,phi_mass=[5,10,20,30]):
     actions.append(zmm2g.Snapshot('zmm2g','zmm2g.root',"best_2g.*|sample_.*"))
     actions.append(zmm3g.Snapshot('zmm3g','zmm3g.root',"best_3g.*|sample_.*"))
     actions.append(zmm4g.Snapshot('zmm4g','zmm4g.root',"best_4g.*|sample_.*"))
-    r=zmm2g.Report()
-    r.Print()
+#    r=zmm2g.Report()
+#    r.Print()
     return actions
     
 
