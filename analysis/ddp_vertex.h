@@ -634,18 +634,32 @@ bool compare_quad_pairing(const std::vector<float>p1_A,const std::vector<float>p
 
 
 RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,float mass) {
+  printf("Called best 4gamma\n");
   RVec<RVecF> all_combos;
+  RVecF result;
+  result.reserve(20);
   auto idx_cmb = ROOT::VecOps::Combinations(pt, 4);
+  VertexCalculator *calc = new VertexCalculator();
+  std::vector<float> best23_A;
+  std::vector<float> best23_B;
+  best23_A.reserve(20);
+  best23_B.reserve(20);
+  std::vector<float> best_A;
+  std::vector<float> best_B;
+  best_A.reserve(20);
+  best_B.reserve(20);
+
   for (size_t i = 0; i < idx_cmb[0].size(); i++) {
     const auto i1 = idx_cmb[0][i];
     const auto i2 = idx_cmb[1][i];
     const auto i3 = idx_cmb[2][i];
     const auto i4 = idx_cmb[3][i];
-  
+    result.clear();
+    best23_A.clear();
+    best23_B.clear();
+    best_A.clear();
+    best_B.clear();
 
-    RVecF result;
-    result.reserve(20);
-    VertexCalculator *calc = new VertexCalculator();
     //four vector
     ROOT::Math::PtEtaPhiMVector p0(pt[i1],eta[i1],phi[i1],0.0);
     ROOT::Math::PtEtaPhiMVector p1(pt[i2],eta[i2],phi[i2],0.0);
@@ -668,35 +682,30 @@ RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
     std::vector<float> pairing3_A = calc->getVertexInfo(pt[i1],eta[i1],phi[i1],EE[i1],EB[i1],pt[i4],eta[i4],phi[i4],EE[i4],EB[i4],mass); 
     std::vector<float> pairing3_B = calc->getVertexInfo(pt[i2],eta[i2],phi[i2],EE[i2],EB[i2],pt[i3],eta[i3],phi[i3],EE[i3],EB[i3],mass); 
     
-    std::vector<float> best23_A;
-    std::vector<float> best23_B;
     
-    delete calc;
     
     if (compare_quad_pairing(pairing2_A,pairing2_B,pairing3_A,pairing3_B)) {
-      best23_A = pairing2_A;
-      best23_B = pairing2_B;
+      best23_A.insert(best23_A.end(),pairing2_A.begin(),pairing2_A.end());
+      best23_B.insert(best23_B.end(),pairing2_B.begin(),pairing2_B.end());
       pA = p0+p2;
       pB = p1+p3;
       
     }
     else {
-      best23_A = pairing3_A;
-      best23_B = pairing3_B;
+      best23_A.insert(best23_A.end(),pairing3_A.begin(),pairing3_A.end());
+      best23_B.insert(best23_B.end(),pairing3_B.begin(),pairing3_B.end());
       pA=p0+p3;
       pB=p1+p2;
     }
-    std::vector<float> best_A;
-    std::vector<float> best_B;
     if (compare_quad_pairing(pairing1_A,pairing1_B,best23_A,best23_B)) {
-      best_A = pairing2_A;
-      best_B = pairing2_B;
+      best_A.insert(best_A.end(),pairing2_A.begin(),pairing2_A.end());
+      best_B.insert(best_B.end(),pairing2_B.begin(),pairing2_B.end());
       pA=p0+p1;
       pB=p2+p3;
     }
     else {
-      best_A = best23_A;
-      best_B = best23_B;
+      best_A.insert(best_A.end(),best23_A.begin(),best23_A.end());
+      best_B.insert(best_B.end(),best23_B.begin(),best23_B.end());
     }
 
     result.emplace_back(best_A[0]);
@@ -727,7 +736,16 @@ RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
     result.emplace_back((pc0+pc1+pc2+pc3).M());
     all_combos.emplace_back(result);
   }
-  auto sortedIndices = ROOT::VecOps::Argsort(all_combos,compare_quad);
+  delete calc;  
+  printf("Done best 4gamma\n");
 
-  return all_combos[sortedIndices[0]];
+  if (all_combos.size()>1) {
+    auto sortedIndices = ROOT::VecOps::Argsort(all_combos,compare_quad);
+    return all_combos[sortedIndices[0]];
+  }
+  else {
+    return all_combos[0];
+  }
+
+
 }

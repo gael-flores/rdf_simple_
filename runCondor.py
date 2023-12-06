@@ -21,7 +21,7 @@ for d in datasets:
         tar -xzvf sandbox.tar.gz
         mkdir .dasmaps
         source ./setup.sh
-        python run.py {dataset}
+        python3 run.py {dataset}
         echo python done
         
         OUTDIR={eos}
@@ -69,7 +69,7 @@ for d in datasets:
             tar -xzvf sandbox.tar.gz
             mkdir .dasmaps
             source ./setup.sh
-            python run.py {dataset} -s {splitFactor} -p {part}
+            python3 run.py {dataset} -s {splitFactor} -p {part}
             echo python done
         
             OUTDIR={eos}
