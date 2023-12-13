@@ -39,10 +39,14 @@ def ggH(data,phi_mass=[5,10,20,30]):
 
     #Declare dataframe and load all meta data 
     dataframe =load_meta_data(data)
-    ####################
-    #ANALYSIS CODE HERE#        
-    ####################
+    #pass HLT
+    ggH = dataframe.Filter('HLT_passed','passed HLT')
+    #your code here 
 
+
+    r=ggH.Report()
+    r.Print()
+    
     return actions
 
 

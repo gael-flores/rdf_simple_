@@ -1,4 +1,7 @@
 analysis_samples={
+'ggH_4photons':{'dataset':'local:./local_samples/ggHTo4gamma.root',
+                    'triggers':['HLT_TriplePhoton_20_20_20_CaloIdLV2'],
+                    'veto_triggers':[]},
 'SingleMuon_2018A':{'dataset':'/SingleMuon/Run2018A-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD',
                     'triggers':['HLT_IsoMu27'],
                     'veto_triggers':[]},

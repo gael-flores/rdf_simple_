@@ -5,8 +5,8 @@ def load_meta_data(data):
     #Declare dataframe
     dataframe =ROOT.RDataFrame(data)
     #read the HLT string from the sample
-    dataframe=dataframe.DefinePerSample('HLTstring','rdfsampleinfo_.GetS("trigger")')
-    dataframe=dataframe.Define('HLT_passed','HLTstring.data()')
+    #dataframe=dataframe.DefinePerSample('HLTstring','rdfsampleinfo_.GetS("trigger")')
+    dataframe=dataframe.Define('HLT_passed',data.GetMetaData()[0].GetS("trigger")) #need to fix to suppport trigger/amples!!!!
     #Check if it is MC
     dataframe=dataframe.DefinePerSample('sample_isMC','rdfsampleinfo_.GetI("isMC")')
     #get the list of meta keys
@@ -21,10 +21,13 @@ def load_meta_data(data):
 def loadSample(info,locator='root://cms-xrd-global.cern.ch//'):
     files=[]
     print(info['dataset'])
-    p = subprocess.Popen('/cvmfs/cms.cern.ch/common/dasgoclient -dasmaps=./ -query="file dataset={}"'.format(info['dataset']), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    for line in p.stdout.readlines():
-        files.append(locator+(line.decode('ASCII').split('\n')[0]))
-    retval = p.wait()
+    if 'local:' in info['dataset']:
+        files=info['dataset'].split('local:')[1].split(',')
+    else:
+        p = subprocess.Popen('/cvmfs/cms.cern.ch/common/dasgoclient -dasmaps=./ -query="file dataset={}"'.format(info['dataset']), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        for line in p.stdout.readlines():
+            files.append(locator+(line.decode('ASCII').split('\n')[0]))
+        retval = p.wait()
     triggerStr=[]
     for t in info['triggers']:
         triggerStr.append('{}==1'.format(t))
@@ -34,11 +37,11 @@ def loadSample(info,locator='root://cms-xrd-global.cern.ch//'):
 
     metaData = ROOT.RDF.Experimental.RMetaData()
     metaData.Add('trigger',triggerDecision)
-
-    if 'SIM' in info['dataset']:
-        metaData.Add('isMC',1)
-    else:
+    print(triggerDecision)
+    if not ('SIM' in info['dataset']):
         metaData.Add('isMC',0)
+    else:
+        metaData.Add('isMC',1)
     # add custom user meta data e.g sigma or weights- assume float for now
     meta_keys=[]
     for tag, data in info.items():
