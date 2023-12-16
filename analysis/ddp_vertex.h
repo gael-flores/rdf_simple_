@@ -577,10 +577,10 @@ bool compare_quad_pairing(const std::vector<float>p1_A,const std::vector<float>p
       ROOT::Math::PtEtaPhiMVector p2_B1(p2_B[0],p2_B[1],p2_B[2],0.0);
       ROOT::Math::PtEtaPhiMVector p2_B2(p2_B[3],p2_B[4],p2_B[5],0.0);
       //first we see if the mass is everywhere below 125/2.
-      unsigned int p1_masscut_A = (p1_A1+p1_A2).M()<62.5 ? 1:0; 
-      unsigned int p1_masscut_B = (p1_B1+p1_B2).M()<62.5 ? 1:0; 
-      unsigned int p2_masscut_A = (p2_A1+p2_A2).M()<62.5 ? 1:0; 
-      unsigned int p2_masscut_B = (p2_B1+p2_B2).M()<62.5 ? 1:0; 
+      unsigned int p1_masscut_A = (p1_A1+p1_A2).M()<65. ? 1:0; 
+      unsigned int p1_masscut_B = (p1_B1+p1_B2).M()<65. ? 1:0; 
+      unsigned int p2_masscut_A = (p2_A1+p2_A2).M()<65. ? 1:0; 
+      unsigned int p2_masscut_B = (p2_B1+p2_B2).M()<65. ? 1:0; 
 
       if ((p1_masscut_A+p1_masscut_B)>(p2_masscut_A+p2_masscut_B)) {
 	return true;
@@ -698,8 +698,8 @@ RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
       pB=p1+p2;
     }
     if (compare_quad_pairing(pairing1_A,pairing1_B,best23_A,best23_B)) {
-      best_A.insert(best_A.end(),pairing2_A.begin(),pairing2_A.end());
-      best_B.insert(best_B.end(),pairing2_B.begin(),pairing2_B.end());
+      best_A.insert(best_A.end(),pairing1_A.begin(),pairing1_A.end());
+      best_B.insert(best_B.end(),pairing1_B.begin(),pairing1_B.end());
       pA=p0+p1;
       pB=p2+p3;
     }
@@ -748,4 +748,18 @@ RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
   }
 
 
+}
+
+RVecF minMatchDR(const RVecF& photonEta,const RVecF& photonPhi,const RVecF& genEta,const RVecF& genPhi) {
+  RVecF output;
+  for (int i=0;i<photonEta.size();++i) {
+    float minDR=1000000;
+    for (int j=0;j<genEta.size();++j) {
+      float dr = ROOT::VecOps::DeltaR(photonEta[i],genEta[j],photonPhi[i],genPhi[j]);
+      if (dr<minDR)
+	minDR=dr;
+    }
+    output.emplace_back(minDR);
+  }
+  return output;
 }
