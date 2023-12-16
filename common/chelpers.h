@@ -64,6 +64,32 @@ RVecF correct_gammaIso_for_muons_and_photons(const RVec<size_t>& idx,RVecF mpt, 
   return result;
 }
 
+RVecF correct_gammaIso(const RVecF& gpt, const RVecF& geta, const RVecF& gphi, const RVecF& giso, const RVec<bool>& gID) {
+  RVecF result;
+  result.reserve(gpt.size());
+
+  for (size_t i = 0; i < gpt.size(); ++i) {
+    float iso = giso[i] * gpt[i];
+
+    // Correction for other photons
+    for (size_t j = 0; j < gpt.size(); ++j) {
+      if ((i == j) || gID[j] == 0)
+        continue;
+
+      if (DeltaR(geta[i], geta[j], gphi[i], gphi[j]) < 0.3)
+        iso = iso - gpt[j];
+    }
+
+    // Ensure the corrected isolation is non-negative
+    if (iso < 0)
+      iso = 0;
+
+    result.emplace_back(iso / gpt[i]);
+  }
+
+  return result;
+}
+
 RVecF correct_muoniso_for_photons(RVecF mpt, RVecF meta, RVecF mphi,RVecF miso,RVecF gpt, RVecF geta, RVecF gphi,RVec<bool> gFSR) {
   RVecF result;  
   result.reserve(mpt.size());
