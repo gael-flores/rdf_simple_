@@ -365,8 +365,8 @@ std::vector<float> getVertexInfo(const double pt1, const double eta1, const doub
 
 bool compare_pair(const RVecF& q1,const RVecF& q2) {
   //first invariant mass of pairs
-  unsigned int mass1 = q1[8]<62.5 ? 1:0;
-  unsigned int mass2 = q2[8]<62.5 ? 1:0;
+  unsigned int mass1 = q1[8]<65. ? 1:0;
+  unsigned int mass2 = q2[8]<65 ? 1:0;
 
   unsigned int valid1 = q1[7]>0 ? 1:0;
   unsigned int valid2 = q2[7]>0 ? 1:0;
@@ -450,51 +450,79 @@ RVecF best_2gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
 
 RVecF best_3gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,float mass) {
   RVec<RVecF> all_combos;  
-  auto idx_cmb = ROOT::VecOps::Combinations(pt, 2);
-  for (size_t i = 0; i < idx_cmb[0].size(); i++) {
-    const auto i1 = idx_cmb[0][i];
-    const auto i2 = idx_cmb[1][i];
-    size_t other_i;
-    for (size_t j=0;j<3;++j) {
-      if (i1!=j&&i2!=j) {
-	other_i=j;
-	break;
-      }
-	
-    }
-
-    RVecF result;
-    result.reserve(13);
+  RVecF result;
+    result.reserve(14);
     VertexCalculator *calc = new VertexCalculator();
+    std::vector<float> best_pair;
+    best_pair.reserve(14);
+    int other_i;
+    float raw_m;
     //four vector
     ROOT::Math::PtEtaPhiMVector p0(pt[0],eta[0],phi[0],0.0);
     ROOT::Math::PtEtaPhiMVector p1(pt[1],eta[1],phi[1],0.0);
     ROOT::Math::PtEtaPhiMVector p2(pt[2],eta[2],phi[2],0.0);
-    float raw_m = (p0+p1).M();
-    std::vector<float> kin_fit= calc->getVertexInfo(pt[0],eta[0],phi[0],EE[0],EB[0],pt[1],eta[1],phi[1],EE[1],EB[1],mass); 
+    
+
+    //First Pair
+    std::vector<float> pair_1 = calc->getVertexInfo(pt[0],eta[0],phi[0],EE[0],EB[0],pt[1],eta[1],phi[1],EE[1],EB[1],mass);
+
+    //second pair
+    std::vector<float> pair_2 = calc->getVertexInfo(pt[0],eta[0],phi[0],EE[0],EB[0],pt[2],eta[2],phi[2],EE[2],EB[2],mass);
+
+    //third pair
+    std::vector<float> pair_3 = calc->getVertexInfo(pt[1],eta[1],phi[1],EE[1],EB[1],pt[2],eta[2],phi[2],EE[2],EB[2],mass);
+
+  
+    if (compare_pair(pair_1,pair_2)) {
+      if (compare_pair(pair_1,pair_3)){
+        best_pair.insert(best_pair.end(),pair_1.begin(),pair_1.end());
+        raw_m = (p0+p1).M();
+        other_i = 2;
+        printf("\nbest_pair: 0,1");
+      } else {
+        best_pair.insert(best_pair.end(),pair_3.begin(),pair_3.end());
+        raw_m = (p1+p2).M();
+        other_i = 0;
+        printf("\nbest_pair: 1,2");
+      }
+      
+    } else if (compare_pair(pair_2,pair_3)) {
+      best_pair.insert(best_pair.end(),pair_2.begin(),pair_2.end());
+      raw_m = (p0+p2).M();
+      other_i = 1;
+      printf("\nbest_pair: 0,2");
+      } else {
+        best_pair.insert(best_pair.end(),pair_3.begin(),pair_3.end());
+        raw_m = (p1+p2).M();
+        other_i = 0;
+        printf("\nbest_pair: 1,2");
+      }
+    ROOT::Math::PtEtaPhiMVector pc0(best_pair[0],best_pair[1],best_pair[2],0.0);
+    ROOT::Math::PtEtaPhiMVector pc1(best_pair[3],best_pair[4],best_pair[5],0.0);
+    ROOT::Math::PtEtaPhiMVector pc2(pt[other_i],eta[other_i],phi[other_i],0.0);
 
     delete calc;
   
-    result.emplace_back(kin_fit[0]);
-    result.emplace_back(kin_fit[1]);
-    result.emplace_back(kin_fit[2]);
-    result.emplace_back(kin_fit[3]);
-    result.emplace_back(kin_fit[4]);
-    result.emplace_back(kin_fit[5]);
-    result.emplace_back(kin_fit[6]);
-    result.emplace_back(kin_fit[7]);
+    result.emplace_back(best_pair[0]);
+    result.emplace_back(best_pair[1]);
+    result.emplace_back(best_pair[2]);
+    result.emplace_back(best_pair[3]);
+    result.emplace_back(best_pair[4]);
+    result.emplace_back(best_pair[5]);
+    result.emplace_back(best_pair[6]);
+    result.emplace_back(best_pair[7]);
     result.emplace_back(raw_m);
     result.emplace_back(pt[other_i]);
     result.emplace_back(eta[other_i]);
     result.emplace_back(phi[other_i]);
     result.emplace_back((p0+p1+p2).M());
+    result.emplace_back((pc0+pc1+pc2).M());
     all_combos.emplace_back(result);
-  }
+  
   auto sortedIndices = ROOT::VecOps::Argsort(all_combos,compare_pair);
 
   return all_combos[sortedIndices[0]];
 }
-
 
 
 bool compare_quad(const RVecF& q1,const RVecF& q2) {
@@ -594,7 +622,7 @@ bool compare_quad_pairing(const std::vector<float>p1_A,const std::vector<float>p
 	  return true;
 	}
 	else if ((p1_A[7]+p1_B[7])<(p2_A[7]+p2_B[7])) {
-	  return true;
+	  return true; //should this be false?
 	} 
 	else if ((p1_A[7]+p1_B[7])==(p2_A[7]+p2_B[7])) {
 	  float p1_pt = (p1_A1+p1_A2).pt()+(p1_B1+p1_B2).pt();
@@ -738,7 +766,6 @@ RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
   }
   delete calc;  
   printf("Done best 4gamma\n");
-
   if (all_combos.size()>1) {
     auto sortedIndices = ROOT::VecOps::Argsort(all_combos,compare_quad);
     return all_combos[sortedIndices[0]];
