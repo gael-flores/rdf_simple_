@@ -38,7 +38,7 @@ def loadSample(info,locator='root://cms-xrd-global.cern.ch//'):
     metaData = ROOT.RDF.Experimental.RMetaData()
     metaData.Add('trigger',triggerDecision)
     print(triggerDecision)
-    if not ('SIM' in info['dataset']):
+    if not ('SIM' in info['dataset'] or 'local' in info['dataset']):
         metaData.Add('isMC',0)
     else:
         metaData.Add('isMC',1)
