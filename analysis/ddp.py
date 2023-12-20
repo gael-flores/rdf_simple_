@@ -58,10 +58,9 @@ def ggH(data,phi_mass=[5,10,20,30]):
     ggH=ggH.Filter('Sum(Photon_ID==1)>2','At least 3 ID photon')
 
     #exactly 3 photons
-    ggH3g=ggH.Filter('Sum(Photon_ID==1)==3','exactly 3 ID photon')
+    ggH3g=ggH.Filter('Sum(Photon_ID==1)==3','exactly ID photon')
     ggH3g=ggH3g.Define('good_photons','Photon_ID==1')
-    ggH3g=ggH3g.Define("m_3g", "InvariantMass(Photon_pt[good_photons], Photon_eta[good_photons], Photon_phi[good_photons], Photon_mass[good_photons])")#.Filter("m_3g > 0 && m_3g < 160")
-
+    #ggH3g=ggH3g.Define("m_3g", "InvariantMass(Photon_pt[good_photons], Photon_eta[good_photons], Photon_phi[good_photons], Photon_mass[good_photons])")
     for mass in phi_mass:
         ggH3g=ggH3g.Define('raw_best_3g_m{}'.format(mass),"best_3gamma(Photon_pt[good_photons],Photon_eta[good_photons],Photon_phi[good_photons],Photon_isScEtaEE[good_photons], Photon_isScEtaEB[good_photons],{})".format(float(mass)))
         ggH3g=ggH3g.Define('best_3g_phi_gamma1_pt_m{}'.format(mass),'raw_best_3g_m{}[0]'.format(mass))
@@ -77,18 +76,15 @@ def ggH(data,phi_mass=[5,10,20,30]):
         ggH3g=ggH3g.Define('best_3g_phi_valid_m{}'.format(mass),'raw_best_3g_m{}[7]'.format(mass))
         ggH3g=ggH3g.Define('best_3g_phi_mass_m{}'.format(mass),'raw_best_3g_m{}[8]'.format(mass))
         ggH3g=ggH3g.Define('best_3g_raw_mass_m{}'.format(mass),'raw_best_3g_m{}[12]'.format(mass))
-        
-    
-    h3     = ggH3g.Histo1D(("m_3g", "m_3g;m_{3#gamma} (GeV);N_{Events}", 15, 0, 160),"m_3g")
-    h3_raw = ggH3g.Histo1D(("best_3g_raw_mass_m30", "m_3g;m_{3#gamma} (GeV);N_{Events}", 15, 0, 160),"best_3g_raw_mass_m30")
-    
+        ggH3g=ggH3g.Define('best_3g_corr_mass_m{}'.format(mass),'raw_best_3g_m{}[13]'.format(mass))
+    #h3     = ggH3g.Histo1D(("m_3g", "m_3g;m_{3#gamma} (GeV);N_{Events}", 15, 0, 160),"m_3g")
+    #h3_raw = ggH3g.Histo1D(("best_3g_raw_mass_m30", "m_3g;m_{3#gamma} (GeV);N_{Events}", 15, 0, 160),"best_3g_raw_mass_m30")
+    #h3_corr = ggH3g.Histo1D(("best_3g_corr_mass_m30", "m_3g;m_{3#gamma} (GeV);N_{Events}", 15, 0, 160),"best_3g_corr_mass_m30")
 
     #exactly 4 photons
     ggH4g=ggH.Filter('Sum(Photon_ID==1)==4','exactly 4 ID photon')
     ggH4g=ggH4g.Define('good_photons','Photon_ID==1')
-    ggH4g=ggH4g.Define("m_4g", "InvariantMass(Photon_pt[good_photons], Photon_eta[good_photons], Photon_phi[good_photons], Photon_mass[good_photons])")#.Filter("m_4g > 0 && m_4g < 160")
-
-    
+    #ggH4g=ggH4g.Define("m_4g", "InvariantMass(Photon_pt[good_photons], Photon_eta[good_photons], Photon_phi[good_photons], Photon_mass[good_photons])")#.Filter("m_4g > 0 && m_4g < 160")
     for mass in phi_mass:
         ggH4g=ggH4g.Define('raw_best_4g_m{}'.format(mass),"best_4gamma(Photon_pt[good_photons],Photon_eta[good_photons],Photon_phi[good_photons],Photon_isScEtaEE[good_photons], Photon_isScEtaEB[good_photons],{})".format(float(mass)))
         ggH4g=ggH4g.Define('best_4g_phi1_gamma1_pt_m{}'.format(mass),'raw_best_4g_m{}[0]'.format(mass))
@@ -111,13 +107,11 @@ def ggH(data,phi_mass=[5,10,20,30]):
         ggH4g=ggH4g.Define('best_4g_phi2_mass_m{}'.format(mass),'raw_best_4g_m{}[17]'.format(mass))
         ggH4g=ggH4g.Define('best_4g_uncorr_mass_m{}'.format(mass),'raw_best_4g_m{}[18]'.format(mass))
         ggH4g=ggH4g.Define('best_4g_corr_mass_m{}'.format(mass),'raw_best_4g_m{}[19]'.format(mass))
-    
-    h4        = ggH4g.Histo1D(("m_4g", "m_4g;m_{4#gamma} (GeV);N_{Events}", 15, 0, 160), "m_4g")
-    h4_corr   = ggH4g.Histo1D(("best_4g_corr_mass_m30", "m_4g;m_{4#gamma} (GeV);N_{Events}", 15, 0, 160), "best_4g_corr_mass_m30")
-    h4_uncorr = ggH4g.Histo1D(("best_4g_uncorr_mass_m30", "m_4g;m_{4#gamma} (GeV);N_{Events}", 15, 0, 160), "best_4g_uncorr_mass_m30")
+    #h4        = ggH4g.Histo1D(("m_4g", "m_4g;m_{4#gamma} (GeV);N_{Events}", 15, 0, 160), "m_4g")
+    #h4_corr   = ggH4g.Histo1D(("best_4g_corr_mass_m30", "m_4g;m_{4#gamma} (GeV);N_{Events}", 15, 0, 160), "best_4g_corr_mass_m30")
+    #h4_uncorr = ggH4g.Histo1D(("best_4g_uncorr_mass_m30", "m_4g;m_{4#gamma} (GeV);N_{Events}", 15, 0, 160), "best_4g_uncorr_mass_m30")
 
-
-
+    '''
     ROOT.gStyle.SetOptStat(0); ROOT.gStyle.SetTextFont(42)
     
     c1 = ROOT.TCanvas("canvas1", "", 1200, 900)
@@ -128,7 +122,6 @@ def ggH(data,phi_mass=[5,10,20,30]):
     h4_corr.Draw("Same")
     h4_corr.SetLineColor(2)
 
-
     leg1 = ROOT.TLegend(0.2, 0.6, 0.4, 0.4)
     leg1.AddEntry("best_4g_corr_mass_m30","best_4g_corr_mass_m30","f")
     leg1.AddEntry("best_4g_uncorr_mass_m30","best_4g_uncorr_mass_m30","f")
@@ -137,24 +130,31 @@ def ggH(data,phi_mass=[5,10,20,30]):
     leg1.SetBorderSize(0)
     leg1.Draw("Same")
     c1.Draw()
-    c1.SaveAs("4photon_spectrum.png")
+    c1.SaveAs("4photon_spectrum(1).png")
 
     c2 = ROOT.TCanvas("canvas2", "", 1200, 900)
     h3.Draw()
     h3.SetLineColor(3)
     h3_raw.Draw("Same")
     h3_raw.SetLineColor(2)
+    h3_corr.Draw("Same")
+    h3_corr.SetLineColor(4)
     leg2 = ROOT.TLegend(0.3, 0.6, 0.5, 0.5)
     leg2.AddEntry("m_3g","m_3g","f")
     leg2.AddEntry("best_3g_raw_mass_m30","best_3g_raw_mass_m30","f")
+    leg2.AddEntry("best_3g_corr_mass_m30","best_3g_corr_mass_m30","f")
     leg2.SetTextSize(0.02)
     leg2.SetBorderSize(0)
     leg2.Draw("Same")
     c2.Draw()
     c2.SaveAs("3photon_spectrum.png")
+    '''
 
-    r=ggH.Report()
-    r.Print()
+    actions.append(ggH4g.Snapshot('ggH4g','ggH4g.root',"best_4g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
+    actions.append(ggH3g.Snapshot('ggH3g','ggH3g.root',"best_3g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
+
+    #r=ggH.Report()
+    #r.Print()
     
     return actions
 
