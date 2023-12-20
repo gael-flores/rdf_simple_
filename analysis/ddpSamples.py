@@ -17,31 +17,31 @@ analysis_samples={
 'ZH4G_M30_ctau1000':{'dataset':'/ZH_ZToLL_HTo2LongLivedTo4G_MH-125_MFF-30_ctau-1000cm_TuneCP5_fixedLifetime_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM',
                           'triggers':['HLT_IsoMu27'],
                           'veto_triggers':[],
-                          'sigma':1.0} #custom meta data see pyhelpers.py
+                          'sigma':1.0}, #custom meta data see pyhelpers.py
 'DoubleEG_2017B':{'dataset':'/DoubleEG/Run2017B-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD',
                     'trigers':['HLT_TriplePhoton_20_20_20_CaloIdLV2'],
-                    'veto_triggers':[]}
+                    'veto_triggers':[]},
 'DoubleEG_2017C':{'dataset':'/DoubleEG/Run2017C-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD',
                     'trigers':['HLT_TriplePhoton_20_20_20_CaloIdLV2'],
-                    'veto_triggers':[]}
+                    'veto_triggers':[]},
 'DoubleEG_2017D':{'dataset':'/DoubleEG/Run2017D-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD',
                     'trigers':['HLT_TriplePhoton_20_20_20_CaloIdLV2'],
-                    'veto_triggers':[]}
+                    'veto_triggers':[]},
 'DoubleEG_2017E':{'dataset':'/DoubleEG/Run2017E-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD',
                     'trigers':['HLT_TriplePhoton_20_20_20_CaloIdLV2'],
-                    'veto_triggers':[]}
+                    'veto_triggers':[]},
 'DoubleEG_2017F':{'dataset':'/DoubleEG/Run2017F-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD',
                     'trigers':['HLT_TriplePhoton_20_20_20_CaloIdLV2'],
-                    'veto_triggers':[]}
+                    'veto_triggers':[]},
 'EGamma_2018A':{'dataset':'/EGamma/Run2018A-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD',
                     'trigers':['HLT_TriplePhoton_20_20_20_CaloIdLV2'],
-                    'veto_triggers':[]}
+                    'veto_triggers':[]},
 'EGamma_2018B':{'dataset':'/EGamma/Run2018B-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD',
                     'trigers':['HLT_TriplePhoton_20_20_20_CaloIdLV2'],
-                    'veto_triggers':[]}
+                    'veto_triggers':[]},
 'EGamma_2018C':{'dataset':'/EGamma/Run2018C-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD',
                     'trigers':['HLT_TriplePhoton_20_20_20_CaloIdLV2'],
-                    'veto_triggers':[]}
+                    'veto_triggers':[]},
 'EGamma_2018D':{'dataset':'/EGamma/Run2018D-UL2018_MiniAODv2_NanoAODv9-v3/NANOAOD',
                     'trigers':['HLT_TriplePhoton_20_20_20_CaloIdLV2'],
                     'veto_triggers':[]}
