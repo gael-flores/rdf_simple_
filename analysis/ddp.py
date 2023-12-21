@@ -41,6 +41,7 @@ def ggH(data,phi_mass=[5,10,20,30]):
     dataframe =load_meta_data(data)
     #pass HLT
     ggH = dataframe.Filter('HLT_passed','passed HLT')
+    
     #your code here 
     ggH=ggH.Filter('nPhoton>2','At least three photons')
     
@@ -57,8 +58,12 @@ def ggH(data,phi_mass=[5,10,20,30]):
     #At least three Photons
     ggH=ggH.Filter('Sum(Photon_ID==1)>2','At least 3 ID photon')
 
+    #Filter out muons above 10Gev and electrons above 15GeV
+    ggH=ggH.Define('electron_veto','Electron_cutBased==2 && Electron_pt>15').Filter('Sum(electron_veto==1)==0','veto loose id electrons above 15GeV')
+    ggH=ggH.Define('muon_veto','Muon_looseId==1 && Muon_pt>10').Filter('Sum(muon_veto==1)==0','veto loose id muons above 10GeV')
+
     #exactly 3 photons
-    ggH3g=ggH.Filter('Sum(Photon_ID==1)==3','exactly ID photon')
+    ggH3g=ggH.Filter('Sum(Photon_ID==1)==3','exactly 3 ID photon')
     ggH3g=ggH3g.Define('good_photons','Photon_ID==1')
     ggH3g=ggH3g.Define("m_3g", "InvariantMass(Photon_pt[good_photons], Photon_eta[good_photons], Photon_phi[good_photons], Photon_mass[good_photons])")
     for mass in phi_mass:
@@ -161,8 +166,8 @@ def ggH(data,phi_mass=[5,10,20,30]):
     actions.append(ggH4g.Snapshot('ggH4g','ggH4g.root',"best_4g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
     actions.append(ggH3g.Snapshot('ggH3g','ggH3g.root',"best_3g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
 
-    r=ggH.Report()
-    r.Print()
+    #r=ggH.Report()
+    #r.Print()
     
     return actions
 
