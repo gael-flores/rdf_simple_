@@ -44,9 +44,10 @@ def ggH(data,phi_mass=[5,10,20,30]):
     
     #your code here 
     ggH=ggH.Filter('nPhoton>2','At least three photons')
-    
-    ggH=ggH.Define('genPhotonDR','minMatchDR(Photon_eta,Photon_phi,GenIsolatedPhoton_eta,GenIsolatedPhoton_phi)')
-    ggH=ggH.Filter('Sum(genPhotonDR<0.2)>2','At least three matched photons')
+ 
+# Implement matching only for signal efficiency studies    
+#    ggH=ggH.Define('genPhotonDR','minMatchDR(Photon_eta,Photon_phi,GenIsolatedPhoton_eta,GenIsolatedPhoton_phi)')
+#    ggH=ggH.Filter('Sum(genPhotonDR<0.2)>2','At least three matched photons')
 
     ggH=ggH.Define("Photon_IDNoIso","((Photon_isScEtaEB&&Photon_hoe<0.04596&&Photon_sieie<0.0106)||(Photon_isScEtaEE&&Photon_hoe<0.0590&&Photon_sieie<0.0272))&&(Photon_electronVeto==1)&&(Photon_eta>-2.5&&Photon_eta<2.5)")
     ggH=ggH.Filter('Sum(Photon_IDNoIso)>2','At least 3 ID No Iso Photon')
@@ -124,44 +125,44 @@ def ggH(data,phi_mass=[5,10,20,30]):
     #h4_corr   = ggH4g.Histo1D(("best_4g_corr_mass_m30", "m_4g;m_{4#gamma} (GeV);N_{Events}", 15, 0, 160), "best_4g_corr_mass_m30")
     #h4_uncorr = ggH4g.Histo1D(("best_4g_uncorr_mass_m30", "m_4g;m_{4#gamma} (GeV);N_{Events}", 15, 0, 160), "best_4g_uncorr_mass_m30")
 
-    '''
-    ROOT.gStyle.SetOptStat(0); ROOT.gStyle.SetTextFont(42)
-    
-    c1 = ROOT.TCanvas("canvas1", "", 1200, 900)
-    h4_uncorr.Draw()
-    h4_uncorr.SetLineColor(4)
-    h4.Draw("Same")
-    h4.SetLineColor(3)
-    h4_corr.Draw("Same")
-    h4_corr.SetLineColor(2)
-
-    leg1 = ROOT.TLegend(0.2, 0.6, 0.4, 0.4)
-    leg1.AddEntry("best_4g_corr_mass_m30","best_4g_corr_mass_m30","f")
-    leg1.AddEntry("best_4g_uncorr_mass_m30","best_4g_uncorr_mass_m30","f")
-    leg1.AddEntry("m_4g","m_4g","f")
-    leg1.SetTextSize(0.02)
-    leg1.SetBorderSize(0)
-    leg1.Draw("Same")
-    c1.Draw()
-    c1.SaveAs("4photon_spectrum.png")
-    
-    c2 = ROOT.TCanvas("canvas2", "", 1200, 900)
-    h3.Draw()
-    h3.SetLineColor(3)
-    h3_raw.Draw("Same")
-    h3_raw.SetLineColor(2)
-    h3_corr.Draw("Same")
-    h3_corr.SetLineColor(4)
-    leg2 = ROOT.TLegend(0.3, 0.6, 0.5, 0.5)
-    leg2.AddEntry("m_3g","m_3g","f")
-    leg2.AddEntry("best_3g_raw_mass_m30","best_3g_raw_mass_m30","f")
-    leg2.AddEntry("best_3g_corr_mass_m30","best_3g_corr_mass_m30","f")
-    leg2.SetTextSize(0.02)
-    leg2.SetBorderSize(0)
-    leg2.Draw("Same")
-    c2.Draw()
-    c2.SaveAs("3photon_spectrum.png")
-    '''
+    #'''
+    #ROOT.gStyle.SetOptStat(0); ROOT.gStyle.SetTextFont(42)
+    #
+    #c1 = ROOT.TCanvas("canvas1", "", 1200, 900)
+    #h4_uncorr.Draw()
+    #h4_uncorr.SetLineColor(4)
+    #h4.Draw("Same")
+    #h4.SetLineColor(3)
+    #h4_corr.Draw("Same")
+    #h4_corr.SetLineColor(2)
+    #
+    #leg1 = ROOT.TLegend(0.2, 0.6, 0.4, 0.4)
+    #leg1.AddEntry("best_4g_corr_mass_m30","best_4g_corr_mass_m30","f")
+    #leg1.AddEntry("best_4g_uncorr_mass_m30","best_4g_uncorr_mass_m30","f")
+    #leg1.AddEntry("m_4g","m_4g","f")
+    #leg1.SetTextSize(0.02)
+    #leg1.SetBorderSize(0)
+    #leg1.Draw("Same")
+    #c1.Draw()
+    #c1.SaveAs("4photon_spectrum.png")
+    #
+    #c2 = ROOT.TCanvas("canvas2", "", 1200, 900)
+    #h3.Draw()
+    #h3.SetLineColor(3)
+    #h3_raw.Draw("Same")
+    #h3_raw.SetLineColor(2)
+    #h3_corr.Draw("Same")
+    #h3_corr.SetLineColor(4)
+    #leg2 = ROOT.TLegend(0.3, 0.6, 0.5, 0.5)
+    #leg2.AddEntry("m_3g","m_3g","f")
+    #leg2.AddEntry("best_3g_raw_mass_m30","best_3g_raw_mass_m30","f")
+    #leg2.AddEntry("best_3g_corr_mass_m30","best_3g_corr_mass_m30","f")
+    #leg2.SetTextSize(0.02)
+    #leg2.SetBorderSize(0)
+    #leg2.Draw("Same")
+    #c2.Draw()
+    #c2.SaveAs("3photon_spectrum.png")
+    #'''
 
     actions.append(ggH4g.Snapshot('ggH4g','ggH4g.root',"best_4g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
     actions.append(ggH3g.Snapshot('ggH3g','ggH3g.root',"best_3g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))

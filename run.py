@@ -1,7 +1,7 @@
 import ROOT
 # Enable multi-threading
-#ROOT.ROOT.EnableImplicitMT()
-ROOT.ROOT.DisableImplicitMT()
+ROOT.ROOT.EnableImplicitMT()
+#ROOT.ROOT.DisableImplicitMT()
 ROOT.gInterpreter.Declare('#include "common/chelpers.h"')
 from common.pyhelpers import *
 
@@ -24,7 +24,7 @@ from analysis.ddpSamples import analysis_samples
 toProcess=[]
 for s in args:
     toProcess.append(analysis_samples[s])
-data=createDataSet(toProcess,options.splitFactor,options.processPart,"root://cmsxrootd.fnal.gov//")
+data=createDataSet(toProcess,options.splitFactor,options.processPart,'root://cmsxrootd.fnal.gov//')
 
 analysis(data)
  
