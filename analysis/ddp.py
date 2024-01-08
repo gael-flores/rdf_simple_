@@ -44,9 +44,10 @@ def ggH(data,phi_mass=[5,10,20,30]):
     
     #your code here 
     ggH=ggH.Filter('nPhoton>2','At least three photons')
-    
-    ggH=ggH.Define('genPhotonDR','minMatchDR(Photon_eta,Photon_phi,GenIsolatedPhoton_eta,GenIsolatedPhoton_phi)')
-    ggH=ggH.Filter('Sum(genPhotonDR<0.2)>2','At least three matched photons')
+ 
+# Implement matching only for signal efficiency studies    
+#    ggH=ggH.Define('genPhotonDR','minMatchDR(Photon_eta,Photon_phi,GenIsolatedPhoton_eta,GenIsolatedPhoton_phi)')
+#    ggH=ggH.Filter('Sum(genPhotonDR<0.2)>2','At least three matched photons')
 
     ggH=ggH.Define("Photon_IDNoIso","((Photon_isScEtaEB&&Photon_hoe<0.04596&&Photon_sieie<0.0106)||(Photon_isScEtaEE&&Photon_hoe<0.0590&&Photon_sieie<0.0272))&&(Photon_electronVeto==1)&&(Photon_eta>-2.5&&Photon_eta<2.5)")
     ggH=ggH.Filter('Sum(Photon_IDNoIso)>2','At least 3 ID No Iso Photon')
