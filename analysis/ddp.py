@@ -116,9 +116,6 @@ def ggH(data,phi_mass=[5,10,20,30]):
         ggH3g_antiID=ggH3g_antiID.Define('best_3g_raw_mass_m{}'.format(mass),'raw_best_3g_m{}[12]'.format(mass))
         ggH3g_antiID=ggH3g_antiID.Define('best_3g_corr_mass_m{}'.format(mass),'raw_best_3g_m{}[13]'.format(mass))
         
-    #blinding region for data samples only
-    ggH3g_antiID=ggH3g_antiID.Define('non_MC_cut','sample_isMC==0 && best_3g_raw_mass_m30<30|best_3g_raw_mass_m30>140')
-    ggH3g_antiID=ggH3g_antiID.Filter('sample_isMC==1 | non_MC_cut==1','blinding data samples')
 
     #at least 4 photons
     ggH4g=ggH.Filter('Sum(Photon_ID==1)>3','at least 4 ID photon')
