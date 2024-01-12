@@ -478,24 +478,24 @@ RVecF best_3gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
         best_pair.insert(best_pair.end(),pair_1.begin(),pair_1.end());
         raw_m = (p0+p1).M();
         other_i = 2;
-        printf("\nbest_pair: 0,1");
+
       } else {
         best_pair.insert(best_pair.end(),pair_3.begin(),pair_3.end());
         raw_m = (p1+p2).M();
         other_i = 0;
-        printf("\nbest_pair: 1,2");
+
       }
       
     } else if (compare_pair(pair_2,pair_3)) {
       best_pair.insert(best_pair.end(),pair_2.begin(),pair_2.end());
       raw_m = (p0+p2).M();
       other_i = 1;
-      printf("\nbest_pair: 0,2");
+
       } else {
         best_pair.insert(best_pair.end(),pair_3.begin(),pair_3.end());
         raw_m = (p1+p2).M();
         other_i = 0;
-        printf("\nbest_pair: 1,2");
+
       }
     ROOT::Math::PtEtaPhiMVector pc0(best_pair[0],best_pair[1],best_pair[2],0.0);
     ROOT::Math::PtEtaPhiMVector pc1(best_pair[3],best_pair[4],best_pair[5],0.0);
@@ -662,7 +662,7 @@ bool compare_quad_pairing(const std::vector<float>p1_A,const std::vector<float>p
 
 
 RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,float mass) {
-  printf("Called best 4gamma\n");
+
   RVec<RVecF> all_combos;
   RVecF result;
   result.reserve(20);
@@ -765,7 +765,6 @@ RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
     all_combos.emplace_back(result);
   }
   delete calc;  
-  printf("Done best 4gamma\n");
   if (all_combos.size()>1) {
     auto sortedIndices = ROOT::VecOps::Argsort(all_combos,compare_quad);
     return all_combos[sortedIndices[0]];

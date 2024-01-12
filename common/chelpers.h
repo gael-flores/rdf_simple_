@@ -10,6 +10,18 @@ using namespace ROOT;
 using namespace ROOT::VecOps;
 float Z_mass=91;
 
+
+using RVecB = ROOT::VecOps::RVec<bool>;
+using RVecC = ROOT::VecOps::RVec<char>;
+using RVecD = ROOT::VecOps::RVec<double>;
+using RVecF = ROOT::VecOps::RVec<float>;
+using RVecI = ROOT::VecOps::RVec<int>;
+using RVecL = ROOT::VecOps::RVec<long int>;
+using RVecLL = ROOT::VecOps::RVec<long long int>;
+using RVecU = ROOT::VecOps::RVec<unsigned int>;
+using RVecUL = ROOT::VecOps::RVec<unsigned long int>;
+using RVecULL = ROOT::VecOps::RVec<unsigned long long int>;
+
 // Reconstruct the best Z-> ll candidate
 RVec<size_t> best_z(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecI charge)
 {
