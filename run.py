@@ -20,7 +20,7 @@ from analysis.ddpSamples import analysis_samples
 
 
 #root://cmsxrootd.fnal.gov//
-
 data=createDataSet(analysis_samples[args[0]],options.splitFactor,options.processPart,'root://cmsxrootd.fnal.gov//')
+
 analysis(data)
  
