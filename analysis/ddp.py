@@ -57,7 +57,7 @@ def ggH(data,phi_mass=[5,10,20,30]):
     ggH=ggH.Define("Photon_ID","Photon_IDNoIso==1 &&Photon_corrIso<0.1")
         
     #Anti-photon RDF
-    ggH3g_antiID = ggH.Filter("Sum(Photon_ID==1)>1 && Sum(Photon_ID==0)>0","at least 2 good and 1 bad photon")
+    ggH_antiID = ggH.Filter("Sum(Photon_ID==1)>1 && Sum(Photon_ID==0)>0","at least 2 good and 1 bad photon")
 
     #At least three Photons
     ggH=ggH.Filter('Sum(Photon_IDNoIso)>2','At least 3 ID No Iso Photon')
@@ -67,8 +67,8 @@ def ggH(data,phi_mass=[5,10,20,30]):
     ggH=ggH.Define('electron_veto','Electron_cutBased==2 && Electron_pt>15').Filter('Sum(electron_veto==1)==0','veto loose id electrons above 15GeV')
     ggH=ggH.Define('muon_veto','Muon_looseId==1 && Muon_pt>10').Filter('Sum(muon_veto==1)==0','veto loose id muons above 10GeV')
     
-    ggH3g_antiID=ggH3g_antiID.Define('electron_veto','Electron_cutBased==2 && Electron_pt>15').Filter('Sum(electron_veto==1)==0','veto loose id electrons above 15GeV')
-    ggH3g_antiID=ggH3g_antiID.Define('muon_veto','Muon_looseId==1 && Muon_pt>10').Filter('Sum(muon_veto==1)==0','veto loose id muons above 10GeV')
+    ggH_antiID=ggH_antiID.Define('electron_veto','Electron_cutBased==2 && Electron_pt>15').Filter('Sum(electron_veto==1)==0','veto loose id electrons above 15GeV')
+    ggH_antiID=ggH_antiID.Define('muon_veto','Muon_looseId==1 && Muon_pt>10').Filter('Sum(muon_veto==1)==0','veto loose id muons above 10GeV')
     
     #exactly 3 photons
     ggH3g=ggH.Filter('Sum(Photon_ID==1)==3','exactly 3 ID photon')
@@ -92,11 +92,11 @@ def ggH(data,phi_mass=[5,10,20,30]):
         ggH3g=ggH3g.Define('best_3g_corr_mass_m{}'.format(mass),'raw_best_3g_m{}[13]'.format(mass))
         
     #blinding region for data samples only
-    ggH3g=ggH3g.Define('non_MC_cut','sample_isMC==0 && best_3g_raw_mass_m30<30|best_3g_raw_mass_m30>140')
+    ggH3g=ggH3g.Define('non_MC_cut','sample_isMC==0 && best_3g_raw_mass_m30<30|best_3g_raw_mass_m30>140') 
     ggH3g=ggH3g.Filter('sample_isMC==1 | non_MC_cut==1','blinding data samples')
    
     #exactly 3 photons: two good and one failing ID
-    ggH3g_antiID=ggH3g_antiID.Filter('Sum(Photon_ID==1)==2 && Sum(Photon_ID==0)==1','exactly 2 ID photon and 1 fail ID photon')
+    ggH3g_antiID=ggH_antiID.Filter('Sum(Photon_ID==1)==2 && Sum(Photon_ID==0)==1','exactly 2 ID photon and 1 fail ID photon')
     ggH3g_antiID=ggH3g_antiID.Define('good_photons','Photon_ID==1|Photon_ID==0')
     ggH3g_antiID=ggH3g_antiID.Define("m_3g", "InvariantMass(Photon_pt[good_photons], Photon_eta[good_photons], Photon_phi[good_photons], Photon_mass[good_photons])")
     for mass in phi_mass:
@@ -147,13 +147,47 @@ def ggH(data,phi_mass=[5,10,20,30]):
     #blinding region for data samples only
     ggH4g=ggH4g.Define('non_MC_cut','sample_isMC==0 && best_4g_uncorr_mass_m30<90|best_4g_uncorr_mass_m30>150')
     ggH4g=ggH4g.Filter('sample_isMC==1 | non_MC_cut==1','blinding data samples')
-    
-    
-    actions.append(ggH4g.Snapshot('ggH4g','ggH4g.root',"best_4g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
-    actions.append(ggH3g.Snapshot('ggH3g','ggH3g.root',"best_3g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
-    actions.append(ggH3g_antiID.Snapshot('ggH3g_antiID','ggH3g_antiID.root',"best_3g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
 
-    #r=ggH.Report()
+    #at least 4 photons with exactly one anti ID photon
+    ggH4g_antiID=ggH_antiID.Filter('Sum(Photon_ID==1)>2 && Sum(Photon_ID==0)==1','at least 3 ID photon and exactly one fail ID photon')
+    ggH4g_antiID=ggH4g_antiID.Define('good_photons','Photon_ID==1|Photon_ID==0')
+    ggH4g_antiID=ggH4g_antiID.Define("m_4g", "InvariantMass(Photon_pt[good_photons], Photon_eta[good_photons], Photon_phi[good_photons], Photon_mass[good_photons])")
+    for mass in phi_mass:
+        ggH4g_antiID=ggH4g_antiID.Define('raw_best_4g_m{}'.format(mass),"best_4gamma(Photon_pt[good_photons],Photon_eta[good_photons],Photon_phi[good_photons],Photon_isScEtaEB[good_photons], Photon_isScEtaEE[good_photons],{})".format(float(mass)))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi1_gamma1_pt_m{}'.format(mass),'raw_best_4g_m{}[0]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi1_gamma1_eta_m{}'.format(mass),'raw_best_4g_m{}[1]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi1_gamma1_phi_m{}'.format(mass),'raw_best_4g_m{}[2]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi1_gamma2_pt_m{}'.format(mass),'raw_best_4g_m{}[3]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi1_gamma2_eta_m{}'.format(mass),'raw_best_4g_m{}[4]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi1_gamma2_phi_m{}'.format(mass),'raw_best_4g_m{}[5]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi1_dxy_m{}'.format(mass),'raw_best_4g_m{}[6]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi1_valid_m{}'.format(mass),'raw_best_4g_m{}[7]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi2_gamma1_pt_m{}'.format(mass),'raw_best_4g_m{}[8]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi2_gamma1_eta_m{}'.format(mass),'raw_best_4g_m{}[9]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi2_gamma1_phi_m{}'.format(mass),'raw_best_4g_m{}[10]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi2_gamma2_pt_m{}'.format(mass),'raw_best_4g_m{}[11]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi2_gamma2_eta_m{}'.format(mass),'raw_best_4g_m{}[12]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi2_gamma2_phi_m{}'.format(mass),'raw_best_4g_m{}[13]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi2_dxy_m{}'.format(mass),'raw_best_4g_m{}[14]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi2_valid_m{}'.format(mass),'raw_best_4g_m{}[15]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi1_mass_m{}'.format(mass),'raw_best_4g_m{}[16]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi2_mass_m{}'.format(mass),'raw_best_4g_m{}[17]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_uncorr_mass_m{}'.format(mass),'raw_best_4g_m{}[18]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_corr_mass_m{}'.format(mass),'raw_best_4g_m{}[19]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_idx1_m{}'.format(mass),'raw_best_4g_m{}[20]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_idx2_m{}'.format(mass),'raw_best_4g_m{}[21]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_idx3_m{}'.format(mass),'raw_best_4g_m{}[22]'.format(mass))
+        ggH4g_antiID=ggH4g_antiID.Define('best_4g_idx4_m{}'.format(mass),'raw_best_4g_m{}[23]'.format(mass))
+    
+    ggH4g_antiID=ggH4g_antiID.Define('best_4g_includes_failID_m30','Photon_ID[best_4g_idx1_m30]==0|Photon_ID[best_4g_idx2_m30]==0|Photon_ID[best_4g_idx3_m30]==0|Photon_ID[best_4g_idx4_m30]==0')
+    ggH4g_antiID=ggH4g_antiID.Filter('best_4g_includes_failID_m30==1','fit keeps one fail ID photon')
+
+    actions.append(ggH4g.Snapshot('ggH4g','ggH4g.root',"gen.*|best_4g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
+    actions.append(ggH3g.Snapshot('ggH3g','ggH3g.root',"gen.*|best_3g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
+    actions.append(ggH3g_antiID.Snapshot('ggH3g_antiID','ggH3g_antiID.root',"gen.*|best_3g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
+    actions.append(ggH4g_antiID.Snapshot('ggH4g_antiID','ggH4g_antiID.root',"gen.*|best_4g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
+
+    #r=ggH4g_antiID.Report()
     #r.Print()
 
     return actions
