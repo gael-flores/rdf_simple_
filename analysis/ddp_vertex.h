@@ -665,7 +665,7 @@ RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
 
   RVec<RVecF> all_combos;
   RVecF result;
-  result.reserve(20);
+  result.reserve(24);
   auto idx_cmb = ROOT::VecOps::Combinations(pt, 4);
   VertexCalculator *calc = new VertexCalculator();
   std::vector<float> best23_A;
@@ -762,6 +762,11 @@ RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
     ROOT::Math::PtEtaPhiMVector pc2(best_B[0],best_B[1],best_B[2],0.0);
     ROOT::Math::PtEtaPhiMVector pc3(best_B[3],best_B[4],best_B[5],0.0);
     result.emplace_back((pc0+pc1+pc2+pc3).M());
+    //indices of used photons
+    result.emplace_back(i1);
+    result.emplace_back(i2);
+    result.emplace_back(i3);
+    result.emplace_back(i4);
     all_combos.emplace_back(result);
   }
   delete calc;  
