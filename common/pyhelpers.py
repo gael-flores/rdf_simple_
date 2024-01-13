@@ -60,7 +60,8 @@ def createDataSet(sample,splitFactor=0,processPart=0,locator='root://cms-xrd-glo
         fileNames = spec['files']
         splitFileNames = list(split(fileNames,splitFactor))[processPart]
         print('split file names')
-        print(splitFileNames)
+        for s in splitFileNames:
+            print(s)
         spec['files']=splitFileNames
         return spec
         
