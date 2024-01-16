@@ -51,6 +51,42 @@ RVec<size_t> best_z(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecI charge)
   return result;
 }
 
+
+RVec<bool> overlapClean(RVecF gphi, RVecF geta, RVecF lphi, RVecF leta, RVecF lID){
+  RVec<bool> out;
+  out.reserve(gphi.size());
+  for (size_t i = 0; i < gphi.size(); i++){
+    bool overlap = false;
+    for (size_t j = 0; j < lphi.size(); j++){
+      if (lID[j]){
+	if (pow(DeltaPhi(gphi[i], lphi[j]),2)/0.5 + pow(abs(geta[i] - leta[j]), 2)/0.4 < 1){
+	  overlap = true;
+	  break;
+	}
+      }
+    }
+    out.emplace_back(overlap);
+  }
+  return out;
+}
+
+RVecF best_Z_info(RVecF pt, RVecF eta, RVecF phi, RVecF mass, const RVec<size_t>& idx){
+ 
+  RVecF out;
+  out.reserve(6);
+  size_t id1 = idx[0];
+  size_t id2 = idx[1];
+  ROOT::Math::PtEtaPhiMVector p0(pt[id1], eta[id1], phi[id1], mass[id1]);
+  ROOT::Math::PtEtaPhiMVector p1(pt[id2], eta[id2], phi[id2], mass[id2]);
+  out.emplace_back((p0+p1).pt());
+  out.emplace_back((p0+p1).eta());
+  out.emplace_back((p0+p1).phi());
+  out.emplace_back((p0+p1).mass());
+  out.emplace_back(DeltaR(eta[id1], eta[id2], phi[id1], phi[id2]));
+  out.emplace_back(DeltaPhi(phi[id1], phi[id2]));
+  return out;
+}
+
 RVecF correct_gammaIso_for_muons_and_photons(const RVec<size_t>& idx,RVecF mpt, RVecF meta, RVecF mphi,RVecF gpt, RVecF geta, RVecF gphi,RVecF giso,RVec<bool> gID) {
   RVecF result;  
   result.reserve(gpt.size());
