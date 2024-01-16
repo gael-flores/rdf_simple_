@@ -1,7 +1,7 @@
 import ROOT
 # Enable multi-threading
-ROOT.ROOT.EnableImplicitMT()
-#ROOT.ROOT.DisableImplicitMT()
+#ROOT.ROOT.EnableImplicitMT(4)
+ROOT.ROOT.DisableImplicitMT()
 ROOT.gInterpreter.Declare('#include "common/chelpers.h"')
 from common.pyhelpers import *
 
