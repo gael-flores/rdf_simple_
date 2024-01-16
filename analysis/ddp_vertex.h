@@ -425,13 +425,13 @@ RVecF best_2gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
     
 
     RVecF result;
-    result.reserve(9);
+    result.reserve(11);
     VertexCalculator *calc = new VertexCalculator();
     //four vector
-    ROOT::Math::PtEtaPhiMVector p0(pt[0],eta[0],phi[0],0.0);
-    ROOT::Math::PtEtaPhiMVector p1(pt[1],eta[1],phi[1],0.0);
+    ROOT::Math::PtEtaPhiMVector p0(pt[i1],eta[i1],phi[i1],0.0);
+    ROOT::Math::PtEtaPhiMVector p1(pt[i2],eta[i2],phi[i2],0.0);
     float raw_m = (p0+p1).M();
-    std::vector<float> kin_fit= calc->getVertexInfo(pt[0],eta[0],phi[0],EE[0],EB[0],pt[1],eta[1],phi[1],EE[1],EB[1],mass); 
+    std::vector<float> kin_fit= calc->getVertexInfo(pt[i1],eta[i1],phi[i1],EE[i1],EB[i1],pt[i2],eta[i2],phi[i2],EE[i2],EB[i2],mass); 
     delete calc;
     result.emplace_back(kin_fit[0]);
     result.emplace_back(kin_fit[1]);
@@ -442,6 +442,8 @@ RVecF best_2gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
     result.emplace_back(kin_fit[6]);
     result.emplace_back(kin_fit[7]);
     result.emplace_back(raw_m);
+    result.emplace_back(i1);
+    result.emplace_back(i2);
     all_combos.emplace_back(result);
   }
   auto sortedIndices = ROOT::VecOps::Argsort(all_combos,compare_pair);
