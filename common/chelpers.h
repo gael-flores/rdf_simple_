@@ -87,30 +87,38 @@ RVecF best_Z_info(RVecF pt, RVecF eta, RVecF phi, RVecF mass, const RVec<size_t>
   return out;
 }
 
-RVecF correct_gammaIso_for_muons_and_photons(const RVec<size_t>& idx,RVecF mpt, RVecF meta, RVecF mphi,RVecF gpt, RVecF geta, RVecF gphi,RVecF giso,RVec<bool> gID) {
+RVecF correct_gammaIso_for_muons(const RVec<size_t>& idx,RVecF mpt, RVecF meta, RVecF mphi,RVecF gpt, RVecF geta, RVecF gphi,RVecF giso,RVec<bool> fsr) {
   RVecF result;  
   result.reserve(gpt.size());
   //add the FSR
   
   for(size_t i=0;i<gpt.size();++i) {
     float iso=giso[i]*gpt[i];
-    if (DeltaR(geta[i],meta[idx[0]],gphi[i],mphi[idx[0]])<0.3)
-      iso=iso-mpt[idx[0]];
-    if (DeltaR(geta[i],meta[idx[1]],gphi[i],mphi[idx[1]])<0.3)
-      iso=iso-mpt[idx[1]];
-    for(size_t j=0;j<gpt.size();++j) {
-      if ((i==j)||gID[j]==0)
-	continue;
-      if (DeltaR(geta[i],geta[j],gphi[i],gphi[j])<0.3)
-	iso=iso-gpt[j];
+    if (fsr[i]){
+      if (DeltaR(geta[i],meta[idx[0]],gphi[i],mphi[idx[0]])<0.3)
+	iso=iso-mpt[idx[0]];
+      if (DeltaR(geta[i],meta[idx[1]],gphi[i],mphi[idx[1]])<0.3)
+	iso=iso-mpt[idx[1]];
     }
-    
+   
     if(iso<0)
       iso=0;
     result.emplace_back(iso/gpt[i]);
   }
   return result;
 }
+
+RVecF correct_gammaIso_for_photons(const int idx1, const int idx2, RVecF gpt, RVecF geta, RVecF gphi, RVecF giso) {
+  RVecF result = giso;  
+  if (DeltaR(geta[idx1], geta[idx2], gphi[idx1], gphi[idx2]) < 0.3){
+    float iso1 = giso[idx1]*gpt[idx1];
+    float iso2 = giso[idx2]*gpt[idx2];
+    result[idx1] = (iso1 - gpt[idx2])/gpt[idx1] > 0.0 ? (iso1 - gpt[idx2])/gpt[idx1] : 0.0;
+    result[idx2] = (iso2 - gpt[idx1])/gpt[idx2] > 0.0 ? (iso2 - gpt[idx1])/gpt[idx2] : 0.0;
+  }
+  return result;
+}
+
 
 RVecF correct_gammaIso(const RVecF& gpt, const RVecF& geta, const RVecF& gphi, const RVecF& giso, const RVec<bool>& gID) {
   RVecF result;
@@ -149,7 +157,7 @@ RVecF correct_muoniso_for_photons(RVecF mpt, RVecF meta, RVecF mphi,RVecF miso,R
       if (gFSR[j]==0)
 	continue;
       
-      if (DeltaR(meta[i],geta[j],mphi[i],gphi[j])<0.3)
+      if (DeltaR(meta[i],geta[j],mphi[i],gphi[j])<0.4)
 	iso=iso-gpt[j];
     }
     if(iso<0)
@@ -172,7 +180,7 @@ RVec<bool> fsr_recovery(const RVec<size_t>& idx,RVecF mpt, RVecF meta, RVecF mph
    //add the FSR
    for(size_t i=0;i<gpt.size();++i) {
      bool keep=false;
-     if ((DeltaR(geta[i],meta[idx[0]],gphi[i],mphi[idx[0]])<0.5 ||DeltaR(geta[i],meta[idx[1]],gphi[i],mphi[idx[1]])<0.5)&&gID[i]==1) {
+     if (gID[i]==1) {
        ROOT::Math::PtEtaPhiMVector gamma(gpt[i], geta[i], gphi[i],0);
        float m_fsr = (Z+gamma).M();
        if(std::abs(m_fsr-Z_mass)<std::abs(m-Z_mass)) {
