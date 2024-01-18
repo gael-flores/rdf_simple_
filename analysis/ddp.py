@@ -24,12 +24,13 @@ def electronAna(dataframe):
 # Must run muon + electron analyzer first to do overlap with loose leptons
 def photonAna(dataframe):
 
-    # Photon Preselection criteria
-    photons = dataframe.Define("Photon_preselection", "Photon_pt>20&&!Photon_pixelSeed&&abs(Photon_eta)<2.5&&(abs(Photon_eta)>1.57||abs(Photon_eta)<1.44)")
-
-    photons = photons.Define("Photon_muOverlap", "overlapClean(Photon_phi, Photon_eta, Muon_phi, Muon_eta, loose_muon)")
+    # Overlap with loose leptons
+    photons = dataframe.Define("Photon_muOverlap", "overlapClean(Photon_phi, Photon_eta, Muon_phi, Muon_eta, loose_muon)")
     photons = photons.Define("Photon_eleOverlap", "overlapClean(Photon_phi, Photon_eta, Electron_phi, Electron_eta, loose_electrons)")
     photons = photons.Define("Photon_overlap", "Photon_muOverlap||Photon_eleOverlap")
+
+    # Photon Preselection criteria
+    photons = photons.Define("Photon_preselection", "Photon_pt>20&&!Photon_pixelSeed&&abs(Photon_eta)<2.5&&(abs(Photon_eta)>1.57||abs(Photon_eta)<1.44)&&!Photon_overlap&&(Photon_isScEtaEE||Photon_isScEtaEB)")
 
     # Common Photon ID definitions (No isolation)
     photons = photons.Define("Photon_IDNoIso","((Photon_isScEtaEB&&Photon_hoe<0.04596&&Photon_sieie<0.0106)||(Photon_isScEtaEE&&Photon_hoe<0.0590&&Photon_sieie<0.0272))").Filter('Sum(Photon_IDNoIso)>0','At least one ID No Iso Photon')
@@ -262,41 +263,43 @@ def zmumuH(data,phi_mass=[5,10,20,30]):
     zmm = electronAna(zmm)
     #Look for + and - muons
     zmm = zmm.Filter("Sum(Muon_charge[loose_muon]==1)>0 && Sum(Muon_charge[loose_muon]==-1)>0","At least one opposite sign muon pair")
-    #create the best Zmumu candidate 
+    #create the best Zmumu candidate and filter
     zmm = makeZ(zmm, "Muon")  
+    zmm = zmm.Filter("Z_mass>70&&Z_mass<110")
     #Apply Thresholds to the muon pts
-    zmm = zmm.Filter("(tight_muon[Z_idx[0]]||tight_muon[Z_idx[1]])&&(Muon_pt[Z_idx[0]]>25||Muon_pt[Z_idx[1]]>25)")
+    ptThresh = 28 if data['era']=='2017' else 25
+    zmm = zmm.Filter("(tight_muon[Z_idx[0]]||tight_muon[Z_idx[1]])&&(Muon_pt[Z_idx[0]]>{p}||Muon_pt[Z_idx[1]]>{p})".format(p=ptThresh))
+
     #require just a super cluster
     zmm = zmm.Filter("nPhoton>0","At least one super cluster")
     
     #Apply photon ID (no ISO)
     zmm = photonAna(zmm)
 
-    #Correct Photon Isolation for both muons and photons
-    zmm=zmm.Define("Photon_corrIso","correct_gammaIso_for_muons_and_photons(Z_idx,Muon_pt,Muon_eta,Muon_phi,Photon_pt,Photon_eta,Photon_phi,Photon_pfRelIso03_all,Photon_IDNoIso)")
-    #Define ID and isolation
-    zmm=zmm.Define("Photon_ID","Photon_IDNoIso==1 &&Photon_corrIso<0.1")
-    #At least one Photon
-    zmm=zmm.Filter('Sum(Photon_ID==1)>0','At least one ID photon')
-    #FSR recovery
-    zmm=zmm.Define("fsr","fsr_recovery(Z_idx,Muon_pt[loose_muon], Muon_eta[loose_muon], Muon_phi[loose_muon], Muon_mass[loose_muon],Photon_pt,Photon_eta,Photon_phi,Photon_ID)");
-    #Correct Muon isolation for photons
-    zmm=zmm.Define("corr_muon_iso","correct_muoniso_for_photons(Muon_pt, Muon_eta,Muon_phi,Muon_pfRelIso04_all,Photon_pt,Photon_eta,Photon_phi,fsr)");
-    zmm = zmm.Define("Muon_pfIsoId_corr", "1*corr_muon_iso<0.4+1*corr_muon_iso<.25+1*corr_muon_iso<.20+1*corr_muon_iso<.15+1*corr_muon_iso<.10+1*corr_muon_iso<.05")
-    zmm = zmm.Define("Muon_isLoose_corr", "loose_muon&&Muon_pfIsoId_corr>1")
-    zmm = zmm.Define("Muon_isTight_corr", "tight_muon&&Muon_pfIsoId_corr>3")
+    # FSR Recovery with loose muons and preselection photons
+    zmm=zmm.Define("Photon_isFSR","fsr_recovery(Z_idx,Muon_pt[loose_muon], Muon_eta[loose_muon], Muon_phi[loose_muon], Muon_mass[loose_muon],Photon_pt,Photon_eta,Photon_phi,Photon_preselection)");
+    # Correct isolation for FSR
+    zmm = zmm.Define("Muon_pfRelIso04_fsrCorr", "correct_muoniso_for_photons(Muon_pt, Muon_eta,Muon_phi,Muon_pfRelIso04_all,Photon_pt,Photon_eta,Photon_phi,Photon_isFSR)")
+    zmm = zmm.Define("Photon_pfRelIso03_fsrCorr", "correct_gammaIso_for_muons(Z_idx, Muon_pt, Muon_eta, Muon_phi, Photon_pt, Photon_eta, Photon_phi, Photon_pfRelIso03_all, Photon_isFSR)")
+    # Defining muon ID after FSR
+    zmm = zmm.Define("Muon_isLoose_corr", "loose_muon&&Muon_pfRelIso04_fsrCorr<.25")
+    zmm = zmm.Define("Muon_isTight_corr", "tight_muon&&Muon_pfRelIso04_fsrCorr<.15")
     #Now cut on the ll+gamma mass around the Z 
-    zmm=zmm.Define("llgamma_mass","calculate_llgamma_mass(Z_idx,Muon_pt[loose_muon], Muon_eta[loose_muon], Muon_phi[loose_muon], Muon_mass[loose_muon],Photon_pt,Photon_eta,Photon_phi, fsr)").Filter('llgamma_mass>75&&llgamma_mass<115','Z+gamma mass near the Z')
-    #Define good photons
-    zmm=zmm.Define('good_photons','fsr==0&&Photon_ID==1')
+    zmm=zmm.Define("llgamma_mass","calculate_llgamma_mass(Z_idx,Muon_pt[loose_muon], Muon_eta[loose_muon], Muon_phi[loose_muon], Muon_mass[loose_muon],Photon_pt,Photon_eta,Photon_phi, Photon_isFSR)")
+    
+    # Define loose photons: passing preselection and not FSR tagged
+    zmm = zmm.Define("Photon_isLoose", "Photon_preselection==1&&Photon_isFSR==0")
+
+    #At least one Photon
+    zmm = zmm.Filter('Sum(Photon_isLoose==1)>0','At least one ID photon')
 
     ##### gamma gamma +X analysis ######
     ####################################
 
     #Al least Two good photons
-    zmm2g=zmm.Filter('Sum(good_photons)>1','At least 2 good no FSR photons')
+    zmm2g=zmm.Filter('Sum(Photon_isLoose==1)>1','At least 2 good no FSR photons')
     for mass in phi_mass:
-        zmm2g=zmm2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt[good_photons],Photon_eta[good_photons],Photon_phi[good_photons],Photon_isScEtaEB[good_photons], Photon_isScEtaEE[good_photons],{})'.format(float(mass)))
+        zmm2g=zmm2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt[Photon_isLoose],Photon_eta[Photon_isLoose],Photon_phi[Photon_isLoose],Photon_isScEtaEB[Photon_isLoose], Photon_isScEtaEE[Photon_isLoose],{})'.format(float(mass)))
         zmm2g=zmm2g.Define('best_2g_gamma1_pt_m{}'.format(mass),'raw_best_2g_m{}[0]'.format(mass))
         zmm2g=zmm2g.Define('best_2g_gamma1_eta_m{}'.format(mass),'raw_best_2g_m{}[1]'.format(mass))
         zmm2g=zmm2g.Define('best_2g_gamma1_phi_m{}'.format(mass),'raw_best_2g_m{}[2]'.format(mass))
@@ -308,14 +311,16 @@ def zmumuH(data,phi_mass=[5,10,20,30]):
         zmm2g=zmm2g.Define('best_2g_raw_mass_m{}'.format(mass),'raw_best_2g_m{}[8]'.format(mass))
         zmm2g=zmm2g.Define('best_2g_idx1_m{}'.format(mass),'raw_best_2g_m{}[9]'.format(mass))
         zmm2g=zmm2g.Define('best_2g_idx2_m{}'.format(mass),'raw_best_2g_m{}[10]'.format(mass))
-        zmm2g=zmm2g.Define('best_2g_sumID_m{}'.format(mass), 'Photon_ID[best_2g_idx1_m{m}]+Photon_ID[best_2g_idx2_m{m}]'.format(m=mass))
+        zmm2g=zmm2g.Define("Photon_corrIso_m{}".format(mass), "correct_gammaIso_for_photons(best_2g_idx1_m{m}, best_2g_idx2_m{m}, Photon_pt, Photon_eta, Photon_phi, Photon_pfRelIso03_all)".format(m=mass))
+        zmm2g = zmm2g.Define("Photon_ID_m{}".format(mass), "Photon_isLoose&&Photon_corrIso_m{}<0.1&&Photon_IDNoIso".format(mass))
+        zmm2g=zmm2g.Define('best_2g_sumID_m{}'.format(mass), 'Photon_ID_m{m}[best_2g_idx1_m{m}]+Photon_ID_m{m}[best_2g_idx2_m{m}]'.format(m=mass))
     
     ##### 3 gamma analysis ######
     #Targets events where one two photons are merged
     ####################################
-    zmm3g=zmm.Filter('Sum(good_photons)==3','Exactly three no FSR photons')
+    zmm3g=zmm.Filter('Sum(Photon_isLoose)==3','Exactly three no FSR photons')
     for mass in phi_mass:
-        zmm3g=zmm3g.Define('raw_best_3g_m{}'.format(mass),'best_3gamma(Photon_pt[good_photons],Photon_eta[good_photons],Photon_phi[good_photons],Photon_isScEtaEB[good_photons], Photon_isScEtaEE[good_photons],{})'.format(float(mass)))
+        zmm3g=zmm3g.Define('raw_best_3g_m{}'.format(mass),'best_3gamma(Photon_pt[Photon_isLoose],Photon_eta[Photon_isLoose],Photon_phi[Photon_isLoose],Photon_isScEtaEB[Photon_isLoose], Photon_isScEtaEE[Photon_isLoose],{})'.format(float(mass)))
         zmm3g=zmm3g.Define('best_3g_phi_gamma1_pt_m{}'.format(mass),'raw_best_3g_m{}[0]'.format(mass))
         zmm3g=zmm3g.Define('best_3g_phi_gamma1_eta_m{}'.format(mass),'raw_best_3g_m{}[1]'.format(mass))
         zmm3g=zmm3g.Define('best_3g_phi_gamma1_phi_m{}'.format(mass),'raw_best_3g_m{}[2]'.format(mass))
@@ -336,10 +341,10 @@ def zmumuH(data,phi_mass=[5,10,20,30]):
     ##### 4 gamma  analysis       ######
     ####################################
     #Four good photons
-    zmm4g=zmm.Filter('Sum(good_photons)>3','At least 4 good no FSR photons')
+    zmm4g=zmm.Filter('Sum(Photon_isLoose)>3','At least 4 good no FSR photons')
     #Pick the best combination dependening on the mass
     for mass in phi_mass:
-        zmm4g=zmm4g.Define('raw_best_4g_m{}'.format(mass),'best_4gamma(Photon_pt[good_photons],Photon_eta[good_photons],Photon_phi[good_photons],Photon_isScEtaEB[good_photons], Photon_isScEtaEE[good_photons],{})'.format(float(mass)))
+        zmm4g=zmm4g.Define('raw_best_4g_m{}'.format(mass),'best_4gamma(Photon_pt[Photon_isLoose],Photon_eta[Photon_isLoose],Photon_phi[Photon_isLoose],Photon_isScEtaEB[Photon_isLoose], Photon_isScEtaEE[Photon_isLoose],{})'.format(float(mass)))
         zmm4g=zmm4g.Define('best_4g_phi1_gamma1_pt_m{}'.format(mass),'raw_best_4g_m{}[0]'.format(mass))
         zmm4g=zmm4g.Define('best_4g_phi1_gamma1_eta_m{}'.format(mass),'raw_best_4g_m{}[1]'.format(mass))
         zmm4g=zmm4g.Define('best_4g_phi1_gamma1_phi_m{}'.format(mass),'raw_best_4g_m{}[2]'.format(mass))
@@ -362,7 +367,7 @@ def zmumuH(data,phi_mass=[5,10,20,30]):
         zmm4g=zmm4g.Define('best_4g_corr_mass_m{}'.format(mass),'raw_best_4g_m{}[19]'.format(mass))
      
         
-    actions.append(zmm2g.Snapshot('zmm2g','zmm2g.root',"best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z_.*|Weight.*|^Gen.*|^weight.*"))
+    actions.append(zmm2g.Snapshot('zmm2g','zmm2g.root',"best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z_.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*"))
     actions.append(zmm3g.Snapshot('zmm3g','zmm3g.root',"best_3g.*|sample_.*|^Photon_.*|^Muon_.*|^Z_.*|Weight.*|^Gen.*|^weight.*"))
     actions.append(zmm4g.Snapshot('zmm4g','zmm4g.root',"best_4g.*|sample_.*|^Photon_.*|^Muon_.*|^Z_.*|Weight.*|^Gen.*|^weight.*"))
     for tree in ['Runs']:

@@ -66,6 +66,21 @@ TVector3 propToEcal(const double eta, const double phi, const int isEE, const in
     float y = sin(phi) * r;
     out.SetXYZ(x, y, ecal_z);
   }
+  else{ // Cases where both isEE an isEB==false
+    if (abs(eta) < 1.45){ // Treat as barrel
+      float r = 137;
+      float x = cos(phi) * r;
+      float y = sin(phi) * r;
+      out.SetXYZ(x, y, ecal_z);
+    }
+    else{ // Treat as endcap
+      ecal_z = 324*ecal_z/abs(ecal_z);
+      float r = ecal_z * tan(theta);
+      float dx = cos(phi) * r;
+      float dy = sin(phi) * r;
+      out.SetXYZ(dx, dy, ecal_z);
+    }
+  }
   return out;
 }
 

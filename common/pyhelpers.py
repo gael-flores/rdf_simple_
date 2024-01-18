@@ -9,6 +9,7 @@ def load_meta_data(data):
     #dataframe=dataframe.DefinePerSample('HLTstring','rdfsampleinfo_.GetS("trigger")')
     dataframe['Events']=dataframe['Events'].Define('HLT_passed',data['trigger']) #need to fix to suppport trigger/amples!!!!
     dataframe['Events']=dataframe['Events'].Define('sample_isMC',str(data['isMC']))
+    dataframe['era'] = data['era']
     #get the list of meta keys
     meta_keys =data.keys()
     for key in meta_keys:
@@ -45,6 +46,10 @@ def loadSample(info,locator='root://cms-xrd-global.cern.ch//'):
         if tag not in ['dataset','triggers','veto_triggers']:
             meta[tag]=data
     meta['files'] = files        
+    if 'era' in info.keys():
+        meta['era'] = info['era']
+    else:
+        meta['era'] = '2018' # Assume 2018 if not included
     return meta
 
 
