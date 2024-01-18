@@ -326,20 +326,6 @@ void runPtEtaPhi(const double pt1, const double eta1, const double phi1, const i
     ROOT::Math::PtEtaPhiMVector p4_1(pt1, eta1, phi1, 0);
     ROOT::Math::PtEtaPhiMVector p4_2(pt2, eta2, phi2, 0);
     run(v1, v2, p4_1.energy(), p4_2.energy(), mass);
-    if (v1.Perp()>150) {
-      printf("\n perp1: %f, coords:%f,%f,%f",v1.Perp(),v1.X(),v1.Y(),v1.Z());
-      printf("\npt1:%f",pt1);
-      printf("\neta1:%f",eta1);
-      printf("\nphi1:%f",phi1);
-      printf("\nisEE1:%i",isEE1);
-      printf("\nisEB1:%i",isEB1);
-      printf("\n perp2: %f, coords:%f,%f,%f",v2.Perp(),v2.X(),v2.Y(),v2.Z());
-      printf("\npt2:%f",pt2);
-      printf("\neta2:%f",eta2);
-      printf("\nphi2:%f",phi2);
-      printf("\nisEE2:%i",isEE2);
-      printf("\nisEB2:%i",isEB2);
-    }
     return;
 }
 
