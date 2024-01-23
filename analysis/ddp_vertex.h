@@ -396,14 +396,14 @@ bool compare_pair(const RVecF& q1,const RVecF& q2) {
   ROOT::Math::PtEtaPhiMVector p2_1(q2[3],q2[4],q2[5],0.0);
   ROOT::Math::PtEtaPhiMVector p2 = p2_0+p2_1;
   
-  if (mass1>mass2)
+  if (valid1>valid2)
     return true;
-  else if (mass1<mass2)
+  else if (valid1<valid2)
     return false;
   else {
-    if (valid1>valid2)
+    if (mass1>mass2)
       return true;
-    else if (valid1<valid2)
+    else if (mass1<mass2)
       return false;
     else {
       if (valid1==1) {
@@ -431,21 +431,89 @@ bool compare_pair(const RVecF& q1,const RVecF& q2) {
 
 }
 
-RVecF best_2gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,float mass) {
+bool compare_pair_withId(const RVecF& q1,const RVecF& q2) {
+  //first invariant mass of pairs
+  unsigned int mass1 = q1[8]<65. ? 1:0;
+  unsigned int mass2 = q2[8]<65 ? 1:0;
+
+  unsigned int valid1 = q1[7]>0 ? 1:0;
+  unsigned int valid2 = q2[7]>0 ? 1:0;
+
+  unsigned int dxy1   = q1[6]>-8 ? 1:0;
+  unsigned int dxy2   = q2[6]>-8 ? 1:0;
+
+  unsigned int id1 = q1[13] + q1[14];
+  unsigned int id2 = q2[13] + q2[14];
+
+  ROOT::Math::PtEtaPhiMVector p1_0(q1[0],q1[1],q1[2],0.0);
+  ROOT::Math::PtEtaPhiMVector p1_1(q1[3],q1[4],q1[5],0.0);
+  ROOT::Math::PtEtaPhiMVector p1 = p1_0+p1_1;
+
+  ROOT::Math::PtEtaPhiMVector p2_0(q2[0],q2[1],q2[2],0.0);
+  ROOT::Math::PtEtaPhiMVector p2_1(q2[3],q2[4],q2[5],0.0);
+  ROOT::Math::PtEtaPhiMVector p2 = p2_0+p2_1;
+  
+  if (valid1>valid2)
+    return true;
+  else if (valid1<valid2)
+    return false;
+  else {
+    if (id1 > id2)
+      return true;
+    else if (id2 > id1)
+      return false;
+    else {
+      if (mass1>mass2)
+	return true;
+      else if (mass1<mass2)
+	return false;
+      else {
+	if (valid1==1) {
+	  if(dxy1>dxy2)
+	    return true;
+	  else if (dxy1<dxy2)
+	    return false;
+	  else {
+	    if(p1.pt()>p2.pt())
+	      return true;
+	    else
+	      return false;
+	  }
+	}
+	else {
+	  if(p1.pt()>p2.pt())
+	    return true;
+	  else
+	    return false;
+	}
+      }
+    }
+  }
+}
+
+RVecF best_2gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE, RVecI isLoose, RVecI gID, RVecF gIso, float mass) {
   RVec<RVecF> all_combos;
   auto idx_cmb = ROOT::VecOps::Combinations(pt, 2);
   for (size_t i = 0; i < idx_cmb[0].size(); i++) {
     const auto i1 = idx_cmb[0][i];
     const auto i2 = idx_cmb[1][i];
     
+    if (!(isLoose[i1] && isLoose[i2]))
+      continue;
 
     RVecF result;
-    result.reserve(11);
+    result.reserve(16);
     VertexCalculator *calc = new VertexCalculator();
     //four vector
     ROOT::Math::PtEtaPhiMVector p0(pt[i1],eta[i1],phi[i1],0.0);
     ROOT::Math::PtEtaPhiMVector p1(pt[i2],eta[i2],phi[i2],0.0);
     float raw_m = (p0+p1).M();
+    float iso1 = gIso[i1];
+    float iso2 = gIso[i2];
+    if (DeltaR(eta[i1], eta[i2], phi[i1], phi[i2]) < 0.3){
+      iso1 = iso1 - pt[i2]/pt[i1] > 0 ? iso1 - pt[i2]/pt[i1] : 0.0 ;
+      iso2 = iso2 - pt[i1]/pt[i2] > 0 ? iso2 - pt[i1]/pt[i2] : 0.0 ;
+    }
     std::vector<float> kin_fit= calc->getVertexInfo(pt[i1],eta[i1],phi[i1],EE[i1],EB[i1],pt[i2],eta[i2],phi[i2],EE[i2],EB[i2],mass); 
     delete calc;
     result.emplace_back(kin_fit[0]);
@@ -459,9 +527,14 @@ RVecF best_2gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
     result.emplace_back(raw_m);
     result.emplace_back(i1);
     result.emplace_back(i2);
+    result.emplace_back(DeltaPhi(phi[i1], phi[i2]));
+    result.emplace_back(DeltaR(eta[i1], eta[i2], phi[i1], phi[i2]));
+    result.emplace_back(gID[i1] && iso1<0.1);
+    result.emplace_back(gID[i2] && iso2<0.1);
+    result.emplace_back((p0+p1).pt());
     all_combos.emplace_back(result);
   }
-  auto sortedIndices = ROOT::VecOps::Argsort(all_combos,compare_pair);
+  auto sortedIndices = ROOT::VecOps::Argsort(all_combos,compare_pair_withId);
   return all_combos[sortedIndices[0]];
 }
 
