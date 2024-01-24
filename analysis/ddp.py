@@ -106,23 +106,23 @@ def ggH(data,phi_mass,sample):
     ggH=photonAna(ggH)
     
     ggH=ggH.Filter("Sum(loose_muon==1)==0",'muon veto')
-    ggH=ggH.Filter("Sum(loose_electrons==1)==0",'electron veto')
+    ggH=ggH.Filter("Sum(loose_electron==1)==0",'electron veto')
 # Implement matching only for signal efficiency studies    
 #    ggH=ggH.Define('genPhotonDR','minMatchDR(Photon_eta,Photon_phi,GenIsolatedPhoton_eta,GenIsolatedPhoton_phi)')
 #    ggH=ggH.Filter('Sum(genPhotonDR<0.2)>2','At least three matched photons')
 
     #Correct Photon Isolation for photons
-    ggH=ggH.Define("Photon_corrIso","correct_gammaIso(Photon_pt,Photon_eta,Photon_phi,Photon_pfRelIso03_all,Photon_IDNoIso)")
+    ggH=ggH.Define("Photon_corrIso","correct_gammaIso(Photon_pt,Photon_eta,Photon_phi,Photon_pfRelIso03_all,Photon_IdNoIso)")
     
     #Define ID and isolation
-    ggH=ggH.Define("Photon_ID","Photon_IDNoIso==1 &&Photon_corrIso<0.1")
+    ggH=ggH.Define("Photon_ID","Photon_IdNoIso==1 &&Photon_corrIso<0.1")
     ggH=ggH.Define("Photon_antiID","Photon_ID==0 && (Photon_isScEtaEB|Photon_isScEtaEE)")
         
     #Anti-photon RDF
     ggH_antiID = ggH.Filter("Sum(Photon_ID==1)>1 && Sum(Photon_antiID==1)>0 ","at least 2 good and 1 bad photon")
 
     #At least three Photons
-    ggH=ggH.Filter('Sum(Photon_IDNoIso)>2','At least 3 ID No Iso Photon')
+    ggH=ggH.Filter('Sum(Photon_IdNoIso)>2','At least 3 ID No Iso Photon')
     ggH=ggH.Filter('Sum(Photon_ID==1)>2','At least 3 ID photon')
     
     #exactly 3 photons
@@ -383,9 +383,9 @@ def zmumuH(data,phi_mass,sample):
      
         
 
-    actions.append(zmm2g.Snapshot('Events',sample+'_zmm2g.root',"best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z_.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*"))
-    actions.append(zmm3g.Snapshot('Events',sample+'_zmm3g.root',"best_3g.*|sample_.*|^Photon_.*|^Muon_.*|^Z_.*|Weight.*|^Gen.*|^weight.*"))
-    actions.append(zmm4g.Snapshot('Events',sample+'_zmm4g.root',"best_4g.*|sample_.*|^Photon_.*|^Muon_.*|^Z_.*|Weight.*|^Gen.*|^weight.*"))
+    actions.append(zmm2g.Snapshot('Events',sample+'_zmm2g.root',cols))
+    actions.append(zmm3g.Snapshot('Events',sample+'_zmm3g.root',cols))
+    actions.append(zmm4g.Snapshot('Events',sample+'_zmm4g.root',cols))
     for tree in ['Runs']:
         actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm2g.root', "", opts))
         actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm3g.root', "", opts))
@@ -397,8 +397,8 @@ def zmumuH(data,phi_mass,sample):
     
 
 def analysis(data,sample):
-    phi_mass=[5,10,20,30]
-    
+    #phi_mass=[5,10,20,30]
+    phi_mass=[7,15,20,30,40,50,55]
     actions = []
     actions.extend(zmumuH(data,phi_mass,sample))
     actions.extend(zeeH(data,phi_mass,sample))
