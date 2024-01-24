@@ -1,7 +1,7 @@
 import ROOT
 # Enable multi-threading
-#ROOT.ROOT.EnableImplicitMT(4)
-ROOT.ROOT.DisableImplicitMT()
+ROOT.ROOT.EnableImplicitMT()
+#ROOT.ROOT.DisableImplicitMT()
 ROOT.gInterpreter.Declare('#include "common/chelpers.h"')
 from common.pyhelpers import *
 
@@ -21,6 +21,5 @@ from analysis.ddpSamples import analysis_samples
 
 #root://cmsxrootd.fnal.gov//
 data=createDataSet(analysis_samples[args[0]],options.splitFactor,options.processPart,'root://cmsxrootd.fnal.gov//')
-
-analysis(data)
- 
+actions = analysis(data,args[0])
+ROOT.RDF.RunGraphs(actions)
