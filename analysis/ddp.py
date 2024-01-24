@@ -49,7 +49,7 @@ def makeZ(dataframe, lepton):
     Zs = Zs.Define("Z_deltaPhi", "bestZ_info[5]")
     return Zs
 
-def zeeH(data,phi_mass=[5,10,20,30]):
+def zeeH(data,phi_mass,sample):
     actions=[]
 
     #Declare dataframe and load all meta data 
@@ -60,7 +60,7 @@ def zeeH(data,phi_mass=[5,10,20,30]):
 
     return actions
 
-def wenuH(data,phi_mass=[5,10,20,30]):
+def wenuH(data,phi_mass,sample):
     actions=[]
 
     #Declare dataframe and load all meta data 
@@ -71,7 +71,7 @@ def wenuH(data,phi_mass=[5,10,20,30]):
 
     return actions
 
-def wmunuH(data,phi_mass=[5,10,20,30]):
+def wmunuH(data,phi_mass,sample):
     actions=[]
 
     #Declare dataframe and load all meta data 
@@ -82,7 +82,7 @@ def wmunuH(data,phi_mass=[5,10,20,30]):
 
     return actions
 
-def ggH(data,phi_mass=[5,10,20,30]):
+def ggH(data,phi_mass,sample):
     actions=[]
 
     #Declare dataframe and load all meta data 
@@ -230,16 +230,16 @@ def ggH(data,phi_mass=[5,10,20,30]):
     ggH4g_antiID=ggH4g_antiID.Define('best_4g_includes_failID_m30','Photon_antiID[best_4g_idx1_m30]==1|Photon_antiID[best_4g_idx2_m30]==1|Photon_antiID[best_4g_idx3_m30]==1|Photon_antiID[best_4g_idx4_m30]==1')
     ggH4g_antiID=ggH4g_antiID.Filter('best_4g_includes_failID_m30==1','fit keeps one fail ID photon')
 
-    actions.append(ggH4g.Snapshot('Events','ggH4g.root',"gen.*|best_4g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
-    actions.append(ggH3g.Snapshot('Events','ggH3g.root',"gen.*|best_3g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
-    actions.append(ggH3g_antiID.Snapshot('Events','ggH3g_antiID.root',"gen.*|best_3g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
-    actions.append(ggH4g_antiID.Snapshot('Events','ggH4g_antiID.root',"gen.*|best_4g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
+    actions.append(ggH4g.Snapshot('Events',sample+'_ggH4g.root',"gen.*|best_4g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
+    actions.append(ggH3g.Snapshot('Events',sample+'_ggH3g.root',"gen.*|best_3g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
+    actions.append(ggH3g_antiID.Snapshot('Events',sample+'_ggH3g_antiID.root',"gen.*|best_3g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
+    actions.append(ggH4g_antiID.Snapshot('Events',sample+'_ggH4g_antiID.root',"gen.*|best_4g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
 
     for tree in ['Runs']:
-        actions.append(dataframe[tree].Snapshot(tree, "ggH4g.root", "", opts))
-        actions.append(dataframe[tree].Snapshot(tree, "ggH3g.root", "", opts))
-        actions.append(dataframe[tree].Snapshot(tree, "ggH3g_antiID.root", "", opts))
-        actions.append(dataframe[tree].Snapshot(tree, "ggH4g_antiID.root", "", opts))
+        actions.append(dataframe[tree].Snapshot(tree, sample+"_ggH4g.root", "", opts))
+        actions.append(dataframe[tree].Snapshot(tree, sample+"_ggH3g.root", "", opts))
+        actions.append(dataframe[tree].Snapshot(tree, sample+"_ggH3g_antiID.root", "", opts))
+        actions.append(dataframe[tree].Snapshot(tree, sample+"_ggH4g_antiID.root", "", opts))
 
     #r=ggH.Report()
     #r=ggH4g_antiID.Report()
@@ -247,7 +247,7 @@ def ggH(data,phi_mass=[5,10,20,30]):
 
     return actions
 
-def zmumuH(data,phi_mass=[5,10,20,30]):
+def zmumuH(data,phi_mass,sample):
     actions=[]
 
     #Declare dataframe and load all meta data 
@@ -368,28 +368,28 @@ def zmumuH(data,phi_mass=[5,10,20,30]):
         zmm4g=zmm4g.Define('best_4g_corr_mass_m{}'.format(mass),'raw_best_4g_m{}[19]'.format(mass))
      
         
-    actions.append(zmm2g.Snapshot('Events','zmm2g.root',"best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z_.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*"))
-    actions.append(zmm3g.Snapshot('Events','zmm3g.root',"best_3g.*|sample_.*|^Photon_.*|^Muon_.*|^Z_.*|Weight.*|^Gen.*|^weight.*"))
-    actions.append(zmm4g.Snapshot('Events','zmm4g.root',"best_4g.*|sample_.*|^Photon_.*|^Muon_.*|^Z_.*|Weight.*|^Gen.*|^weight.*"))
+    actions.append(zmm2g.Snapshot('Events',sample+'_zmm2g.root',"best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z_.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*"))
+    actions.append(zmm3g.Snapshot('Events',sample+'_zmm3g.root',"best_3g.*|sample_.*|^Photon_.*|^Muon_.*|^Z_.*|Weight.*|^Gen.*|^weight.*"))
+    actions.append(zmm4g.Snapshot('Events',sample+'_zmm4g.root',"best_4g.*|sample_.*|^Photon_.*|^Muon_.*|^Z_.*|Weight.*|^Gen.*|^weight.*"))
     for tree in ['Runs']:
-        actions.append(dataframe[tree].Snapshot(tree, 'zmm2g.root', "", opts))
-        actions.append(dataframe[tree].Snapshot(tree, 'zmm3g.root', "", opts))
-        actions.append(dataframe[tree].Snapshot(tree, 'zmm4g.root', "", opts))
+        actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm2g.root', "", opts))
+        actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm3g.root', "", opts))
+        actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm4g.root', "", opts))
 #    r=zmm2g.Report()
 #    r.Print()
     return actions
     
 
-def analysis(data):
+def analysis(data,sample):
     phi_mass=[5,10,20,30]
 
     actions = []
-    actions.append(zmumuH(data,phi_mass))
-    actions.append(zeeH(data,phi_mass))
-    actions.append(wmunuH(data,phi_mass))
-    actions.append(wenuH(data,phi_mass))
-    actions.append(ggH(data,phi_mass))
-
+    actions.extend(zmumuH(data,phi_mass,sample))
+    actions.extend(zeeH(data,phi_mass,sample))
+    actions.extend(wmunuH(data,phi_mass,sample))
+    actions.extend(wenuH(data,phi_mass,sample))
+    actions.extend(ggH(data,phi_mass,sample))
+    return actions
     
 
     
