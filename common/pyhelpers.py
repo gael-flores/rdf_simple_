@@ -9,7 +9,6 @@ def load_meta_data(data):
     #dataframe=dataframe.DefinePerSample('HLTstring','rdfsampleinfo_.GetS("trigger")')
     dataframe['Events']=dataframe['Events'].Define('HLT_passed',data['trigger']) #need to fix to suppport trigger/amples!!!!
     dataframe['Events']=dataframe['Events'].Define('sample_isMC',str(data['isMC']))
-    dataframe['era'] = data['era']
     #get the list of meta keys
     meta_keys =data.keys()
     for key in meta_keys:

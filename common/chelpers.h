@@ -52,17 +52,15 @@ RVec<size_t> best_z(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecI charge)
 }
 
 
-RVec<bool> overlapClean(RVecF gphi, RVecF geta, RVecF lphi, RVecF leta, RVecF lID){
+RVec<bool> overlapClean(RVecF gphi, RVecF geta, RVecF lphi, RVecF leta){
   RVec<bool> out;
   out.reserve(gphi.size());
   for (size_t i = 0; i < gphi.size(); i++){
     bool overlap = false;
     for (size_t j = 0; j < lphi.size(); j++){
-      if (lID[j]){
-	if (pow(DeltaPhi(gphi[i], lphi[j]),2)/0.5 + pow(abs(geta[i] - leta[j]), 2)/0.4 < 1){
-	  overlap = true;
-	  break;
-	}
+      if (pow(DeltaPhi(gphi[i], lphi[j]),2)/pow(0.5,2) + pow(abs(geta[i] - leta[j]), 2)/pow(0.4,2) < 1){
+	overlap = true;
+	break;
       }
     }
     out.emplace_back(overlap);
