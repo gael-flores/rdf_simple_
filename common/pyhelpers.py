@@ -1,22 +1,6 @@
 import subprocess
 import ROOT
 
-def load_meta_data(data):
-    dataframe = {}
-    #Declare dataframe
-    dataframe['Events'] =ROOT.RDataFrame('Events',data['files'])
-    #read the HLT string from the sample
-    #dataframe=dataframe.DefinePerSample('HLTstring','rdfsampleinfo_.GetS("trigger")')
-    dataframe['Events']=dataframe['Events'].Define('HLT_passed',data['trigger']) #need to fix to suppport trigger/amples!!!!
-    dataframe['Events']=dataframe['Events'].Define('sample_isMC',str(data['isMC']))
-    #get the list of meta keys
-    meta_keys =data.keys()
-    for key in meta_keys:
-        if key=='files' or key=='isMC' or key=='trigger':
-            continue;
-        dataframe['Events']=dataframe['Events'].Define('sample_'+key,str(data[key]))
-    dataframe['Runs'] = ROOT.RDataFrame("Runs", data['files'])
-    return dataframe
 
 
 def loadSample(info,locator='root://cms-xrd-global.cern.ch//'):
