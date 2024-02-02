@@ -27,7 +27,7 @@ samp = importlib.import_module('analysis.{}samples'.format(options.analysis))
 
 actions=[]
 for sample in args:
-    data=createDataSet(samp.samples[sample],options.splitFactor,options.processPart,'root://cmsxrootd.fnal.gov/')
+    data=createDataSet(samp.samples[sample],options.splitFactor,options.processPart,'root://xrootd-cms.infn.it//')
     actions.extend(an.analysis(data,sample))
 ROOT.RDF.RunGraphs(actions)
 

@@ -1,11 +1,4 @@
 samples={
-'SingleMuon_2018A':{'dataset':'/SingleMuon/Run2018A-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD',
-                    'triggers':['HLT_IsoMu24'],
-                    'veto_triggers':[],
-                    'era':'2018',
-                    'jobs':8}
-}
-asamples={
 # Single Muon 2018 Data
 'SingleMuon_2018A':{'dataset':'/SingleMuon/Run2018A-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD',
                     'triggers':['HLT_IsoMu24'],
