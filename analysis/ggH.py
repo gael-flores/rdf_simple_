@@ -5,6 +5,9 @@ opts = ROOT.RDF.RSnapshotOptions()
 opts.fMode = "UPDATE"
 opts.fOverwriteIfExists = True
 
+from common.pyhelpers import load_meta_data
+
+
 cols = "best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z_.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*|^event.*|^Electron_.*|^Pileup_.*"
 
 def photonAna(dataframe):

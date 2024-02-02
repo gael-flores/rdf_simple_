@@ -1,21 +1,30 @@
 from optparse import OptionParser
 import os
 import time
+import importlib
 parser = OptionParser()
+
+parser.add_option("-a", "--analysis", dest="analysis",
+                  help="analysis to run",type='str',default='VH')
+
 parser.add_option("-o", "--eosdir", dest="eos",default='root://cmseos.fnal.gov//store/user/bachtis/analysis',
                   help="EOS output Directory")
-parser.add_option("-s", "--splitFactor", dest="splitFactor",default=0,type='int',
-                  help="Split the sample in N jobs")
 
 (options, args) = parser.parse_args()
 
+samp = importlib.import_module('analysis.{}samples'.format(options.analysis))
+
+
 datasets= args
+
+
+
 os.system('tar --overwrite --exclude="common/__pycache__" --exclude="analysis/__pycache__"  -czvf /tmp/sandbox.tar.gz .')
 os.system('mv /tmp/sandbox.tar.gz .')
 
 
-for d in datasets:    
-    if options.splitFactor==0:
+for d,info in samp.samples.items():    
+    if (not ('jobs' in info)):
         shell="""#!/bin/sh
         echo starting script
         tar -xzvf sandbox.tar.gz
@@ -63,7 +72,7 @@ for d in datasets:
         os.system('condor_submit {dataset}_condor.jdl'.format(dataset=d))
         time.sleep(0.1)
     else:
-        for i in range(0,options.splitFactor):
+        for i in range(0,info['jobs']):
             shell="""#!/bin/sh
             echo starting script
             tar -xzvf sandbox.tar.gz
@@ -86,7 +95,7 @@ for d in datasets:
             fi
             rm ${{FILE}}
             done
-            """.format(dataset=d,eos=options.eos,splitFactor=options.splitFactor,part=i)
+            """.format(dataset=d,eos=options.eos,splitFactor=info['jobs'],part=i)
             print(shell)
             f=open("{dataset}_{part}_condor.sh".format(dataset=d,part=i),"w")
             f.write(shell)
