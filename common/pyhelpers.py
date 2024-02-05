@@ -12,11 +12,13 @@ def load_meta_data(data):
     #get the list of meta keys
     meta_keys =data.keys()
     for key in meta_keys:
-        if key=='files' or key=='isMC' or key=='trigger':
+        if key=='files' or key=='isMC' or key=='trigger' or key=='jobs' or key=='era':
             continue;
         dataframe['Events']=dataframe['Events'].Define('sample_'+key,str(data[key]))
     dataframe['Runs'] = ROOT.RDataFrame("Runs", data['files'])
     return dataframe
+
+
 
 
 def loadSample(info,locator='root://cms-xrd-global.cern.ch//'):
