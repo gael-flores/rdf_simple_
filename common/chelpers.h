@@ -51,6 +51,39 @@ RVec<size_t> best_z(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecI charge)
   return result;
 }
 
+// Picking best leptons for FSR Z events
+RVec<size_t> best_zg(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecI charge, RVecF g_pt, RVecF g_eta, RVecF g_phi)
+{
+  RVec<size_t> result;
+  result.reserve(3);
+  auto idx_cmb = ROOT::VecOps::Combinations(pt, 2);
+  auto best_mass = -1;
+  size_t best_i1 = 0;
+  size_t best_i2 = 0;
+  size_t best_g = 0;
+  for (size_t i = 0; i < idx_cmb[0].size(); i++) { // Loop through pairs of leptons
+    const auto i1 = idx_cmb[0][i];
+    const auto i2 = idx_cmb[1][i];
+    if (charge[i1] != charge[i2]) { // Require opposite charge
+      ROOT::Math::PtEtaPhiMVector p1(pt[i1], eta[i1], phi[i1], mass[i1]);
+      ROOT::Math::PtEtaPhiMVector p2(pt[i2], eta[i2], phi[i2], mass[i2]);
+      for (size_t j = 0; j < g_pt.size(); j++) { // Loop through photons to find closest inv mass to 90 GeV
+	ROOT::Math::PtEtaPhiMVector g(g_pt[j], g_eta[j], g_phi[j], 0);
+	const auto this_mass = (p1 + p2 + g).M();
+	if (std::abs(this_mass - Z_mass) < std::abs(best_mass - Z_mass)) {
+	  best_mass = Z_mass;
+	  best_i1 = i1;
+	  best_i2 = i2;
+	  best_g = j;
+	}
+      }
+    }
+  }
+  result.emplace_back(best_i1);
+  result.emplace_back(best_i2);
+  result.emplace_back(best_g);
+  return result;
+}
 
 RVec<bool> overlapClean(RVecF gphi, RVecF geta, RVecF lphi, RVecF leta){
   RVec<bool> out;
@@ -82,6 +115,26 @@ RVecF best_Z_info(RVecF pt, RVecF eta, RVecF phi, RVecF mass, const RVec<size_t>
   out.emplace_back((p0+p1).mass());
   out.emplace_back(DeltaR(eta[id1], eta[id2], phi[id1], phi[id2]));
   out.emplace_back(DeltaPhi(phi[id1], phi[id2]));
+  return out;
+}
+
+RVecF best_Zg_info(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecF g_pt, RVecF g_eta, RVecF g_phi, const RVec<size_t>& idx){
+  RVecF out;
+  out.reserve(8);
+  size_t idx_l1 = idx[0];
+  size_t idx_l2 = idx[1];
+  size_t idx_g = idx[2];
+  ROOT::Math::PtEtaPhiMVector l1(pt[idx_l1], eta[idx_l1], phi[idx_l1], mass[idx_l1]);
+  ROOT::Math::PtEtaPhiMVector l2(pt[idx_l2], eta[idx_l2], phi[idx_l2], mass[idx_l2]);
+  ROOT::Math::PtEtaPhiMVector g(g_pt[idx_g], g_eta[idx_g], g_phi[idx_g], 0);
+  out.emplace_back((l1+l2+g).pt());
+  out.emplace_back((l1+l2+g).eta());
+  out.emplace_back((l1+l2+g).phi());
+  out.emplace_back((l1+l2+g).mass());
+  out.emplace_back(DeltaR(eta[idx_l1], g_eta[idx_g], phi[idx_l1], g_phi[idx_g]));
+  out.emplace_back(DeltaR(eta[idx_l2], g_eta[idx_g], phi[idx_l2], g_phi[idx_g]));
+  out.emplace_back(DeltaPhi(phi[idx_l1], g_phi[idx_g]));
+  out.emplace_back(DeltaPhi(phi[idx_l2], g_phi[idx_g]));
   return out;
 }
 

@@ -7,7 +7,7 @@ opts.fOverwriteIfExists = True
 
 from common.pyhelpers import load_meta_data
 
-cols = "best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z_.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*|^event.*|^Electron_.*|^Pileup_.*"
+cols = "best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*|^event.*|^Electron_.*|^Pileup_.*"
 
 # Common Object ID:
 def muonAna(dataframe):
@@ -61,6 +61,23 @@ def makeZ(dataframe, lepton):
 
     return Zs
 
+def makeZ_fsr(dataframe, lepton):
+    Zgs = dataframe.Define("Zg_idx", "best_zg({L}_pt[tight_{l}], {L}_eta[tight_{l}], {L}_phi[tight_{l}], {L}_mass[tight_{l}], {L}_charge[tight_{l}], Photon_pt, Photon_eta, Photon_phi)".format(L=lepton, l=lepton.lower()))
+    Zgs = Zgs.Define("bestZg_info", "best_Zg_info({L}_pt[tight_{l}], {L}_eta[tight_{l}], {L}_phi[tight_{l}], {L}_mass[tight_{l}], Photon_pt, Photon_eta, Photon_phi, Zg_idx)".format(L=lepton, l=lepton.lower()))
+    Zgs = Zgs.Define("Zg_pt", "bestZg_info[0]")
+    Zgs = Zgs.Define("Zg_eta", "bestZg_info[1]")
+    Zgs = Zgs.Define("Zg_phi", "bestZg_info[2]")
+    Zgs = Zgs.Define("Zg_mass", "bestZg_info[3]")
+    Zgs = Zgs.Define("Zg_deltaR_l1g", "bestZg_info[4]")
+    Zgs = Zgs.Define("Zg_deltaR_l2g", "bestZg_info[5]")
+    Zgs = Zgs.Define("Zg_deltaPhi_l1g", "bestZg_info[6]")
+    Zgs = Zgs.Define("Zg_deltaPhi_l2g", "bestZg_info[7]")
+    Zgs = Zgs.Define("Zg_l1_idx", "Zg_idx[0]")
+    Zgs = Zgs.Define("Zg_l2_idx", "Zg_idx[1]")
+    Zgs = Zgs.Define("Zg_g_idx", "Zg_idx[2]")
+    
+    return Zgs
+
 def zeeH(data,phi_mass,sample):
     actions=[]
 
@@ -108,12 +125,19 @@ def zmumuH(data,phi_mass,sample):
 
     #pass HLT
     zmm = dataframe['Events'].Filter('HLT_passed','passed HLT')
-
     #Apply Lepton ID (no ISO)
     zmm = muonAna(zmm)
     zmm = electronAna(zmm)
     #Look for + and - muons
     zmm = zmm.Filter("Sum(Muon_charge[tight_muon]==1)>0 && Sum(Muon_charge[tight_muon]==-1)>0","At least one opposite sign muon pair, both passing tight ID and preselection")
+
+    # Separate dataframe for Z FSR tagging for photon ID
+    zmmg = zmm.Filter("nPhoton==1", "Exactly 1 photon")
+    zmmg = photonAna(zmmg) # Run photon analyzer but no cuts on ID
+    zmmg = makeZ_fsr(zmmg, "Muon")
+    zmmg = zmmg.Filter("Zg_mass > 70 && Zg_mass < 110", "Dimuon + photon mass between 70-110 GeV")
+    actions.append(zmmg.Snapshot("Events", sample+"_zmmg.root", cols))
+    actions.append(dataframe['Runs'].Snapshot("Runs", sample+"_zmmg.root", "", opts))
 
     #create the best Zmumu candidate and filter
     zmm = makeZ(zmm, "Muon")  
