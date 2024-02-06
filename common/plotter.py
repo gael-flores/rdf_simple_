@@ -262,7 +262,7 @@ class combined_plotter(object):
 
         if len(units)>0:
             frame.GetXaxis().SetTitle(titlex + " (" +units+")")
-            frame.GetYaxis().SetTitle("Events / "+str((hists[0].GetXaxis().GetXmax()-hists[0].GetXaxis().GetXmin())/bins)+ " "+units)
+            frame.GetYaxis().SetTitle("Events / "+str((hists[0].GetXaxis().GetXmax()-hists[0].GetXaxis().GetXmin())/hists[0].GetNbinsX())+ " "+units)
         else:    
             frame.GetXaxis().SetTitle(titlex)
             frame.GetYaxis().SetTitle("Events")
