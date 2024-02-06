@@ -66,6 +66,8 @@ def createDataSet(sample,splitFactor=0,processPart=0,locator='root://cms-xrd-glo
     else:
         #split the sample
         fileNames = spec['files']
+        if len(fileNames)<splitFactor:
+            print('Number of files smaller than the number of job splits.you should only split in  {} parts.Job will not generate output'.format(len(fileNames)))
         splitFileNames = list(split(fileNames,splitFactor))[processPart]
         print('split file names')
         for s in splitFileNames:

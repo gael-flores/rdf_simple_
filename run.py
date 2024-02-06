@@ -24,7 +24,7 @@ parser.add_option("-p", "--processPart", dest="processPart",
 
 an = importlib.import_module('analysis.{}'.format(options.analysis))
 samp = importlib.import_module('analysis.{}samples'.format(options.analysis))
-
+#'root://xrootd-cms.infn.it//'
 actions=[]
 for sample in args:
     data=createDataSet(samp.samples[sample],options.splitFactor,options.processPart,'root://xrootd-cms.infn.it//')

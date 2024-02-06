@@ -63,7 +63,7 @@ samples={
                              'triggers':['HLT_IsoMu24', 'HLT_IsoTkMu24'],
                              'veto_triggers':[],
                               'era':'2016preVFP',
-                              'jobs':8},
+                              'jobs':2},
 'SingleMuon_2016B_ver2_HIPM':{'dataset': '/SingleMuon/Run2016B-ver2_HIPM_UL2016_MiniAODv2_NanoAODv9-v2/NANOAOD',
                              'triggers':['HLT_IsoMu24', 'HLT_IsoTkMu24'],
                              'veto_triggers':[],
@@ -93,7 +93,7 @@ samples={
                     'triggers':['HLT_IsoMu24', 'HLT_IsoTkMu24'],
                     'veto_triggers':[],
                     'era': '2016postVFP',
-                    'jobs':8},
+                    'jobs':5},
 'SingleMuon_2016G':{'dataset':'/SingleMuon/Run2016G-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD',
                     'triggers':['HLT_IsoMu24', 'HLT_IsoTkMu24'],
                     'veto_triggers':[],
@@ -641,3 +641,5 @@ samples={
 	'era':18,
 	'sigma':1.0},
 }
+
+
