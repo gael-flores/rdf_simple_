@@ -9,7 +9,30 @@ from common.pyhelpers import load_meta_data
 
 
 cols = "best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z_.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*|^event.*|^Electron_.*|^Pileup_.*"
+photon_cols = "|^Photon_+(ID|antiID|Id.*|pt|eta|phi|corr.*|pf.*_all.*|pre.*|isScEta.*|hoe|sieie)|good_photons|Trigger_ID"
+# Common Object ID:
+def muonAna(dataframe):
 
+    # Common Muon ID definitions (No isolation)
+    muons = dataframe.Define("loose_muon", "Muon_looseId==1&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&Muon_pt>10&&Muon_pfIsoId>1")
+    muons = muons.Define("tight_muon", "loose_muon&&Muon_tightId&&Muon_pfIsoId>3")
+    muons = muons.Define("veto_muon", "Muon_pt>5&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&(loose_muon==0)&&(tight_muon==0)")
+    muons = muons.Define("Muon_nloose", "Sum(loose_muon)")
+    muons = muons.Define("Muon_ntight", "Sum(tight_muon)")
+    muons = muons.Define("Muon_nveto", "Sum(veto_muon)")
+    return muons
+
+def electronAna(dataframe):
+
+    # Common Electron ID definitions
+    electrons = dataframe.Define("loose_electron", "Electron_pt>15&&abs(Electron_eta)<2.5&&(abs(Electron_eta)>1.57||abs(Electron_eta)<1.44)&&abs(Electron_dxy)<0.2&&abs(Electron_dz)<0.2&&Electron_lostHits<2&&Electron_convVeto&&Electron_cutBased>0")
+    electrons = electrons.Define("tight_electron", "loose_electron&&Electron_cutBased>3")
+    electrons = electrons.Define("veto_electron", "Electron_pt>55&&abs(Electron_eta)<2.5&&(abs(Electron_eta)>1.57||abs(Electron_eta)<1.44)&&abs(Electron_dxy)<0.2&&abs(Electron_dz)<0.2&&Electron_lostHits<2&&Electron_convVeto&&(tight_electron==0)&&(loose_electron==0)")
+    electrons = electrons.Define("Electron_nloose", "Sum(loose_electron)")
+    electrons = electrons.Define("Electron_ntight", "Sum(tight_electron)")
+    electrons = electrons.Define("Electron_nveto", "Sum(veto_electron)")
+    return electrons
+    
 def photonAna(dataframe):
 
     # Overlap with loose leptons
@@ -173,10 +196,20 @@ def ggH(data,phi_mass,sample):
     ggH4g_antiID=ggH4g_antiID.Define('best_4g_includes_failID_m30','Photon_antiID[best_4g_idx1_m30]==1|Photon_antiID[best_4g_idx2_m30]==1|Photon_antiID[best_4g_idx3_m30]==1|Photon_antiID[best_4g_idx4_m30]==1')
     ggH4g_antiID=ggH4g_antiID.Filter('best_4g_includes_failID_m30==1','fit keeps one fail ID photon')
 
-    actions.append(ggH4g.Snapshot('Events',sample+'_ggH4g.root',"gen.*|best_4g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
-    actions.append(ggH3g.Snapshot('Events',sample+'_ggH3g.root',"gen.*|best_3g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
-    actions.append(ggH3g_antiID.Snapshot('Events',sample+'_ggH3g_antiID.root',"gen.*|best_3g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
-    actions.append(ggH4g_antiID.Snapshot('Events',sample+'_ggH4g_antiID.root',"gen.*|best_4g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"))
+    #At least 2 photons pt above 35GeV
+    ggH3g_antiID=ggH3g_antiID.Define('Trigger_ID','Photon_pt>35')
+    ggH4g_antiID=ggH4g_antiID.Define('Trigger_ID','Photon_pt>35')
+    ggH3g_antiID=ggH3g_antiID.Filter('Sum(Trigger_ID==1)>1','result has at least two photons with pt above 35GeV')
+    ggH4g_antiID=ggH4g_antiID.Filter('Sum(Trigger_ID==1)>1','result has at least two photons with pt above 35GeV')
+    ggH3g=ggH3g.Define('Trigger_ID','Photon_pt>35')
+    ggH4g=ggH4g.Define('Trigger_ID','Photon_pt>35')
+    ggH3g=ggH3g.Filter('Sum(Trigger_ID==1)>1','result has at least two photons with pt above 35GeV')
+    ggH4g=ggH4g.Filter('Sum(Trigger_ID==1)>1','result has at least two photons with pt above 35GeV')
+
+    actions.append(ggH4g.Snapshot('Events',sample+'_ggH4g.root',"gen.*|best_4g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"+photon_cols))
+    actions.append(ggH3g.Snapshot('Events',sample+'_ggH3g.root',"gen.*|best_3g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"+photon_cols))
+    actions.append(ggH3g_antiID.Snapshot('Events',sample+'_ggH3g_antiID.root',"gen.*|best_3g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"+photon_cols))
+    actions.append(ggH4g_antiID.Snapshot('Events',sample+'_ggH4g_antiID.root',"gen.*|best_4g.*|sample_.*|.*LHE.*|Pileup.*|^PV.*|run|event|luminosity|Block|genWeight"+photon_cols))
 
     for tree in ['Runs']:
         actions.append(dataframe[tree].Snapshot(tree, sample+"_ggH4g.root", "", opts))
@@ -191,6 +224,7 @@ def ggH(data,phi_mass,sample):
     return actions
 
 def analysis(data,sample):
+    actions=[]
     phi_mass=[7,15,20,30,40,50,55]
     actions.extend(ggH(data,phi_mass,sample))
     return actions
