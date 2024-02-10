@@ -5,7 +5,6 @@
 #include "TLatex.h"
 #include "Math/Vector4D.h"
 #include "TStyle.h"
-
 using namespace ROOT;
 using namespace ROOT::VecOps;
 float Z_mass=91;
@@ -269,5 +268,119 @@ float calculate_llgamma_mass(const RVec<size_t>& idx,RVecF mpt, RVecF meta, RVec
     }
   }
   return Z.M();
+}
+
+// Find index for scale factor given the value and the bin low edges
+int getBin(const float val, const std::vector<float> bins){
+  if (val < bins.front())
+    return 0;
+  auto lower = std::lower_bound(bins.begin(), bins.end(), val); // Finds iterator of bin upper edge
+  return (int) (std::distance(bins.begin(), lower) - 1);
+
+}
+
+// Get scale factors as a function of 2 variables
+RVec<RVecF> scaleFactors_2d(RVecF x, RVecF y, std::vector <std::vector<std::vector<float>>> SFs, std::vector<float> binsX, std::vector<float> binsY, const bool isMC, RVecB selection){
+  RVec<RVecF> out;
+  RVecF vals;
+  RVecF uncs;
+  out.reserve(x.size());
+  vals.reserve(x.size());
+  uncs.reserve(x.size());
+  for (size_t i = 0; i < x.size(); i++){
+    if (!(selection[i]&&isMC)) {
+      vals.emplace_back(1.0);
+      uncs.emplace_back(0.0);
+    }
+    else {
+      int binX = getBin(x[i], binsX);
+      int binY = getBin(y[i], binsY);
+      vals.emplace_back(SFs[binX][binY][0]);
+      uncs.emplace_back(SFs[binX][binY][1]);
+    }
+  }
+  out.emplace_back(vals);
+  out.emplace_back(uncs);
+  return out;
+}
+
+RVec<RVecF> scaleFactors_3d(RVecF x, RVecF y, RVecF z, std::vector <std::vector<std::vector<std::vector<float>>>> SFs, std::vector<float> binsX, std::vector<float> binsY, std::vector<float> binsZ, const bool isMC, RVecB selection){
+  RVec<RVecF> out;
+  RVecF vals;
+  RVecF uncs;
+  out.reserve(x.size());
+  vals.reserve(x.size());
+  uncs.reserve(x.size());
+  for (size_t i = 0; i < x.size(); i++){
+    if (!(selection[i]&&isMC)) {
+      vals.emplace_back(1.0);
+      uncs.emplace_back(0.0);
+    }
+    else {
+      int binX = getBin(x[i], binsX);
+      int binY = getBin(y[i], binsY);
+      int binZ = getBin(z[i], binsZ);
+      vals.emplace_back(SFs[binX][binY][binZ][0]);
+      uncs.emplace_back(SFs[binX][binY][binZ][1]);
+    } 
+  }
+  out.emplace_back(vals);
+  out.emplace_back(uncs);
+  return out;
+}
+
+// Get scale factors for ele reco (pt > 20, pt < 20 separate)
+RVec<RVecF> scaleFactors_eleReco(RVecF eta, RVecF pt, std::vector <std::vector<std::vector<float>>> SFs_below, std::vector<float> binsX_below, std::vector<float> binsY_below,std::vector <std::vector<std::vector<float>>> SFs_above, std::vector<float> binsX_above, std::vector<float> binsY_above, const bool isMC, RVecB selection){
+  RVec<RVecF> out;
+  RVecF vals;
+  RVecF uncs;
+  out.reserve(pt.size());
+  vals.reserve(pt.size());
+  uncs.reserve(pt.size());
+  for (size_t i = 0; i < pt.size(); i++){
+    if (!(selection[i]&&isMC)) {
+      vals.emplace_back(1.0);
+      uncs.emplace_back(0.0);
+    }
+    else {
+      if (pt[i] < 20){
+	int binX = getBin(eta[i], binsX_below);
+	int binY = getBin(pt[i], binsY_below);
+	vals.emplace_back(SFs_below[binX][binY][0]);
+	uncs.emplace_back(SFs_below[binX][binY][1]);
+      }
+      else{
+	int binX = getBin(eta[i], binsX_above);
+	int binY = getBin(pt[i], binsY_above);
+	vals.emplace_back(SFs_above[binX][binY][0]);
+	uncs.emplace_back(SFs_above[binX][binY][1]);
+      }
+    }
+  }
+  out.emplace_back(vals);
+  out.emplace_back(uncs);
+  return out;
+}
+
+RVecI matchTrigger(RVecF eta, RVecF phi, RVecI pdgId, RVecF trig_eta, RVecF trig_phi, RVecF trig_pt, RVecI trig_id, RVecI trig_bits, const int matchingBits, const float ptThresh){
+  RVecI out;
+  out.reserve(eta.size());
+  for (size_t i = 0; i < eta.size(); i++){
+    bool matched = false;
+    for (size_t j = 0; j < trig_eta.size(); j++){
+      if (std::abs(pdgId[i]) != std::abs(trig_id[j]))
+	continue;
+      if (trig_pt[j] < ptThresh)
+	continue;
+      if (DeltaR(eta[i], trig_eta[j], phi[i], trig_phi[j]) < 0.1){
+	if ((trig_bits[j] & matchingBits) == matchingBits){
+	  matched = true;
+	  break;
+	}
+      }
+    }
+    out.push_back(matched);
+  }
+  return out;
 }
 
