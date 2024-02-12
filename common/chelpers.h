@@ -384,3 +384,11 @@ RVecI matchTrigger(RVecF eta, RVecF phi, RVecI pdgId, RVecF trig_eta, RVecF trig
   return out;
 }
 
+
+float getPUweight(const int truePU, std::vector<float> weights){
+  float out = 1.0;
+  if (truePU > 99 || truePU < 0)
+    return out;
+  return weights[truePU];
+}
+
