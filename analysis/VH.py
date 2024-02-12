@@ -179,7 +179,7 @@ def zmumuH(data,phi_mass,sample):
 
     #pass HLT
     zmm = dataframe['Events'].Filter('HLT_passed','passed HLT')
-    zmm = zmm.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{})".format(data['era']))
+    zmm = zmm.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{},sample_isMC)".format(data['era']))
     #Apply Lepton ID (no ISO)
     zmm = muonAna(zmm, data['era'])
     zmm = electronAna(zmm, data['era'])
