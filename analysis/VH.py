@@ -9,7 +9,10 @@ from common.pyhelpers import load_meta_data
 
 cols = "best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*|^event.*|^Electron_.*|^Pileup_.*"
 
-# Muon trigger[era] = [trigName, bits, ptThresh]
+# Muon trigger[era][par], par = ['name', 'bits', 'pt']
+# Name = branch name in tree
+# Bits = trigger bits for HLT path
+# pt = pt threshold for trigger
 muTrig = {'2018': [{'name': 'HLT_IsoMu24', 'bits': 2+8, 'pt': 24}],
           '2017': [{'name': 'HLT_IsoMu27', 'bits': 2+8, 'pt': 27}],
           '2016postVFP': [{'name': 'HLT_IsoMu24', 'bits': 2+8, 'pt': 24},
@@ -18,7 +21,7 @@ muTrig = {'2018': [{'name': 'HLT_IsoMu24', 'bits': 2+8, 'pt': 24}],
                           {'name': 'HLT_IsoTkMu24', 'bits': 1+8, 'pt': 24}]}
 
 eleTrig = {'2018': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 2, 'pt': 32}],
-           '2017': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 1024, 'pt': 32}],
+           '2017': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 2+1024, 'pt': 32}],
            '2016': [{'name': 'HLT_Ele27_WPTight_Gsf', 'bits': 2, 'pt': 27}]}
           
 # Common Object ID:
@@ -176,6 +179,7 @@ def zmumuH(data,phi_mass,sample):
 
     #pass HLT
     zmm = dataframe['Events'].Filter('HLT_passed','passed HLT')
+    zmm = zmm.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{},sample_isMC)".format(data['era']))
     #Apply Lepton ID (no ISO)
     zmm = muonAna(zmm, data['era'])
     zmm = electronAna(zmm, data['era'])
