@@ -425,3 +425,14 @@ float getPUweight(const int truePU, std::vector<float> weights, const bool isMC)
   return weights[truePU];
 }
 
+RVecF check_W_misID(const float e_pt, const float e_eta, const float e_phi, const float e_mass, RVecF g_pt, RVecF g_eta, RVecF g_phi, const int idx1, const int idx2){
+  RVecF out;
+  out.reserve(3);
+  ROOT::Math::PtEtaPhiMVector e(e_pt, e_eta, e_phi, e_mass);
+  ROOT::Math::PtEtaPhiMVector g1(g_pt[idx1], g_eta[idx1], g_phi[idx1], 0.0);
+  ROOT::Math::PtEtaPhiMVector g2(g_pt[idx2], g_eta[idx2], g_phi[idx2], 0.0);
+  out.emplace_back((e+g1).mass());
+  out.emplace_back((e+g2).mass());
+  out.emplace_back((e+g1+g2).mass());
+  return out;
+}
