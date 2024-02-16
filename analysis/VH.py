@@ -471,12 +471,12 @@ def zmumuH(data,phi_mass,sample):
         
 
     actions.append(zmm2g.Snapshot('Events',sample+'_zmm2g.root',cols))
-    actions.append(zmm3g.Snapshot('Events',sample+'_zmm3g.root',cols))
-    actions.append(zmm4g.Snapshot('Events',sample+'_zmm4g.root',cols))
+    #actions.append(zmm3g.Snapshot('Events',sample+'_zmm3g.root',cols))
+    #actions.append(zmm4g.Snapshot('Events',sample+'_zmm4g.root',cols))
     for tree in ['Runs']:
         actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm2g.root', "", opts))
-        actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm3g.root', "", opts))
-        actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm4g.root', "", opts))
+        #actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm3g.root', "", opts))
+        #actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm4g.root', "", opts))
     #r=zmm2g.Report()
     #r.Print()
 
