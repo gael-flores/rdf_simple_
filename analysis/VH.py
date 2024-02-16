@@ -181,7 +181,7 @@ def zeeH(data,phi_mass,sample):
     zee = zee.Define("Photon_pfRelIso03_fsrCorr", "correct_gammaIso_for_muons(Z_idx, Electron_pt, Electron_eta, Electron_phi, Photon_pt, Photon_eta, Photon_phi, Photon_pfRelIso03_all, Photon_isFSR)")
         
     #Now cut on the ll+gamma mass around the Z 
-    zee=zee.Define("llgamma_mass","calculate_llgamma_mass(Z_idx,Electron_pt[loose_electron], Electron_eta[loose_electron], Electron_phi[loose_electron], Electron_mass[loose_electron],Photon_pt,Photon_eta,Photon_phi, Photon_isFSR)")
+    zee=zee.Define("llgamma_mass","calculate_llgamma_mass(Z_idx,Electron_pt, Electron_eta, Electron_phi, Electron_mass,Photon_pt,Photon_eta,Photon_phi, Photon_isFSR)")
 
     #zee = zee.Filter("Sum(Photon_preselection==1)>1", "At least 2 photons passing preselection")
 
@@ -377,7 +377,7 @@ def zmumuH(data,phi_mass,sample):
     
     
     #Now cut on the ll+gamma mass around the Z 
-    zmm=zmm.Define("llgamma_mass","calculate_llgamma_mass(Z_idx,Muon_pt[loose_muon], Muon_eta[loose_muon], Muon_phi[loose_muon], Muon_mass[loose_muon],Photon_pt,Photon_eta,Photon_phi, Photon_isFSR)")
+    zmm=zmm.Define("llgamma_mass","calculate_llgamma_mass(Z_idx,Muon_pt, Muon_eta, Muon_phi, Muon_mass,Photon_pt,Photon_eta,Photon_phi, Photon_isFSR)")
 
     #zmm = zmm.Filter("Sum(Photon_preselection==1)>1", "At least 2 photons passing preselection")
 
