@@ -37,24 +37,26 @@ class plotter_base(object):
 
 
 class rdf_plotter(plotter_base):
-    def __init__(self,file,isMC=False,weight = "1.0",tree='Events'):
+    def __init__(self,file,isMC=False,weight = "1.0",tree='Events',defaultCuts = "1.0"):
         self.rdf = ROOT.RDataFrame(tree,file)
         self.weight=weight
+        self.defaultCuts = defaultCuts
         super(rdf_plotter,self).__init__()
         #if MC read the sum of weights and weigh the event
         if isMC:
             f=ROOT.TFile(file)
             t=f.Get('Runs')
+            sumw = 0.0
             for event in t:
-                self.weight=self.weight+'*(genWeight/{})'.format(event.genEventSumw)
-                break;
+                sumw += event.genEventSumw
+            self.weight = self.weight+'*(genWeight/{})*(sample_sigma)'.format(sumw if sumw>0 else 1.0)
             f.Close()
 
     def hist1d(self,var,cuts,lumi,model,titlex = "",units = ""):
         corrString="1.0"
         for corr in self.corrFactors:
             corrString = corrString+"*("+str(corr['value'])+")" 
-        c = "("+cuts+")*"+lumi+"*"+self.weight+"*("+corrString+")"
+        c = "("+self.defaultCuts+")*("+cuts+")*"+lumi+"*"+self.weight+"*("+corrString+")"
         rdf=self.rdf.Define('plot_weight',c)
         h=rdf.Histo1D(model,var,'plot_weight')
         h.Sumw2()
@@ -75,7 +77,7 @@ class rdf_plotter(plotter_base):
         corrString="1.0"
         for corr in self.corrFactors:
             corrString = corrString+"*("+str(corr['value'])+")" 
-        c = "("+cuts+")*"+lumi+"*"+self.weight+"*("+corrString+")"
+        c = "("+self.defaultCuts+")*("+cuts+")*"+lumi+"*"+self.weight+"*("+corrString+")"
         rdf=self.rdf.Define('plot_weight',c)
         h=rdf.Profile1D(model,var1,var2,'plot_weight')
         h.SetLineStyle(self.linestyle)
@@ -99,9 +101,9 @@ class rdf_plotter(plotter_base):
         corrString="1.0"
         for corr in self.corrFactors:
             corrString = corrString+"*("+str(corr['value'])+")" 
-        c = "("+cuts+")*"+lumi+"*"+self.weight+"*("+corrString+")"
+        c = "("+self.defaultCuts+")*("+cuts+")*"+lumi+"*"+self.weight+"*("+corrString+")"
         rdf=self.rdf.Define('plot_weight',c)
-        h=rdf.Histo1D(model,var,'plot_weight')
+        h=rdf.Histo2D(model,var,'plot_weight')
         h.Sumw2()
         h.SetLineStyle(self.linestyle)
         h.SetLineColor(self.linecolor)
@@ -152,6 +154,63 @@ def convertToPoisson(h):
     return graph    
 
 
+
+class merged_plotter(plotter_base):
+
+    def __init__(self, plotters):
+        self.fillstyle=1001
+        self.linestyle=1
+        self.linecolor=1
+        self.linewidth=2
+        self.fillcolor=ROOT.kOrange-3
+        self.markerstyle=20
+        self.corrFactors=[]
+        self.plotters = plotters
+
+    def hist1d(self,var,cuts,lumi,model,titlex = "",units = ""):
+        h = None
+        for plotter in self.plotters:
+            if h is None:
+                h = plotter.hist1d(var, cuts, lumi, model, titlex, units)
+            else:
+                h.Add(plotter.hist1d(var, cuts, lumi, model, titlex, units).GetValue())
+        h.Sumw2()
+        h.SetLineStyle(self.linestyle)
+        h.SetLineColor(self.linecolor)
+        h.SetLineWidth(self.linewidth)
+        h.SetFillStyle(self.fillstyle)
+        h.SetFillColor(self.fillcolor)
+        h.SetMarkerStyle(self.markerstyle)
+        if units=="":
+            h.GetXaxis().SetTitle(titlex)
+        else:
+            h.GetXaxis().SetTitle(titlex+ " ["+units+"]")
+        return h
+
+
+    def hist2d(self,var,cuts,lumi,model,titlex = "",unitsx = "",titley="",unitsy=""):
+        h = None
+        for plotter in self.plotters:
+            if h is None:
+                h = plotter.hist2d(var, cuts, lumi, model, titlex, units)
+            else:
+                h.Add(plotter.hist2d(var, cuts, lumi, model, titlex, units).GetValue())
+        h.Sumw2()
+        h.SetLineStyle(self.linestyle)
+        h.SetLineColor(self.linecolor)
+        h.SetLineWidth(self.linewidth)
+        h.SetFillStyle(self.fillstyle)
+        h.SetFillColor(self.fillcolor)
+        h.SetMarkerStyle(self.markerstyle)
+        if unitsx=="":
+            h.GetXaxis().SetTitle(titlex)
+        else:
+            h.GetXaxis().SetTitle(titlex+ " ["+unitsx+"]")
+        if unitsy=="":
+            h.GetYaxis().SetTitle(titley)
+        else:
+            h.GetYaxis().SetTitle(titley+ " ["+unitsy+"]")
+        return h
 
 
 class combined_plotter(object):
@@ -322,4 +381,111 @@ class combined_plotter(object):
         return plot
 
 
+# The nostack option normalizes the background and signal
+# contributions separately. Without this all MC contributions
+# are normalized together and drawn stacked
+    def draw_comp(self,var,cut,model,titlex = "", units = "",expandY=0.0,nostack=True,prelim="Preliminary"): 
+        canvas = ROOT.TCanvas("canvas","")
+#        ROOT.gStyle.SetOptStat(0)
+#        ROOT.gStyle.SetOptTitle(0)
+#        canvas.Range(-68.75,-7.5,856.25,42.5)
+#        canvas.SetFillColor(0)
+#        canvas.SetBorderMode(0)
+#        canvas.SetBorderSize(2)
+#        canvas.SetTickx(1)
+#        canvas.SetTicky(1)
+#        canvas.SetLeftMargin(0.15)
+        canvas.SetRightMargin(0.05)
+#        canvas.SetTopMargin(0.05)
+#        canvas.SetBottomMargin(0.15)
+#        canvas.SetFrameFillStyle(0)
+#        canvas.SetFrameBorderMode(0)
+#        canvas.SetFrameFillStyle(0)
+#        canvas.SetFrameBorderMode(0)
+
+
+        canvas.cd()
+        hists=[]
+        labels = {}
+        stack = ROOT.THStack("stack","")
+        
+        signal=0
+        background=0
+        backgroundErr=0
+        
+        data=[]
+
+        cutL="("+self.defaultCut+")*("+cut+")"
+        scale = 0.0
+        for (plotter,typeP,label,name) in zip(self.plotters,self.types,self.labels,self.names):
+            hist = plotter.hist1d(var,cutL,"1",model,titlex,units)
+            hist.SetFillStyle(0)
+            hist.SetName(name+label)
+            labels[hist.GetValue()] = label
+            if nostack:
+                if hist.Integral() == 0:
+                    stack.Add(hist.GetValue())
+                    hists.append(hist)
+                    continue
+                hist.Scale(1.0/hist.Integral())
+                stack.Add(hist.GetValue())
+                hists.append(hist.GetValue())
+            else:
+                if typeP =="data":
+                    if hist.Integral() > 0:
+                        hist.Scale(1.0/hist.Integral())
+                    data.append(hist.GetValue())
+                else:
+                    scale += hist.Integral()
+                    hists.append(hist.GetValue())
+                    
+        if nostack:
+            stack.Draw("hist,nostack")
+        else:
+            for h in hists:
+                h.Scale(1./scale)
+                stack.Add(h)
+            stack.Draw("hist")
+            for h in data:
+                h.Draw("hist,same")
+
+        canvas.SetLeftMargin(canvas.GetLeftMargin()*1.15)
+        stack.SetMinimum(0)
+        if len(units):
+            stack.GetXaxis().SetTitle(titlex + " ["+units+"]")
+        else:
+            stack.GetXaxis().SetTitle(titlex)
+
+        stack.GetYaxis().SetTitle("a.u.")
+        stack.GetYaxis().SetTitleOffset(0.9)
+        stack.GetYaxis().SetTitleSize(0.05)
+        stack.GetXaxis().SetTitleSize(0.05)
+
+        legend = ROOT.TLegend(0.6, 0.6, 0.9, 0.9)
+        legend.SetFillColor(ROOT.kWhite)
+        for histo in labels.keys():
+            legend.AddEntry(histo, labels[histo], 'lf')
+        legend.SetFillStyle(0)
+        legend.SetBorderSize(0)
+        ROOT.SetOwnership(legend, False)
+        legend.Draw()
+        
+        tex_prelim = ROOT.TLatex()
+        if prelim != "":
+            tex_prelim.SetTextSize(0.03)
+            tex_prelim.DrawLatexNDC(.11, .91, "#scale[1.5]{CMS}"+" {}".format(prelim))
+            tex_prelim.Draw("same")
+
+        pt = ROOT.TPaveText(0.1577181,0.9562937,0.9580537,0.9947552,"brNDC")
+        pt.SetBorderSize(0)
+        pt.SetTextAlign(12)
+        pt.SetFillStyle(0)
+        pt.SetTextFont(42)
+        pt.SetTextSize(0.03)
+        text = pt.AddText(0.01,0.5,"CMS simulation")
+        pt.Draw()   
+        
+        canvas.Update()
+
+        return {'canvas': canvas, 'stack': stack, 'legend': legend, 'data': data, 'hists': hists}
 
