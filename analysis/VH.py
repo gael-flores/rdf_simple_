@@ -1,6 +1,6 @@
 import ROOT
 ROOT.gInterpreter.Declare('#include "analysis/ddp_vertex.h"')
-
+ROOT.gInterpreter.Declare('#include "common/scaleFactors.h"')
 opts = ROOT.RDF.RSnapshotOptions()
 opts.fMode = "UPDATE"
 opts.fOverwriteIfExists = True
@@ -9,8 +9,23 @@ from common.pyhelpers import load_meta_data
 
 cols = "best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*|^event.*|^Electron_.*|^Pileup_.*"
 
+# Muon trigger[era][par], par = ['name', 'bits', 'pt']
+# Name = branch name in tree
+# Bits = trigger bits for HLT path
+# pt = pt threshold for trigger
+muTrig = {'2018': [{'name': 'HLT_IsoMu24', 'bits': 2+8, 'pt': 24}],
+          '2017': [{'name': 'HLT_IsoMu27', 'bits': 2+8, 'pt': 27}],
+          '2016postVFP': [{'name': 'HLT_IsoMu24', 'bits': 2+8, 'pt': 24},
+                          {'name': 'HLT_IsoTkMu24', 'bits': 1+8, 'pt': 24}],
+          '2016preVFP': [{'name': 'HLT_IsoMu24', 'bits': 2+8, 'pt': 24},
+                          {'name': 'HLT_IsoTkMu24', 'bits': 1+8, 'pt': 24}]}
+
+eleTrig = {'2018': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 2, 'pt': 32}],
+           '2017': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 2+1024, 'pt': 32}],
+           '2016': [{'name': 'HLT_Ele27_WPTight_Gsf', 'bits': 2, 'pt': 27}]}
+          
 # Common Object ID:
-def muonAna(dataframe):
+def muonAna(dataframe, era = '2018'):
 
     # Common Muon ID definitions (No isolation)
     muons = dataframe.Define("loose_muon", "Muon_looseId==1&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&Muon_pt>10&&Muon_pfIsoId>1")
@@ -19,9 +34,31 @@ def muonAna(dataframe):
     muons = muons.Define("Muon_nloose", "Sum(loose_muon)")
     muons = muons.Define("Muon_ntight", "Sum(tight_muon)")
     muons = muons.Define("Muon_nveto", "Sum(veto_muon)")
+
+    for trigger in muTrig[era]:
+        muons = muons.Define("Muon_pass{}".format(trigger['name']), "matchTrigger(Muon_eta, Muon_phi, Muon_pdgId, TrigObj_eta, TrigObj_phi, TrigObj_pt, TrigObj_id, TrigObj_filterBits, {}, {})".format(trigger['bits'], trigger['pt']))
+    muons = muons.Define("Muon_isTrigger", "||".join(["Muon_pass{}".format(trig['name']) for trig in muTrig[era]]))
+
+    muons = muons.Define("mu_SFs_reco", 'scaleFactors_2d(abs(Muon_eta), Muon_pt, MU_RECO_{era}_sf, MU_RECO_{era}_binsX, MU_RECO_{era}_binsY, sample_isMC, Muon_pt>10)'.format(era=era))
+    muons = muons.Define("Muon_recoSF_val", "mu_SFs_reco[0]")
+    muons = muons.Define("Muon_recoSF_unc", "mu_SFs_reco[1]")
+
+    muons = muons.Define("mu_SFs_id", 'scaleFactors_2d(abs(Muon_eta), Muon_pt, MU_ID_{era}_sf, MU_ID_{era}_binsX, MU_ID_{era}_binsY, sample_isMC, tight_muon)'.format(era=era))
+    muons = muons.Define("Muon_idSF_val", "mu_SFs_id[0]")
+    muons = muons.Define("Muon_idSF_unc", "mu_SFs_id[1]")
+
+    muons = muons.Define("mu_SFs_iso", 'scaleFactors_2d(abs(Muon_eta), Muon_pt, MU_ISO_{era}_sf, MU_ISO_{era}_binsX, MU_ISO_{era}_binsY, sample_isMC, tight_muon)'.format(era=era))
+    muons = muons.Define("Muon_isoSF_val", "mu_SFs_iso[0]")
+    muons = muons.Define("Muon_isoSF_unc", "mu_SFs_iso[1]")
+
+    muons = muons.Define("mu_SFs_trig", 'scaleFactors_3d(Muon_charge, Muon_eta, Muon_pt, MU_TRIG_{era}_sf, MU_TRIG_{era}_binsX, MU_TRIG_{era}_binsY, MU_TRIG_{era}_binsZ, sample_isMC, Muon_isTrigger)'.format(era=era))
+    muons = muons.Define("Muon_trigSF_val", "mu_SFs_trig[0]")
+    muons = muons.Define("Muon_trigSF_unc", "mu_SFs_trig[1]")
+    
+
     return muons
 
-def electronAna(dataframe):
+def electronAna(dataframe, era = '2018'):
 
     # Common Electron ID definitions
     electrons = dataframe.Define("loose_electron", "Electron_pt>15&&abs(Electron_eta)<2.5&&(abs(Electron_eta)>1.57||abs(Electron_eta)<1.44)&&abs(Electron_dxy)<0.2&&abs(Electron_dz)<0.2&&Electron_lostHits<2&&Electron_convVeto&&Electron_cutBased>0")
@@ -30,6 +67,23 @@ def electronAna(dataframe):
     electrons = electrons.Define("Electron_nloose", "Sum(loose_electron)")
     electrons = electrons.Define("Electron_ntight", "Sum(tight_electron)")
     electrons = electrons.Define("Electron_nveto", "Sum(veto_electron)")
+
+    for trigger in eleTrig[era]:
+        electrons = electrons.Define("Electron_pass{}".format(trigger['name']), "matchTrigger(Electron_eta, Electron_phi, Electron_pdgId, TrigObj_eta, TrigObj_phi, TrigObj_pt, TrigObj_id, TrigObj_filterBits, {}, {})".format(trigger['bits'], trigger['pt']))
+    electrons = electrons.Define("Electron_isTrigger", "||".join(["Electron_pass{}".format(trig['name']) for trig in eleTrig[era]]))
+
+    electrons = electrons.Define("ele_SFs_id", 'scaleFactors_2d(Electron_eta, Electron_pt, ELE_ID_{era}_sf, ELE_ID_{era}_binsX, ELE_ID_{era}_binsY, sample_isMC, tight_electron)'.format(era=era))
+    electrons = electrons.Define("Electron_idSF_val", "ele_SFs_id[0]")
+    electrons = electrons.Define("Electron_idSF_unc", "ele_SFs_id[1]")
+
+    electrons = electrons.Define("ele_SFs_reco", 'scaleFactors_eleReco(Electron_eta, Electron_eta, ELE_RECO_ptBelow20_{era}_sf, ELE_RECO_ptBelow20_{era}_binsX, ELE_RECO_ptBelow20_{era}_binsY,  ELE_RECO_ptAbove20_{era}_sf, ELE_RECO_ptAbove20_{era}_binsX, ELE_RECO_ptAbove20_{era}_binsY, sample_isMC, tight_electron)'.format(era=era))
+    electrons = electrons.Define("Electron_recoSF_val", "ele_SFs_id[0]")
+    electrons = electrons.Define("Electron_recoSF_unc", "ele_SFs_id[1]")
+    
+    electrons = electrons.Define("ele_SFs_trig", "scaleFactors_2d(Electron_eta, Electron_pt, ELE_TRIG_{era}_sf, ELE_TRIG_{era}_binsX, ELE_TRIG_{era}_binsY, sample_isMC, Electron_pt>35)".format(era=era))
+    electrons = electrons.Define("Electron_trigSF_val", "ele_SFs_trig[0]")
+    electrons = electrons.Define("Electron_trigSF_unc", "ele_SFs_trig[1]")
+
     return electrons
 
 # Must run muon + electron analyzer first to do overlap with loose leptons
@@ -125,9 +179,10 @@ def zmumuH(data,phi_mass,sample):
 
     #pass HLT
     zmm = dataframe['Events'].Filter('HLT_passed','passed HLT')
+    zmm = zmm.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{},sample_isMC)".format(data['era']))
     #Apply Lepton ID (no ISO)
-    zmm = muonAna(zmm)
-    zmm = electronAna(zmm)
+    zmm = muonAna(zmm, data['era'])
+    zmm = electronAna(zmm, data['era'])
     #Look for + and - muons
     zmm = zmm.Filter("Sum(Muon_charge[tight_muon]==1)>0 && Sum(Muon_charge[tight_muon]==-1)>0","At least one opposite sign muon pair, both passing tight ID and preselection")
 
