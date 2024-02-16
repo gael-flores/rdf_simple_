@@ -22,7 +22,8 @@ muTrig = {'2018': [{'name': 'HLT_IsoMu24', 'bits': 2+8, 'pt': 24}],
 
 eleTrig = {'2018': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 2, 'pt': 32}],
            '2017': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 2+1024, 'pt': 32}],
-           '2016': [{'name': 'HLT_Ele27_WPTight_Gsf', 'bits': 2, 'pt': 27}]}
+           '2016postVFP': [{'name': 'HLT_Ele27_WPTight_Gsf', 'bits': 2, 'pt': 27}],
+           '2016preVFP': [{'name': 'HLT_Ele27_WPTight_Gsf', 'bits': 2, 'pt': 27}]}
           
 # Common Object ID:
 def muonAna(dataframe, era = '2018'):
@@ -164,7 +165,6 @@ def zeeH(data,phi_mass,sample):
     #create the best Zmumu candidate and filter
     zee = makeZ(zee, "Electron")  
     zee = zee.Filter("Z_mass>70&&Z_mass<110", "Di-electron mass between 70-110 GeV")  
-
     #Apply Thresholds to the muon pts and cut on muon pf iso
     ptThresh = 35
     zee = zee.Filter("(Electron_pt[Z_idx[0]]>{p}||Electron_pt[Z_idx[1]]>{p})".format(p=ptThresh), "At least one Electron in Z with pt>{}".format(ptThresh))
@@ -174,7 +174,6 @@ def zeeH(data,phi_mass,sample):
     
     #Apply photon ID (no ISO)
     zee = photonAna(zee)
-    #actions.append(zee.Snapshot("Events", "zeeg.root", cols, opts))
 
     # FSR Recovery with loose muons and preselection photons
     zee=zee.Define("Photon_isFSR","fsr_recovery(Z_idx,Electron_pt, Electron_eta, Electron_phi, Electron_mass,Photon_pt,Photon_eta,Photon_phi,Photon_preselection)");
