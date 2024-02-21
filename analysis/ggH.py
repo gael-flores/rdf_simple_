@@ -87,7 +87,6 @@ def ggH(data,phi_mass,sample):
     #exactly 3 photons
     ggH3g=ggH.Filter('Sum(Photon_ID==1)==3','exactly 3 ID photon')
     ggH3g=ggH3g.Define('good_photons','Photon_ID==1')
-    ggH3g=ggH3g.Define("m_3g", "InvariantMass(Photon_pt[good_photons], Photon_eta[good_photons], Photon_phi[good_photons], Photon_mass[good_photons])")
     for mass in phi_mass:
         ggH3g=ggH3g.Define('raw_best_3g_m{}'.format(mass),"best_3gamma(Photon_pt[good_photons],Photon_eta[good_photons],Photon_phi[good_photons],Photon_isScEtaEB[good_photons], Photon_isScEtaEE[good_photons],{})".format(float(mass)))
         ggH3g=ggH3g.Define('best_3g_phi_gamma1_pt_m{}'.format(mass),'raw_best_3g_m{}[0]'.format(mass))
@@ -112,7 +111,6 @@ def ggH(data,phi_mass,sample):
     #exactly 3 photons: two good and one failing ID
     ggH3g_antiID=ggH_antiID.Filter('Sum(Photon_ID==1)==2 && Sum(Photon_antiID==1)==1','exactly 2 ID photon and 1 fail ID photon')
     ggH3g_antiID=ggH3g_antiID.Define('good_photons','Photon_ID==1|Photon_antiID==1')
-    ggH3g_antiID=ggH3g_antiID.Define("m_3g", "InvariantMass(Photon_pt[good_photons], Photon_eta[good_photons], Photon_phi[good_photons], Photon_mass[good_photons])")
     for mass in phi_mass:
         ggH3g_antiID=ggH3g_antiID.Define('raw_best_3g_m{}'.format(mass),"best_3gamma(Photon_pt[good_photons],Photon_eta[good_photons],Photon_phi[good_photons],Photon_isScEtaEB[good_photons], Photon_isScEtaEE[good_photons],{})".format(float(mass)))
         ggH3g_antiID=ggH3g_antiID.Define('best_3g_phi_gamma1_pt_m{}'.format(mass),'raw_best_3g_m{}[0]'.format(mass))
@@ -134,7 +132,6 @@ def ggH(data,phi_mass,sample):
     #at least 4 photons
     ggH4g=ggH.Filter('Sum(Photon_ID==1)>3','at least 4 ID photon')
     ggH4g=ggH4g.Define('good_photons','Photon_ID==1')
-    ggH4g=ggH4g.Define("m_4g", "InvariantMass(Photon_pt[good_photons], Photon_eta[good_photons], Photon_phi[good_photons], Photon_mass[good_photons])")
     for mass in phi_mass:
         ggH4g=ggH4g.Define('raw_best_4g_m{}'.format(mass),"best_4gamma(Photon_pt[good_photons],Photon_eta[good_photons],Photon_phi[good_photons],Photon_isScEtaEB[good_photons], Photon_isScEtaEE[good_photons],{})".format(float(mass)))
         ggH4g=ggH4g.Define('best_4g_phi1_gamma1_pt_m{}'.format(mass),'raw_best_4g_m{}[0]'.format(mass))
@@ -165,7 +162,6 @@ def ggH(data,phi_mass,sample):
     #at least 4 photons with exactly one anti ID photon
     ggH4g_antiID=ggH_antiID.Filter('Sum(Photon_ID==1)>2 && Sum(Photon_antiID==1)==1','at least 3 ID photon and exactly one fail ID photon')
     ggH4g_antiID=ggH4g_antiID.Define('good_photons','Photon_ID==1|Photon_antiID==1')
-    ggH4g_antiID=ggH4g_antiID.Define("m_4g", "InvariantMass(Photon_pt[good_photons], Photon_eta[good_photons], Photon_phi[good_photons], Photon_mass[good_photons])")
     for mass in phi_mass:
         ggH4g_antiID=ggH4g_antiID.Define('raw_best_4g_m{}'.format(mass),"best_4gamma(Photon_pt[good_photons],Photon_eta[good_photons],Photon_phi[good_photons],Photon_isScEtaEB[good_photons], Photon_isScEtaEE[good_photons],{})".format(float(mass)))
         ggH4g_antiID=ggH4g_antiID.Define('best_4g_phi1_gamma1_pt_m{}'.format(mass),'raw_best_4g_m{}[0]'.format(mass))
