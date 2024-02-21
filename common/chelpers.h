@@ -22,7 +22,7 @@ using RVecUL = ROOT::VecOps::RVec<unsigned long int>;
 using RVecULL = ROOT::VecOps::RVec<unsigned long long int>;
 
 // Reconstruct the best Z-> ll candidate
-RVec<size_t> best_z(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecI charge)
+RVec<size_t> best_z(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecI charge, RVecB isTight)
 {
 
   RVec<size_t> result;
@@ -34,6 +34,8 @@ RVec<size_t> best_z(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecI charge)
   for (size_t i = 0; i < idx_cmb[0].size(); i++) {
     const auto i1 = idx_cmb[0][i];
     const auto i2 = idx_cmb[1][i];
+    if (!(isTight[i1]&&isTight[i2]))
+      continue;
     if (charge[i1] != charge[i2]) {
       ROOT::Math::PtEtaPhiMVector p1(pt[i1], eta[i1], phi[i1], mass[i1]);
       ROOT::Math::PtEtaPhiMVector p2(pt[i2], eta[i2], phi[i2], mass[i2]);
@@ -51,7 +53,7 @@ RVec<size_t> best_z(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecI charge)
 }
 
 // Picking best leptons for FSR Z events
-RVec<size_t> best_zg(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecI charge, RVecF g_pt, RVecF g_eta, RVecF g_phi)
+RVec<size_t> best_zg(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecI charge, RVecB isTight, RVecF g_pt, RVecF g_eta, RVecF g_phi)
 {
   RVec<size_t> result;
   result.reserve(3);
@@ -63,6 +65,8 @@ RVec<size_t> best_zg(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecI charge, R
   for (size_t i = 0; i < idx_cmb[0].size(); i++) { // Loop through pairs of leptons
     const auto i1 = idx_cmb[0][i];
     const auto i2 = idx_cmb[1][i];
+    if (!(isTight[i1] && isTight[i2]))
+      continue;
     if (charge[i1] != charge[i2]) { // Require opposite charge
       ROOT::Math::PtEtaPhiMVector p1(pt[i1], eta[i1], phi[i1], mass[i1]);
       ROOT::Math::PtEtaPhiMVector p2(pt[i2], eta[i2], phi[i2], mass[i2]);
@@ -134,6 +138,33 @@ RVecF best_Zg_info(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecF g_pt, RVecF
   out.emplace_back(DeltaR(eta[idx_l2], g_eta[idx_g], phi[idx_l2], g_phi[idx_g]));
   out.emplace_back(DeltaPhi(phi[idx_l1], g_phi[idx_g]));
   out.emplace_back(DeltaPhi(phi[idx_l2], g_phi[idx_g]));
+  return out;
+}
+
+RVecF best_W_info(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecB isTight, const float met_pt, const float met_phi){
+  RVecF out;
+  out.reserve(8);
+  // Find highest pT tight lepton
+  auto idx = Argsort(pt, [](double x, double y) {return x > y;});
+  for (size_t i = 0; i < pt.size(); i++){
+    if (isTight[idx[i]]){
+      ROOT::Math::PtEtaPhiMVector l(pt[idx[i]], eta[idx[i]], phi[idx[i]], mass[idx[i]]);
+      ROOT::Math::PtEtaPhiMVector MET(met_pt, 0.0, met_phi, 0.0);
+      out.emplace_back((l+MET).pt());
+      out.emplace_back((l+MET).eta());
+      out.emplace_back((l+MET).phi());
+      out.emplace_back((l+MET).mass());
+      float met_eta = 0.0;
+      out.emplace_back(DeltaR(eta[idx[i]], met_eta, phi[idx[i]], met_phi));
+      out.emplace_back(DeltaPhi(phi[idx[i]], met_phi));
+      float mt2 = l.mass()*l.mass()+2*(l.Et()*MET.Et() - l.px()*MET.px() - l.py()*MET.py());
+      out.emplace_back((mt2 > 0) ? std::sqrt(mt2) : 0.0);
+      out.emplace_back(idx[i]);
+      return out;
+    }
+  }
+  for (int i = 0; i < 8; i++)
+    out.emplace_back(0);
   return out;
 }
 
@@ -394,3 +425,14 @@ float getPUweight(const int truePU, std::vector<float> weights, const bool isMC)
   return weights[truePU];
 }
 
+RVecF check_W_misID(const float e_pt, const float e_eta, const float e_phi, const float e_mass, RVecF g_pt, RVecF g_eta, RVecF g_phi, const int idx1, const int idx2){
+  RVecF out;
+  out.reserve(3);
+  ROOT::Math::PtEtaPhiMVector e(e_pt, e_eta, e_phi, e_mass);
+  ROOT::Math::PtEtaPhiMVector g1(g_pt[idx1], g_eta[idx1], g_phi[idx1], 0.0);
+  ROOT::Math::PtEtaPhiMVector g2(g_pt[idx2], g_eta[idx2], g_phi[idx2], 0.0);
+  out.emplace_back((e+g1).mass());
+  out.emplace_back((e+g2).mass());
+  out.emplace_back((e+g1+g2).mass());
+  return out;
+}
