@@ -342,7 +342,7 @@ def zmumuH(data,phi_mass,sample):
     ####################
     #ANALYSIS CODE HERE#        
     ####################
-
+    
     #pass HLT
     zmm = dataframe['Events'].Filter('HLT_passed','passed HLT')
     zmm = zmm.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{},sample_isMC)".format(data['era']))
@@ -355,6 +355,7 @@ def zmumuH(data,phi_mass,sample):
     # Separate dataframe for Z FSR tagging for photon ID
     zmmg = zmm.Filter("nPhoton==1", "Exactly 1 photon")
     zmmg = photonAna(zmmg) # Run photon analyzer but no cuts on ID
+    zmmg = makeZ(zmmg, "Muon")
     zmmg = makeZ_fsr(zmmg, "Muon")
     zmmg = zmmg.Filter("Zg_mass > 70 && Zg_mass < 110", "Dimuon + photon mass between 70-110 GeV")
     actions.append(zmmg.Snapshot("Events", sample+"_zmmg.root", cols))
