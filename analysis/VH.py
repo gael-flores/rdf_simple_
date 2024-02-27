@@ -13,15 +13,15 @@ cols = "best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z.*|^W.*|Weight.*|^Gen.*|^weigh
 # Name = branch name in tree
 # Bits = trigger bits for HLT path
 # pt = pt threshold for trigger
-muTrig = {'2018': [{'name': 'HLT_IsoMu24', 'bits': 2+8, 'pt': 24}],
-          '2017': [{'name': 'HLT_IsoMu27', 'bits': 2+8, 'pt': 27}],
-          '2016postVFP': [{'name': 'HLT_IsoMu24', 'bits': 2+8, 'pt': 24},
+muTrig = {'2018': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
+          '2017': [{'name': 'HLT_IsoMu27', 'bits': 8, 'pt': 27}],
+          '2016postVFP': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24},
                           {'name': 'HLT_IsoTkMu24', 'bits': 1+8, 'pt': 24}],
-          '2016preVFP': [{'name': 'HLT_IsoMu24', 'bits': 2+8, 'pt': 24},
+          '2016preVFP': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24},
                           {'name': 'HLT_IsoTkMu24', 'bits': 1+8, 'pt': 24}]}
 
 eleTrig = {'2018': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 2, 'pt': 32}],
-           '2017': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 2+1024, 'pt': 32}],
+           '2017': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 1024, 'pt': 32}],
            '2016postVFP': [{'name': 'HLT_Ele27_WPTight_Gsf', 'bits': 2, 'pt': 27}],
            '2016preVFP': [{'name': 'HLT_Ele27_WPTight_Gsf', 'bits': 2, 'pt': 27}]}
           
@@ -277,8 +277,6 @@ def wenuH(data,phi_mass,sample):
 
     return actions
 
-    return actions
-
 def wmunuH(data,phi_mass,sample):
     actions=[]
 
@@ -351,15 +349,6 @@ def zmumuH(data,phi_mass,sample):
     zmm = electronAna(zmm, data['era'])
     #Look for + and - muons
     zmm = zmm.Filter("Sum(Muon_charge[tight_muon]==1)>0 && Sum(Muon_charge[tight_muon]==-1)>0","At least one opposite sign muon pair, both passing tight ID and preselection")
-
-    # Separate dataframe for Z FSR tagging for photon ID
-    zmmg = zmm.Filter("nPhoton==1", "Exactly 1 photon")
-    zmmg = photonAna(zmmg) # Run photon analyzer but no cuts on ID
-    zmmg = makeZ(zmmg, "Muon")
-    zmmg = makeZ_fsr(zmmg, "Muon")
-    zmmg = zmmg.Filter("Zg_mass > 70 && Zg_mass < 110", "Dimuon + photon mass between 70-110 GeV")
-    actions.append(zmmg.Snapshot("Events", sample+"_zmmg.root", cols))
-    actions.append(dataframe['Runs'].Snapshot("Runs", sample+"_zmmg.root", "", opts))
 
     #create the best Zmumu candidate and filter
     zmm = makeZ(zmm, "Muon")  
