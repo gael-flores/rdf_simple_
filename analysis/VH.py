@@ -215,9 +215,9 @@ def zeeH(data,phi_mass,sample):
         zee2g = zee2g.Define("Photon_ID_m{}".format(mass), "Photon_isLoose&&Photon_corrIso_m{}<0.1&&Photon_IdNoIso".format(mass))
         zee2g = zee2g.Define("best_2g_sumID_m{}".format(mass), "raw_best_2g_m{m}[13]+raw_best_2g_m{m}[14]".format(m=mass))
 
-    actions.append(zee2g.Snapshot('Events',sample+'_zee2g.root',cols))
+    actions.append(zee2g.Snapshot('zee2g',sample+'.root',cols,opts))
     for tree in ['Runs']:
-        actions.append(dataframe[tree].Snapshot(tree, sample+'_zee2g.root', "", opts))
+        actions.append(dataframe[tree].Snapshot(tree, sample+'.root', "", opts))
 
     return actions
 
@@ -271,9 +271,9 @@ def wenuH(data,phi_mass,sample):
         wen2g = wen2g.Define("best_2g_misID2_m{}".format(mass), "misID_info_m{}[1]".format(mass))
         wen2g = wen2g.Define("best_2g_misID3_m{}".format(mass), "misID_info_m{}[2]".format(mass))
 
-    actions.append(wen2g.Snapshot('Events', sample+"_wen2g.root", cols))
+    actions.append(wen2g.Snapshot('wen2g', sample+".root", cols, opts))
     for tree in ['Runs']:
-        actions.append(dataframe[tree].Snapshot(tree, sample+"_wen2g.root", "", opts))
+        actions.append(dataframe[tree].Snapshot(tree, sample+".root", "", opts))
 
     return actions
 
@@ -323,9 +323,9 @@ def wmunuH(data,phi_mass,sample):
         wmn2g = wmn2g.Define("Photon_ID_m{}".format(mass), "Photon_preselection&&Photon_corrIso_m{}<0.1&&Photon_IdNoIso".format(mass))
         wmn2g = wmn2g.Define("best_2g_sumID_m{}".format(mass), "raw_best_2g_m{m}[13]+raw_best_2g_m{m}[14]".format(m=mass))
 
-    actions.append(wmn2g.Snapshot('Events', sample+"_wmn2g.root", cols))
+    actions.append(wmn2g.Snapshot('wmn2g', sample+".root", cols,opts))
     for tree in ['Runs']:
-        actions.append(dataframe[tree].Snapshot(tree, sample+"_wmn2g.root", "", opts))
+        actions.append(dataframe[tree].Snapshot(tree, sample+".root", "", opts))
         
     return actions
 
@@ -460,11 +460,11 @@ def zmumuH(data,phi_mass,sample):
      
         
 
-    actions.append(zmm2g.Snapshot('Events',sample+'_zmm2g.root',cols))
+    actions.append(zmm2g.Snapshot('zmm2g',sample+'.root',cols, opts))
     #actions.append(zmm3g.Snapshot('Events',sample+'_zmm3g.root',cols))
     #actions.append(zmm4g.Snapshot('Events',sample+'_zmm4g.root',cols))
     for tree in ['Runs']:
-        actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm2g.root', "", opts))
+        actions.append(dataframe[tree].Snapshot(tree, sample+'.root', "", opts))
         #actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm3g.root', "", opts))
         #actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm4g.root', "", opts))
     #r=zmm2g.Report()
