@@ -16,9 +16,9 @@ cols = "best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z.*|^W.*|Weight.*|^Gen.*|^weigh
 muTrig = {'2018': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
           '2017': [{'name': 'HLT_IsoMu27', 'bits': 8, 'pt': 27}],
           '2016postVFP': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24},
-                          {'name': 'HLT_IsoTkMu24', 'bits': 1+8, 'pt': 24}],
+                          {'name': 'HLT_IsoTkMu24', 'bits': 1+8, 'pt': 24}], # Check if filter bits are correct
           '2016preVFP': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24},
-                          {'name': 'HLT_IsoTkMu24', 'bits': 1+8, 'pt': 24}]}
+                          {'name': 'HLT_IsoTkMu24', 'bits': 1+8, 'pt': 24}]} # Check if filter bits are correct
 
 eleTrig = {'2018': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 2, 'pt': 32}],
            '2017': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 1024, 'pt': 32}],
@@ -159,7 +159,8 @@ def zeeH(data,phi_mass,sample):
     ####################
     #pass HLT
     zee = dataframe['Events'].Filter('HLT_passed','passed HLT')
-    zee = zee.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{},sample_isMC)".format(data['era']))
+    if data['isMC']:
+        zee = zee.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{},sample_isMC)".format(data['era']))
     #Apply Lepton ID (no ISO)
     zee = muonAna(zee, data['era'])
     zee = electronAna(zee, data['era'])
@@ -234,7 +235,8 @@ def wenuH(data,phi_mass,sample):
     #ANALYSIS CODE HERE#        
     ####################
     wen = dataframe['Events'].Filter('HLT_passed', 'passed HLT')
-    wen = wen.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
+    if data['isMC']:
+        wen = wen.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
     wen = muonAna(wen, data['era'])
     wen = electronAna(wen, data['era'])
 
@@ -291,7 +293,8 @@ def wmunuH(data,phi_mass,sample):
     ####################
 
     wmn = dataframe['Events'].Filter('HLT_passed', 'passed HLT')
-    wmn = wmn.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
+    if data['isMC']:
+        wmn = wmn.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
     wmn = muonAna(wmn, data['era'])
     wmn = electronAna(wmn, data['era'])
 
@@ -347,7 +350,8 @@ def zmumuH(data,phi_mass,sample):
     
     #pass HLT
     zmm = dataframe['Events'].Filter('HLT_passed','passed HLT')
-    zmm = zmm.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{},sample_isMC)".format(data['era']))
+    if data['isMC']:
+        zmm = zmm.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{},sample_isMC)".format(data['era']))
     #Apply Lepton ID (no ISO)
     zmm = muonAna(zmm, data['era'])
     zmm = electronAna(zmm, data['era'])
