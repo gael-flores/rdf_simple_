@@ -58,14 +58,15 @@ RVec<size_t> best_zg(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecI charge, R
   RVec<size_t> result;
   result.reserve(3);
   auto idx_cmb = ROOT::VecOps::Combinations(pt, 2);
-  auto best_mass = -1;
+  auto best_mass = -999;
   size_t best_i1 = 0;
   size_t best_i2 = 0;
   size_t best_g = 0;
+
   for (size_t i = 0; i < idx_cmb[0].size(); i++) { // Loop through pairs of leptons
     const auto i1 = idx_cmb[0][i];
     const auto i2 = idx_cmb[1][i];
-    if (!(isTight[i1] && isTight[i2]))
+    if (!(isTight[i1] && isTight[i2])) // Require both passing ID
       continue;
     if (charge[i1] != charge[i2]) { // Require opposite charge
       ROOT::Math::PtEtaPhiMVector p1(pt[i1], eta[i1], phi[i1], mass[i1]);
@@ -123,7 +124,7 @@ RVecF best_Z_info(RVecF pt, RVecF eta, RVecF phi, RVecF mass, const RVec<size_t>
 
 RVecF best_Zg_info(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecF g_pt, RVecF g_eta, RVecF g_phi, const RVec<size_t>& idx){
   RVecF out;
-  out.reserve(8);
+  out.reserve(9);
   size_t idx_l1 = idx[0];
   size_t idx_l2 = idx[1];
   size_t idx_g = idx[2];
@@ -138,6 +139,7 @@ RVecF best_Zg_info(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecF g_pt, RVecF
   out.emplace_back(DeltaR(eta[idx_l2], g_eta[idx_g], phi[idx_l2], g_phi[idx_g]));
   out.emplace_back(DeltaPhi(phi[idx_l1], g_phi[idx_g]));
   out.emplace_back(DeltaPhi(phi[idx_l2], g_phi[idx_g]));
+  out.emplace_back((l1+l2).mass());
   return out;
 }
 

@@ -7,21 +7,21 @@ opts.fOverwriteIfExists = True
 
 from common.pyhelpers import load_meta_data
 
-cols = "best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z.*|^W.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*|^event.*|^Electron_.*|^Pileup_.*|^MET_.*"
+cols = "best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z.*|^W.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*|^event.*|^Electron_.*|^Pileup_.*|^MET_.*|^run.*|^luminosityBlock.*"
 
 # Muon trigger[era][par], par = ['name', 'bits', 'pt']
 # Name = branch name in tree
 # Bits = trigger bits for HLT path
 # pt = pt threshold for trigger
-muTrig = {'2018': [{'name': 'HLT_IsoMu24', 'bits': 2+8, 'pt': 24}],
-          '2017': [{'name': 'HLT_IsoMu27', 'bits': 2+8, 'pt': 27}],
-          '2016postVFP': [{'name': 'HLT_IsoMu24', 'bits': 2+8, 'pt': 24},
+muTrig = {'2018': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
+          '2017': [{'name': 'HLT_IsoMu27', 'bits': 8, 'pt': 27}],
+          '2016postVFP': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24},
                           {'name': 'HLT_IsoTkMu24', 'bits': 1+8, 'pt': 24}],
-          '2016preVFP': [{'name': 'HLT_IsoMu24', 'bits': 2+8, 'pt': 24},
+          '2016preVFP': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24},
                           {'name': 'HLT_IsoTkMu24', 'bits': 1+8, 'pt': 24}]}
 
 eleTrig = {'2018': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 2, 'pt': 32}],
-           '2017': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 2+1024, 'pt': 32}],
+           '2017': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 1024, 'pt': 32}],
            '2016postVFP': [{'name': 'HLT_Ele27_WPTight_Gsf', 'bits': 2, 'pt': 27}],
            '2016preVFP': [{'name': 'HLT_Ele27_WPTight_Gsf', 'bits': 2, 'pt': 27}]}
           
@@ -88,7 +88,7 @@ def electronAna(dataframe, era = '2018'):
     return electrons
 
 # Must run muon + electron analyzer first to do overlap with loose leptons
-def photonAna(dataframe):
+def photonAna(dataframe, era = '2018'):
 
     # Overlap with loose leptons
     photons = dataframe.Define("Photon_muOverlap", "overlapClean(Photon_phi, Photon_eta, Muon_phi[loose_muon], Muon_eta[loose_muon])")
@@ -100,6 +100,10 @@ def photonAna(dataframe):
 
     # Common Photon ID definitions (No isolation)
     photons = photons.Define("Photon_IdNoIso","((Photon_isScEtaEB&&Photon_hoe<0.04596&&Photon_sieie<0.0106)||(Photon_isScEtaEE&&Photon_hoe<0.0590&&Photon_sieie<0.0272))")
+
+    photons = photons.Define("pho_SFs_id", "scaleFactors_2d(Photon_eta, Photon_pt, PHO_ID_{era}_sf, PHO_ID_{era}_binsX, PHO_ID_{era}_binsY, sample_isMC, Photon_IdNoIso)".format(era=era))
+    photons = photons.Define("Photon_idSF_val", "pho_SFs_id[0]")
+    photons = photons.Define("Photon_idSF_unc", "pho_SFs_id[1]")
 
     return photons    
 
@@ -173,7 +177,7 @@ def zeeH(data,phi_mass,sample):
     zee = zee.Filter("nPhoton>0","At least one photon")
     
     #Apply photon ID (no ISO)
-    zee = photonAna(zee)
+    zee = photonAna(zee, data['era'])
 
     # FSR Recovery with loose muons and preselection photons
     zee=zee.Define("Photon_isFSR","fsr_recovery(Z_idx,Electron_pt, Electron_eta, Electron_phi, Electron_mass,Photon_pt,Photon_eta,Photon_phi,Photon_preselection)");
@@ -215,9 +219,9 @@ def zeeH(data,phi_mass,sample):
         zee2g = zee2g.Define("Photon_ID_m{}".format(mass), "Photon_isLoose&&Photon_corrIso_m{}<0.1&&Photon_IdNoIso".format(mass))
         zee2g = zee2g.Define("best_2g_sumID_m{}".format(mass), "raw_best_2g_m{m}[13]+raw_best_2g_m{m}[14]".format(m=mass))
 
-    actions.append(zee2g.Snapshot('Events',sample+'_zee2g.root',cols))
+    actions.append(zee2g.Snapshot('zee2g',sample+'.root',cols,opts))
     for tree in ['Runs']:
-        actions.append(dataframe[tree].Snapshot(tree, sample+'_zee2g.root', "", opts))
+        actions.append(dataframe[tree].Snapshot(tree, sample+'.root', "", opts))
 
     return actions
 
@@ -241,7 +245,7 @@ def wenuH(data,phi_mass,sample):
 
     wen = wen.Filter("nPhoton>0", "At least 1 photon")
 
-    wen = photonAna(wen)
+    wen = photonAna(wen, data['era'])
     
     wen2g = wen.Filter('Sum(Photon_preselection==1)>1', "At least 2 photons passing preselection")
     
@@ -271,11 +275,9 @@ def wenuH(data,phi_mass,sample):
         wen2g = wen2g.Define("best_2g_misID2_m{}".format(mass), "misID_info_m{}[1]".format(mass))
         wen2g = wen2g.Define("best_2g_misID3_m{}".format(mass), "misID_info_m{}[2]".format(mass))
 
-    actions.append(wen2g.Snapshot('Events', sample+"_wen2g.root", cols))
+    actions.append(wen2g.Snapshot('wen2g', sample+".root", cols, opts))
     for tree in ['Runs']:
-        actions.append(dataframe[tree].Snapshot(tree, sample+"_wen2g.root", "", opts))
-
-    return actions
+        actions.append(dataframe[tree].Snapshot(tree, sample+".root", "", opts))
 
     return actions
 
@@ -300,7 +302,7 @@ def wmunuH(data,phi_mass,sample):
 
     wmn = wmn.Filter("nPhoton>0", "At least 1 photon")
 
-    wmn = photonAna(wmn)
+    wmn = photonAna(wmn, data['era'])
     
     wmn2g = wmn.Filter('Sum(Photon_preselection==1)>1', "At least 2 photons passing preselection")
     for mass in phi_mass:
@@ -325,9 +327,9 @@ def wmunuH(data,phi_mass,sample):
         wmn2g = wmn2g.Define("Photon_ID_m{}".format(mass), "Photon_preselection&&Photon_corrIso_m{}<0.1&&Photon_IdNoIso".format(mass))
         wmn2g = wmn2g.Define("best_2g_sumID_m{}".format(mass), "raw_best_2g_m{m}[13]+raw_best_2g_m{m}[14]".format(m=mass))
 
-    actions.append(wmn2g.Snapshot('Events', sample+"_wmn2g.root", cols))
+    actions.append(wmn2g.Snapshot('wmn2g', sample+".root", cols,opts))
     for tree in ['Runs']:
-        actions.append(dataframe[tree].Snapshot(tree, sample+"_wmn2g.root", "", opts))
+        actions.append(dataframe[tree].Snapshot(tree, sample+".root", "", opts))
         
     return actions
 
@@ -352,15 +354,6 @@ def zmumuH(data,phi_mass,sample):
     #Look for + and - muons
     zmm = zmm.Filter("Sum(Muon_charge[tight_muon]==1)>0 && Sum(Muon_charge[tight_muon]==-1)>0","At least one opposite sign muon pair, both passing tight ID and preselection")
 
-    # Separate dataframe for Z FSR tagging for photon ID
-    zmmg = zmm.Filter("nPhoton==1", "Exactly 1 photon")
-    zmmg = photonAna(zmmg) # Run photon analyzer but no cuts on ID
-    zmmg = makeZ(zmmg, "Muon")
-    zmmg = makeZ_fsr(zmmg, "Muon")
-    zmmg = zmmg.Filter("Zg_mass > 70 && Zg_mass < 110", "Dimuon + photon mass between 70-110 GeV")
-    actions.append(zmmg.Snapshot("Events", sample+"_zmmg.root", cols))
-    actions.append(dataframe['Runs'].Snapshot("Runs", sample+"_zmmg.root", "", opts))
-
     #create the best Zmumu candidate and filter
     zmm = makeZ(zmm, "Muon")  
     zmm = zmm.Filter("Z_mass>70&&Z_mass<110", "Dimuon mass between 70-110 GeV")  
@@ -373,7 +366,7 @@ def zmumuH(data,phi_mass,sample):
     zmm = zmm.Filter("nPhoton>0","At least one photon")
     
     #Apply photon ID (no ISO)
-    zmm = photonAna(zmm)
+    zmm = photonAna(zmm, data['era'])
     #actions.append(zmm.Snapshot("Events", "zmmg.root", cols, opts))
 
     # FSR Recovery with loose muons and preselection photons
@@ -471,11 +464,11 @@ def zmumuH(data,phi_mass,sample):
      
         
 
-    actions.append(zmm2g.Snapshot('Events',sample+'_zmm2g.root',cols))
+    actions.append(zmm2g.Snapshot('zmm2g',sample+'.root',cols, opts))
     #actions.append(zmm3g.Snapshot('Events',sample+'_zmm3g.root',cols))
     #actions.append(zmm4g.Snapshot('Events',sample+'_zmm4g.root',cols))
     for tree in ['Runs']:
-        actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm2g.root', "", opts))
+        actions.append(dataframe[tree].Snapshot(tree, sample+'.root', "", opts))
         #actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm3g.root', "", opts))
         #actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm4g.root', "", opts))
     #r=zmm2g.Report()
