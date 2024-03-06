@@ -88,7 +88,7 @@ def electronAna(dataframe, era = '2018'):
     return electrons
 
 # Must run muon + electron analyzer first to do overlap with loose leptons
-def photonAna(dataframe):
+def photonAna(dataframe, era = '2018'):
 
     # Overlap with loose leptons
     photons = dataframe.Define("Photon_muOverlap", "overlapClean(Photon_phi, Photon_eta, Muon_phi[loose_muon], Muon_eta[loose_muon])")
@@ -100,6 +100,10 @@ def photonAna(dataframe):
 
     # Common Photon ID definitions (No isolation)
     photons = photons.Define("Photon_IdNoIso","((Photon_isScEtaEB&&Photon_hoe<0.04596&&Photon_sieie<0.0106)||(Photon_isScEtaEE&&Photon_hoe<0.0590&&Photon_sieie<0.0272))")
+
+    photons = photons.Define("pho_SFs_id", "scaleFactors_2d(Photon_eta, Photon_pt, PHO_ID_{era}_sf, PHO_ID_{era}_binsX, PHO_ID_{era}_binsY, sample_isMC, Photon_IdNoIso)".format(era=era))
+    photons = photons.Define("Photon_idSF_val", "pho_SFs_id[0]")
+    photons = photons.Define("Photon_idSF_unc", "pho_SFs_id[1]")
 
     return photons    
 
@@ -173,7 +177,7 @@ def zeeH(data,phi_mass,sample):
     zee = zee.Filter("nPhoton>0","At least one photon")
     
     #Apply photon ID (no ISO)
-    zee = photonAna(zee)
+    zee = photonAna(zee, data['era'])
 
     # FSR Recovery with loose muons and preselection photons
     zee=zee.Define("Photon_isFSR","fsr_recovery(Z_idx,Electron_pt, Electron_eta, Electron_phi, Electron_mass,Photon_pt,Photon_eta,Photon_phi,Photon_preselection)");
@@ -241,7 +245,7 @@ def wenuH(data,phi_mass,sample):
 
     wen = wen.Filter("nPhoton>0", "At least 1 photon")
 
-    wen = photonAna(wen)
+    wen = photonAna(wen, data['era'])
     
     wen2g = wen.Filter('Sum(Photon_preselection==1)>1', "At least 2 photons passing preselection")
     
@@ -298,7 +302,7 @@ def wmunuH(data,phi_mass,sample):
 
     wmn = wmn.Filter("nPhoton>0", "At least 1 photon")
 
-    wmn = photonAna(wmn)
+    wmn = photonAna(wmn, data['era'])
     
     wmn2g = wmn.Filter('Sum(Photon_preselection==1)>1', "At least 2 photons passing preselection")
     for mass in phi_mass:
@@ -362,7 +366,7 @@ def zmumuH(data,phi_mass,sample):
     zmm = zmm.Filter("nPhoton>0","At least one photon")
     
     #Apply photon ID (no ISO)
-    zmm = photonAna(zmm)
+    zmm = photonAna(zmm, data['era'])
     #actions.append(zmm.Snapshot("Events", "zmmg.root", cols, opts))
 
     # FSR Recovery with loose muons and preselection photons
