@@ -97,13 +97,13 @@ class rdf_plotter(plotter_base):
         return h
 
 
-    def hist2d(self,var,cuts,lumi,model,titlex = "",unitsx = "",titley="",unitsy=""):
+    def hist2d(self,var1,var2,cuts,lumi,model,titlex = "",unitsx = "",titley="",unitsy=""):
         corrString="1.0"
         for corr in self.corrFactors:
             corrString = corrString+"*("+str(corr['value'])+")" 
         c = "("+self.defaultCuts+")*("+cuts+")*"+lumi+"*"+self.weight+"*("+corrString+")"
         rdf=self.rdf.Define('plot_weight',c)
-        h=rdf.Histo2D(model,var,'plot_weight')
+        h=rdf.Histo2D(model,var1,var2,'plot_weight')
         h.Sumw2()
         h.SetLineStyle(self.linestyle)
         h.SetLineColor(self.linecolor)
@@ -188,13 +188,13 @@ class merged_plotter(plotter_base):
         return h
 
 
-    def hist2d(self,var,cuts,lumi,model,titlex = "",unitsx = "",titley="",unitsy=""):
+    def hist2d(self,var1,var2,cuts,lumi,model,titlex = "",unitsx = "",titley="",unitsy=""):
         h = None
         for plotter in self.plotters:
             if h is None:
-                h = plotter.hist2d(var, cuts, lumi, model, titlex, units)
+                h = plotter.hist2d(var1,var2, cuts, lumi, model, titlex, units)
             else:
-                h.Add(plotter.hist2d(var, cuts, lumi, model, titlex, units).GetValue())
+                h.Add(plotter.hist2d(var1,var2, cuts, lumi, model, titlex, units).GetValue())
         h.Sumw2()
         h.SetLineStyle(self.linestyle)
         h.SetLineColor(self.linecolor)
