@@ -16,9 +16,8 @@ def load_meta_data(data):
             continue;
         dataframe['Events']=dataframe['Events'].Define('sample_'+key,str(data[key]))
     dataframe['Runs'] = ROOT.RDataFrame("Runs", data['files'])
+    dataframe['isMC'] = data['isMC']
     return dataframe
-
-
 
 
 def loadSample(info,locator='root://cms-xrd-global.cern.ch//'):

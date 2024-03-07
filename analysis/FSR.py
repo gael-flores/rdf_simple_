@@ -9,14 +9,14 @@ from common.pyhelpers import load_meta_data
 
 cols = "sample_.*|^Photon_.*|^Muon_.*|^Z.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*|^event.*|^Pileup_.*"
 
-muTrig = {'2018': [{'name' : "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_subleading", 'bits': 1, 'pt': 8},
-                   {'name' : "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_leading", 'bits': 1, 'pt': 17}],
-          '2017': [{'name' : "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_subleading", 'bits': 1, 'pt': 8},
-                   {'name' : "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_leading", 'bits': 1, 'pt': 17}],
-          '2016postVFP': [{'name' : "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_subleading", 'bits': 1, 'pt': 8},
-                          {'name' : "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_leading", 'bits': 1, 'pt': 17}],
-          '2016preVFP': [{'name' : "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_subleading", 'bits': 1, 'pt': 8},
-                         {'name' : "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_leading", 'bits': 1, 'pt': 17}],          
+muTrig = {'2018': [{'name' : "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_subleading", 'bits': 16, 'pt': 8},
+                   {'name' : "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_leading", 'bits': 16, 'pt': 17}],
+          '2017': [{'name' : "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_subleading", 'bits': 16, 'pt': 8},
+                   {'name' : "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_leading", 'bits': 16, 'pt': 17}],
+          '2016postVFP': [{'name' : "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_subleading", 'bits': 16, 'pt': 8},
+                          {'name' : "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_leading", 'bits': 16, 'pt': 17}],
+          '2016preVFP': [{'name' : "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_subleading", 'bits': 16, 'pt': 8},
+                         {'name' : "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_leading", 'bits': 16, 'pt': 17}],          
           }
 
 def muonAna(dataframe, era = '2018'):
@@ -63,11 +63,10 @@ def makeZ_fsr(dataframe, lepton):
 
 def Zmmg(data, sample):
     actions = []
-
     dataframe = load_meta_data(data)
-
     zmm = dataframe['Events'].Filter('HLT_passed', "passed HLT")
-    zmm = zmm.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
+    if data['isMC']:
+        zmm = zmm.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
     zmm = muonAna(zmm, data['era'])
     zmm = photonAna(zmm)
 
