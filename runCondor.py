@@ -1,4 +1,5 @@
 from optparse import OptionParser
+import ROOT
 import os
 import time
 import importlib
@@ -9,6 +10,10 @@ parser.add_option("-a", "--analysis", dest="analysis",
 
 parser.add_option("-o", "--eosdir", dest="eos",default='root://cmseos.fnal.gov//store/user/bachtis/analysis',
                   help="EOS output Directory")
+parser.add_option("-d", "--donotsubmit", dest="nosubmit",default=0,type=int,
+                  help="Do not submit on condor, just show jobs")
+parser.add_option("-v", "--verbose", dest="verbose",default=0,type=int,
+                  help="Verbose")
 
 (options, args) = parser.parse_args()
 
@@ -17,14 +22,33 @@ samp = importlib.import_module('analysis.{}samples'.format(options.analysis))
 
 datasets= args
 
+def check_file(filename):
+    f=0
+    try:
+        f=ROOT.TFile.Open(filename)
+    except:
+        return False
+    if f.IsZombie()>0:
+        return False
+    else:
+        if f.GetNkeys()>0:
+            return True
+        else:
+            return False
 
-
-os.system('tar --overwrite --exclude="common/__pycache__" --exclude="analysis/__pycache__"  -czvf /tmp/sandbox.tar.gz .')
+    
+    
+os.system('tar --overwrite --exclude=".git" --exclude="common/__pycache__" --exclude="analysis/__pycache__"  -czvf /tmp/sandbox.tar.gz .')
 os.system('mv /tmp/sandbox.tar.gz .')
 
 
 for d,info in samp.samples.items():    
     if (not ('jobs' in info)):
+        filename="{redirect}/{sample}_{sample}.root".format(redirect=options.eos,sample=d)
+        if check_file(filename):
+            if options.verbose:
+                print ('Filename exists = {}.Will not submit'.format(filename)) 
+            continue
         shell="""#!/bin/sh
         echo starting script
         tar -xzvf sandbox.tar.gz
@@ -48,7 +72,7 @@ for d,info in samp.samples.items():
         rm ${{FILE}}
         done
         """.format(dataset=d,eos=options.eos)
-        print(shell)
+        #print(shell)
         f=open("{dataset}_condor.sh".format(dataset=d),"w")
         f.write(shell)
         f.close()
@@ -68,11 +92,19 @@ for d,info in samp.samples.items():
         f=open("{dataset}_condor.jdl".format(dataset=d),"w")
         f.write(condor)
         f.close()
-        
-        os.system('condor_submit {dataset}_condor.jdl'.format(dataset=d))
+        if options.nosubmit:
+            print('condor_submit {dataset}_condor.jdl'.format(dataset=d))
+        else:
+            os.system('condor_submit {dataset}_condor.jdl'.format(dataset=d))
         time.sleep(0.1)
     else:
         for i in range(0,info['jobs']):
+            filename="{redirect}/{sample}_{i}_{sample}.root".format(redirect=options.eos,i=i,sample=d)
+            if check_file(filename):
+                if options.verbose:
+                    print ('Filename exists = {}.Will not submit'.format(filename)) 
+                continue
+
             shell="""#!/bin/sh
             echo starting script
             tar -xzvf sandbox.tar.gz
@@ -96,7 +128,7 @@ for d,info in samp.samples.items():
             rm ${{FILE}}
             done
             """.format(dataset=d,eos=options.eos,splitFactor=info['jobs'],part=i)
-            print(shell)
+         #   print(shell)
             f=open("{dataset}_{part}_condor.sh".format(dataset=d,part=i),"w")
             f.write(shell)
             f.close()
@@ -116,7 +148,9 @@ for d,info in samp.samples.items():
             f=open("{dataset}_{part}_condor.jdl".format(dataset=d,part=i),"w")
             f.write(condor)
             f.close()
-            
-            os.system('condor_submit {dataset}_{part}_condor.jdl'.format(dataset=d,part=i))
+            if options.nosubmit:
+                print('condor_submit {dataset}_{part}_condor.jdl'.format(dataset=d,part=i))
+            else:
+                os.system('condor_submit {dataset}_{part}_condor.jdl'.format(dataset=d,part=i))
             time.sleep(0.1)
             
