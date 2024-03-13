@@ -231,7 +231,7 @@ class combined_plotter(object):
         self.labels.append(label)
         self.names.append(name)
 
-    def draw_stack(self,var,cut,lumi,model,titlex = "", units = "",expandY=0.0):
+    def draw_stack(self,var,cut,lumi,model,titlex = "", units = "",expandY=0.0,scaleFactors="(1)"):
         canvas = ROOT.TCanvas("canvas","")
 #        ROOT.gStyle.SetOptStat(0)
 #        ROOT.gStyle.SetOptTitle(0)
@@ -267,7 +267,7 @@ class combined_plotter(object):
 
         for (plotter,typeP,label,name) in zip(self.plotters,self.types,self.labels,self.names):
             if typeP == "signal" or typeP =="background":
-                hist = plotter.hist1d(var,cutL,lumi,model,titlex,units)
+                hist = plotter.hist1d(var,cutL+"*("+scaleFactors+")",lumi,model,titlex,units)
                 hist.SetName(name)
 
                 stack.Add(hist.GetValue())
