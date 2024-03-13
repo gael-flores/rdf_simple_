@@ -107,6 +107,12 @@ def photonAna(dataframe, era = '2018'):
 
     return photons    
 
+def genAna(dataframe):
+    gen = dataframe.Define("GenPart_ctau", "getctau(GenPart_dx, GenPart_dy, GenPart_dz, GenPart_pt, GenPart_eta, GenPart_phi, GenPart_mass)")
+    gen = gen.Define("GenPart_ecalEta", "getGenScEta(GenPart_vx, GenPart_vy, GenPart_vz, GenPart_pt, GenPart_eta, GenPart_phi, GenPart_mass)")
+    gen = gen.Define("GenPart_ecalPhi", "getGenScPhi(GenPart_vx, GenPart_vy, GenPart_vz, GenPart_pt, GenPart_eta, GenPart_phi, GenPart_mass)")
+    return gen
+
 def makeZ(dataframe, lepton):
     # pT, eta, phi, mass, deltaR, deltaPhi
     Zs = dataframe.Define("Z_idx", "best_z({L}_pt, {L}_eta, {L}_phi, {L}_mass, {L}_charge, tight_{l})".format(L=lepton, l=lepton.lower()))
@@ -161,6 +167,8 @@ def zeeH(data,phi_mass,sample):
     zee = dataframe['Events'].Filter('HLT_passed','passed HLT')
     if data['isMC']:
         zee = zee.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{},sample_isMC)".format(data['era']))
+        if data['customNanoAOD']:
+            zee = genAna(zee)
     #Apply Lepton ID (no ISO)
     zee = muonAna(zee, data['era'])
     zee = electronAna(zee, data['era'])
@@ -237,6 +245,9 @@ def wenuH(data,phi_mass,sample):
     wen = dataframe['Events'].Filter('HLT_passed', 'passed HLT')
     if data['isMC']:
         wen = wen.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
+        if data['customNanoAOD']:
+            wen = genAna(wen)
+
     wen = muonAna(wen, data['era'])
     wen = electronAna(wen, data['era'])
 
@@ -295,6 +306,8 @@ def wmunuH(data,phi_mass,sample):
     wmn = dataframe['Events'].Filter('HLT_passed', 'passed HLT')
     if data['isMC']:
         wmn = wmn.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
+        if data['customNanoAOD']:
+            wmn = genAna(wmn)
     wmn = muonAna(wmn, data['era'])
     wmn = electronAna(wmn, data['era'])
 
@@ -352,6 +365,8 @@ def zmumuH(data,phi_mass,sample):
     zmm = dataframe['Events'].Filter('HLT_passed','passed HLT')
     if data['isMC']:
         zmm = zmm.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{},sample_isMC)".format(data['era']))
+        if data['customNanoAOD']:
+            zmm = genAna(zmm)
     #Apply Lepton ID (no ISO)
     zmm = muonAna(zmm, data['era'])
     zmm = electronAna(zmm, data['era'])
