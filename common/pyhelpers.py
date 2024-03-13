@@ -12,11 +12,12 @@ def load_meta_data(data):
     #get the list of meta keys
     meta_keys =data.keys()
     for key in meta_keys:
-        if key=='files' or key=='isMC' or key=='trigger' or key=='jobs' or key=='era':
+        if key=='files' or key=='isMC' or key=='trigger' or key=='jobs' or key=='era' or key == 'customNanoAOD':
             continue;
         dataframe['Events']=dataframe['Events'].Define('sample_'+key,str(data[key]))
     dataframe['Runs'] = ROOT.RDataFrame("Runs", data['files'])
     dataframe['isMC'] = data['isMC']
+    dataframe['customNanoAOD'] = data['customNanoAOD']
     return dataframe
 
 
@@ -50,6 +51,10 @@ def loadSample(info,locator='root://cms-xrd-global.cern.ch//'):
         meta['era'] = info['era']
     else:
         meta['era'] = '2018' # Assume 2018 if not included
+    if 'customNanoAOD' in info.keys():
+        meta['customNanoAOD'] = info['customNanoAOD']
+    else:
+        meta['customNanoAOD'] = False
     return meta
 
 

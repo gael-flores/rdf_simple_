@@ -1,8 +1,8 @@
 import ROOT
 import importlib
 # Enable multi-threading
-ROOT.ROOT.EnableImplicitMT()
-#ROOT.ROOT.DisableImplicitMT()
+#ROOT.ROOT.EnableImplicitMT()
+ROOT.ROOT.DisableImplicitMT()
 ROOT.gInterpreter.Declare('#include "common/chelpers.h"')
 from common.pyhelpers import *
 from optparse import OptionParser
@@ -24,7 +24,8 @@ parser.add_option("-p", "--processPart", dest="processPart",
 
 an = importlib.import_module('analysis.{}'.format(options.analysis))
 samp = importlib.import_module('analysis.{}samples'.format(options.analysis))
-#'root://xrootd-cms.infn.it//'
+#root://xrootd-cms.infn.it//
+#root://cmsxrootd.fnal.gov//
 actions=[]
 for sample in args:
     data=createDataSet(samp.samples[sample],options.splitFactor,options.processPart,'root://xrootd-cms.infn.it//')
