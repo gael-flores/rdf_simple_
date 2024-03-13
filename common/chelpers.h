@@ -438,3 +438,94 @@ RVecF check_W_misID(const float e_pt, const float e_eta, const float e_phi, cons
   out.emplace_back((e+g1+g2).mass());
   return out;
 }
+
+RVecF getctau(RVecF dx, RVecF dy, RVecF dz, RVecF pt, RVecF eta, RVecF phi, RVecF mass){
+  RVecF out;
+  out.reserve(pt.size());
+  
+  for (size_t i = 0; i < pt.size(); i++){
+    float ip3d = std::sqrt(dx[i]*dx[i]+dy[i]*dy[i]+dz[i]*dz[i]);
+    ROOT::Math::PtEtaPhiMVector p4(pt[i], eta[i], phi[i], mass[i]);
+    float ctau = ip3d/p4.Gamma()/p4.Beta();
+    out.emplace_back(ctau);
+  }
+
+  return out;
+}
+
+RVecF getGenScEta(RVecF vx, RVecF vy, RVecF vz, RVecF pt, RVecF eta, RVecF phi, RVecF mass){
+  RVecF out;
+  out.reserve(vx.size());
+  for (size_t i = 0; i < vx.size(); i++){
+    float lxy = std::sqrt(vx[i]*vx[i]+vy[i]*vy[i]);
+    float theta = 2*std::atan(std::exp(-eta[i]));
+    float ecal_z = (137.0 - lxy)/std::tan(theta) + vz[i];
+    if (std::abs(ecal_z) < 300){
+      float ecal_r = 137.;
+      float ecal_theta = std::atan2(ecal_r, ecal_z);
+      float ecal_eta = -std::log(std::tan(ecal_theta/2.));
+      out.emplace_back(ecal_eta);
+    }
+    else{
+      if (ecal_z > 0)
+	ecal_z = 324;
+      else
+	ecal_z = -324;
+      ROOT::Math::PtEtaPhiMVector p4(pt[i], eta[i], phi[i], mass[i]);
+      float dx = p4.px()/p4.pz()*(ecal_z - vz[i]);
+      float dy = p4.py()/p4.pz()*(ecal_z - vz[i]);
+      float ecal_x = vx[i] + dx;
+      float ecal_y = vy[i] + dy;
+      float ecal_r = std::sqrt(ecal_x*ecal_x+ecal_y*ecal_y);
+      float ecal_theta = std::atan2(ecal_r, ecal_z);
+      float ecal_eta = -std::log(std::tan(ecal_theta/2.));
+      out.emplace_back(ecal_eta);
+    }
+  }
+  return out;
+}
+
+RVecF getGenScPhi(RVecF vx, RVecF vy, RVecF vz, RVecF pt, RVecF eta, RVecF phi, RVecF mass){
+  RVecF out;
+  out.reserve(vx.size());
+  for (size_t i = 0; i < vx.size(); i++){
+    float lxy = std::sqrt(vx[i]*vx[i]+vy[i]*vy[i]);
+    float theta = 2*std::atan(std::exp(-eta[i]));
+    ROOT::Math::PtEtaPhiMVector p4(pt[i], eta[i], phi[i], mass[i]);
+    float ecal_z = (137. - lxy)/std::tan(theta) + vz[i];
+    if (std::abs(ecal_z) > 300){
+      if (ecal_z > 0)
+	ecal_z = 310;
+      else
+	ecal_z = -310;
+      float ecal_x = vx[i] + p4.px()/p4.pz()*(ecal_z-vz[i]);
+      float ecal_y = vy[i] + p4.py()/p4.pz()*(ecal_z-vz[i]);
+      float ecal_phi = std::atan2(ecal_y, ecal_x);
+      out.emplace_back(ecal_phi);
+    }
+    else{
+      float dx = p4.px()/pt[i];
+      float dy = p4.py()/pt[i];
+      float dr = std::sqrt(dx*dx+dy*dy);
+      float D = vx[i]*(vy[i]+p4.py()/pt[i]) - (vx[i]+p4.px()/pt[i])*vy[i];
+      float delta = (137*137.)*(dr*dr)-D*D;
+      if (delta < 0){
+	out.emplace_back(std::atan2(vy[i], vx[i]));
+	continue;
+      }
+      float xP = (D*dy + std::copysign(1, dy)*dx*std::sqrt(delta))/(dr*dr);
+      float xM = (D*dy - std::copysign(1, dy)*dx*std::sqrt(delta))/(dr*dr);
+      float yP = (-D*dx + abs(dy)*std::sqrt(delta))/(dr*dr);
+      float yM = (-D*dx - abs(dy)*std::sqrt(delta))/(dr*dr);
+      float phi1 = std::atan2(yP, xP);
+      float phi2 = std::atan2(yM, xM);
+      float prod1 = p4.px()*(xP-vx[i])+p4.py()*(yP-vy[i]);
+      float prod2 = p4.px()*(xM-vx[i])+p4.py()*(yM-vy[i]);
+      if (prod1 > prod2)
+	out.emplace_back(phi1);
+      else
+	out.emplace_back(phi2);
+    }
+  }
+  return out;
+}
