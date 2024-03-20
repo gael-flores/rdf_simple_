@@ -529,3 +529,20 @@ RVecF getGenScPhi(RVecF vx, RVecF vy, RVecF vz, RVecF pt, RVecF eta, RVecF phi, 
   }
   return out;
 }
+
+
+RVecI isGenSignal(RVecI pdgId, RVecI motherIdx){
+  RVecI out;
+  out.reserve(pdgId.size());
+  for (size_t i = 0; i < pdgId.size(); i++){
+    if (motherIdx[i] == -1){
+      out.emplace_back(0);
+      continue;
+    }
+    if (pdgId[i] == 22 && std::abs(pdgId[motherIdx[i]]) == 9000006)
+      out.emplace_back(1);
+    else
+      out.emplace_back(0);
+  }
+  return out;
+}
