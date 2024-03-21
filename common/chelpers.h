@@ -89,6 +89,19 @@ RVec<size_t> best_zg(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecI charge, R
   return result;
 }
 
+RVecF Zgg_fsr(RVecF g_pt, RVecF g_eta, RVecF g_phi, const int idx1, const int idx2, RVecF l_pt, RVecF l_eta, RVecF l_phi, RVecF l_mass, RVec<size_t> z_idx){
+  RVecF out;
+  out.reserve(3);
+  ROOT::Math::PtEtaPhiMVector g1(g_pt[idx1], g_eta[idx1], g_phi[idx1], 0);
+  ROOT::Math::PtEtaPhiMVector g2(g_pt[idx2], g_eta[idx2], g_phi[idx2], 0);
+  ROOT::Math::PtEtaPhiMVector l1(l_pt[z_idx[0]], l_eta[z_idx[0]], l_phi[z_idx[0]], l_mass[z_idx[0]]);
+  ROOT::Math::PtEtaPhiMVector l2(l_pt[z_idx[1]], l_eta[z_idx[1]], l_phi[z_idx[1]], l_mass[z_idx[1]]);
+  out.emplace_back((l1+l2+g1).mass());
+  out.emplace_back((l1+l2+g2).mass());
+  out.emplace_back((l1+l2+g1+g2).mass());
+  return out;
+}
+
 RVec<bool> overlapClean(RVecF gphi, RVecF geta, RVecF lphi, RVecF leta){
   RVec<bool> out;
   out.reserve(gphi.size());
@@ -305,11 +318,10 @@ float calculate_llgamma_mass(const RVec<size_t>& idx,RVecF mpt, RVecF meta, RVec
 
 // Find index for scale factor given the value and the bin low edges
 int getBin(const float val, const std::vector<float> bins){
-  if (val < bins.front())
+  if (val <= bins.front())
     return 0;
   auto lower = std::lower_bound(bins.begin(), bins.end(), val); // Finds iterator of bin upper edge
   return (int) (std::distance(bins.begin(), lower) - 1);
-
 }
 
 // Get scale factors as a function of 2 variables
@@ -526,6 +538,23 @@ RVecF getGenScPhi(RVecF vx, RVecF vy, RVecF vz, RVecF pt, RVecF eta, RVecF phi, 
       else
 	out.emplace_back(phi2);
     }
+  }
+  return out;
+}
+
+
+RVecI isGenSignal(RVecI pdgId, RVecI motherIdx){
+  RVecI out;
+  out.reserve(pdgId.size());
+  for (size_t i = 0; i < pdgId.size(); i++){
+    if (motherIdx[i] == -1){
+      out.emplace_back(0);
+      continue;
+    }
+    if (pdgId[i] == 22 && std::abs(pdgId[motherIdx[i]]) == 9000006)
+      out.emplace_back(1);
+    else
+      out.emplace_back(0);
   }
   return out;
 }
