@@ -305,11 +305,10 @@ float calculate_llgamma_mass(const RVec<size_t>& idx,RVecF mpt, RVecF meta, RVec
 
 // Find index for scale factor given the value and the bin low edges
 int getBin(const float val, const std::vector<float> bins){
-  if (val < bins.front())
+  if (val <= bins.front())
     return 0;
   auto lower = std::lower_bound(bins.begin(), bins.end(), val); // Finds iterator of bin upper edge
   return (int) (std::distance(bins.begin(), lower) - 1);
-
 }
 
 // Get scale factors as a function of 2 variables
@@ -526,6 +525,23 @@ RVecF getGenScPhi(RVecF vx, RVecF vy, RVecF vz, RVecF pt, RVecF eta, RVecF phi, 
       else
 	out.emplace_back(phi2);
     }
+  }
+  return out;
+}
+
+
+RVecI isGenSignal(RVecI pdgId, RVecI motherIdx){
+  RVecI out;
+  out.reserve(pdgId.size());
+  for (size_t i = 0; i < pdgId.size(); i++){
+    if (motherIdx[i] == -1){
+      out.emplace_back(0);
+      continue;
+    }
+    if (pdgId[i] == 22 && std::abs(pdgId[motherIdx[i]]) == 9000006)
+      out.emplace_back(1);
+    else
+      out.emplace_back(0);
   }
   return out;
 }

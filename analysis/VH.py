@@ -68,23 +68,23 @@ def electronAna(dataframe, era = '2018'):
     electrons = electrons.Define("Electron_nloose", "Sum(loose_electron)")
     electrons = electrons.Define("Electron_ntight", "Sum(tight_electron)")
     electrons = electrons.Define("Electron_nveto", "Sum(veto_electron)")
-
+    
     for trigger in eleTrig[era]:
         electrons = electrons.Define("Electron_pass{}".format(trigger['name']), "matchTrigger(Electron_eta, Electron_phi, Electron_pdgId, TrigObj_eta, TrigObj_phi, TrigObj_pt, TrigObj_id, TrigObj_filterBits, {}, {})".format(trigger['bits'], trigger['pt']))
     electrons = electrons.Define("Electron_isTrigger", "||".join(["Electron_pass{}".format(trig['name']) for trig in eleTrig[era]]))
-
+    
     electrons = electrons.Define("ele_SFs_id", 'scaleFactors_2d(Electron_eta, Electron_pt, ELE_ID_{era}_sf, ELE_ID_{era}_binsX, ELE_ID_{era}_binsY, sample_isMC, tight_electron)'.format(era=era))
     electrons = electrons.Define("Electron_idSF_val", "ele_SFs_id[0]")
     electrons = electrons.Define("Electron_idSF_unc", "ele_SFs_id[1]")
-
+    
     electrons = electrons.Define("ele_SFs_reco", 'scaleFactors_eleReco(Electron_eta, Electron_eta, ELE_RECO_ptBelow20_{era}_sf, ELE_RECO_ptBelow20_{era}_binsX, ELE_RECO_ptBelow20_{era}_binsY,  ELE_RECO_ptAbove20_{era}_sf, ELE_RECO_ptAbove20_{era}_binsX, ELE_RECO_ptAbove20_{era}_binsY, sample_isMC, tight_electron)'.format(era=era))
-    electrons = electrons.Define("Electron_recoSF_val", "ele_SFs_id[0]")
-    electrons = electrons.Define("Electron_recoSF_unc", "ele_SFs_id[1]")
+    electrons = electrons.Define("Electron_recoSF_val", "ele_SFs_reco[0]")
+    electrons = electrons.Define("Electron_recoSF_unc", "ele_SFs_reco[1]")
     
     electrons = electrons.Define("ele_SFs_trig", "scaleFactors_2d(Electron_eta, Electron_pt, ELE_TRIG_{era}_sf, ELE_TRIG_{era}_binsX, ELE_TRIG_{era}_binsY, sample_isMC, Electron_pt>35)".format(era=era))
     electrons = electrons.Define("Electron_trigSF_val", "ele_SFs_trig[0]")
     electrons = electrons.Define("Electron_trigSF_unc", "ele_SFs_trig[1]")
-
+    
     return electrons
 
 # Must run muon + electron analyzer first to do overlap with loose leptons
@@ -111,6 +111,8 @@ def genAna(dataframe):
     gen = dataframe.Define("GenPart_ctau", "getctau(GenPart_dx, GenPart_dy, GenPart_dz, GenPart_pt, GenPart_eta, GenPart_phi, GenPart_mass)")
     gen = gen.Define("GenPart_ecalEta", "getGenScEta(GenPart_vx, GenPart_vy, GenPart_vz, GenPart_pt, GenPart_eta, GenPart_phi, GenPart_mass)")
     gen = gen.Define("GenPart_ecalPhi", "getGenScPhi(GenPart_vx, GenPart_vy, GenPart_vz, GenPart_pt, GenPart_eta, GenPart_phi, GenPart_mass)")
+    gen = gen.Define("GenPart_isSignal", "isGenSignal(GenPart_pdgId, GenPart_genPartIdxMother)")
+    gen = gen.Define("GenPart_nSignal", "Sum(GenPart_isSignal)")
     return gen
 
 def makeZ(dataframe, lepton):
@@ -164,7 +166,7 @@ def zeeH(data,phi_mass,sample):
     #ANALYSIS CODE HERE#        
     ####################
     #pass HLT
-    zee = dataframe['Events'].Filter('HLT_passed','passed HLT')
+    zee = dataframe['Events'].Filter('HLT_passed','passed_HLT')
     if data['isMC']:
         zee = zee.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{},sample_isMC)".format(data['era']))
         if data['customNanoAOD']:
@@ -173,17 +175,17 @@ def zeeH(data,phi_mass,sample):
     zee = muonAna(zee, data['era'])
     zee = electronAna(zee, data['era'])
     #Look for + and - muons
-    zee = zee.Filter("Sum(Electron_charge[tight_electron]==1)>0 && Sum(Electron_charge[tight_electron]==-1)>0","At least one opposite sign electron pair, both passing tight ID and preselection")
+    zee = zee.Filter("Sum(Electron_charge[tight_electron]==1)>0 && Sum(Electron_charge[tight_electron]==-1)>0","Tight_eplus_eminus")
 
     #create the best Zmumu candidate and filter
     zee = makeZ(zee, "Electron")  
-    zee = zee.Filter("Z_mass>70&&Z_mass<110", "Di-electron mass between 70-110 GeV")  
+    zee = zee.Filter("Z_mass>70&&Z_mass<110", "dielectron_mass_70to110")  
     #Apply Thresholds to the muon pts and cut on muon pf iso
     ptThresh = 35
-    zee = zee.Filter("(Electron_pt[Z_idx[0]]>{p}||Electron_pt[Z_idx[1]]>{p})".format(p=ptThresh), "At least one Electron in Z with pt>{}".format(ptThresh))
+    zee = zee.Filter("(Electron_pt[Z_idx[0]]>{p}||Electron_pt[Z_idx[1]]>{p})".format(p=ptThresh), "leading_electron_ptOver{}".format(int(ptThresh)))
 
     #require just a super cluster
-    zee = zee.Filter("nPhoton>0","At least one photon")
+    zee = zee.Filter("nPhoton>0","at_least_1_photon")
     
     #Apply photon ID (no ISO)
     zee = photonAna(zee, data['era'])
@@ -196,8 +198,6 @@ def zeeH(data,phi_mass,sample):
     #Now cut on the ll+gamma mass around the Z 
     zee=zee.Define("llgamma_mass","calculate_llgamma_mass(Z_idx,Electron_pt, Electron_eta, Electron_phi, Electron_mass,Photon_pt,Photon_eta,Photon_phi, Photon_isFSR)")
 
-    #zee = zee.Filter("Sum(Photon_preselection==1)>1", "At least 2 photons passing preselection")
-
     # Define loose photons: passing preselection and not FSR tagged
     zee = zee.Define("Photon_isLoose", "Photon_preselection==1&&Photon_isFSR==0")
 
@@ -205,7 +205,9 @@ def zeeH(data,phi_mass,sample):
     ####################################
 
     #Al least Two good photons
-    zee2g=zee.Filter('Sum(Photon_isLoose==1)>1','At least 2 non FSR photons passing preselection')
+    #zee2g=zee.Filter('Sum(Photon_isLoose==1)>1','At least 2 non FSR photons passing preselection')
+    zee2g = zee.Filter("Sum(Photon_preselection==1)>1", "at_least_2_preselection_photons")
+    zee2g = zee2g.Filter("Sum(Photon_preselection==1 && Photon_isFSR==0)>1", "no_fsr_photons")
     for mass in phi_mass:
         zee2g=zee2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_isLoose, Photon_IdNoIso, Photon_pfRelIso03_fsrCorr, {})'.format(float(mass)))
         zee2g=zee2g.Define('best_2g_gamma1_pt_m{}'.format(mass),'raw_best_2g_m{}[0]'.format(mass))
@@ -229,6 +231,12 @@ def zeeH(data,phi_mass,sample):
         zee2g = zee2g.Define("best_2g_sumID_m{}".format(mass), "raw_best_2g_m{m}[13]+raw_best_2g_m{m}[14]".format(m=mass))
 
     actions.append(zee2g.Snapshot('zee2g',sample+'.root',cols,opts))
+    report = ROOT.RDataFrame(1)
+    r = zee2g.Report()
+    for cut in r:
+        report = report.Define("report_{}_all".format(cut.GetName()), "{}".format(cut.GetAll()))
+        report = report.Define("report_{}_pass".format(cut.GetName()), "{}".format(cut.GetPass()))
+    actions.append(report.Snapshot("Report_zee2g", sample+'.root', "", opts))
     for tree in ['Runs']:
         actions.append(dataframe[tree].Snapshot(tree, sample+'.root', "", opts))
 
@@ -242,7 +250,7 @@ def wenuH(data,phi_mass,sample):
     ####################
     #ANALYSIS CODE HERE#        
     ####################
-    wen = dataframe['Events'].Filter('HLT_passed', 'passed HLT')
+    wen = dataframe['Events'].Filter('HLT_passed', 'passed_HLT')
     if data['isMC']:
         wen = wen.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
         if data['customNanoAOD']:
@@ -251,16 +259,16 @@ def wenuH(data,phi_mass,sample):
     wen = muonAna(wen, data['era'])
     wen = electronAna(wen, data['era'])
 
-    wen = wen.Filter("Electron_ntight==1", "Exactly 1 tight electron")
+    wen = wen.Filter("Electron_ntight==1", "exactly_1_tight_electron")
     ptThresh = 35
-    wen = wen.Filter("Sum(Electron_pt[tight_electron]>{})>0".format(ptThresh), "Tight electron pt > {}".format(ptThresh))
+    wen = wen.Filter("Sum(Electron_pt[tight_electron]>{})>0".format(ptThresh), "electron_pt_over{}".format(ptThresh))
     wen = makeW(wen, "Electron")
 
-    wen = wen.Filter("nPhoton>0", "At least 1 photon")
+    wen = wen.Filter("nPhoton>0", "at_least_1_photon")
 
     wen = photonAna(wen, data['era'])
     
-    wen2g = wen.Filter('Sum(Photon_preselection==1)>1', "At least 2 photons passing preselection")
+    wen2g = wen.Filter('Sum(Photon_preselection==1)>1', "at_least_2_preselection_photons")
     
     for mass in phi_mass:
         wen2g=wen2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_IdNoIso, Photon_pfRelIso03_all, {})'.format(float(mass)))
@@ -289,6 +297,12 @@ def wenuH(data,phi_mass,sample):
         wen2g = wen2g.Define("best_2g_misID3_m{}".format(mass), "misID_info_m{}[2]".format(mass))
 
     actions.append(wen2g.Snapshot('wen2g', sample+".root", cols, opts))
+    report = ROOT.RDataFrame(1)
+    r = wen2g.Report()
+    for cut in r:
+        report = report.Define("report_{}_all".format(cut.GetName()), "{}".format(cut.GetAll()))
+        report = report.Define("report_{}_pass".format(cut.GetName()), "{}".format(cut.GetPass()))
+    actions.append(report.Snapshot("Report_wen2g", sample+'.root', "", opts))
     for tree in ['Runs']:
         actions.append(dataframe[tree].Snapshot(tree, sample+".root", "", opts))
 
@@ -303,24 +317,27 @@ def wmunuH(data,phi_mass,sample):
     #ANALYSIS CODE HERE#        
     ####################
 
-    wmn = dataframe['Events'].Filter('HLT_passed', 'passed HLT')
+    wmn = dataframe['Events'].Filter('HLT_passed', 'passed_HLT')
+    
     if data['isMC']:
         wmn = wmn.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
         if data['customNanoAOD']:
             wmn = genAna(wmn)
+    
     wmn = muonAna(wmn, data['era'])
     wmn = electronAna(wmn, data['era'])
-
-    wmn = wmn.Filter("Muon_ntight==1", "Exactly 1 tight muon")
+    
+    wmn = wmn.Filter("Muon_ntight==1", "exactly_1_tight_muon")
     ptThresh = 28 if data['era']=='2017' else 25
-    wmn = wmn.Filter("Sum(Muon_pt[tight_muon]>{})>0".format(ptThresh), "Tight muon pt > {}".format(ptThresh))
+    wmn = wmn.Filter("Sum(Muon_pt[tight_muon]>{})>0".format(ptThresh), "muon_pt_over{}".format(ptThresh))
     wmn = makeW(wmn, "Muon")
 
-    wmn = wmn.Filter("nPhoton>0", "At least 1 photon")
+    wmn = wmn.Filter("nPhoton>0", "at_least_1_photon")
 
     wmn = photonAna(wmn, data['era'])
     
-    wmn2g = wmn.Filter('Sum(Photon_preselection==1)>1', "At least 2 photons passing preselection")
+    wmn2g = wmn.Filter('Sum(Photon_preselection==1)>1', "at_least_2_preselection_photons")
+    
     for mass in phi_mass:
         wmn2g=wmn2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_IdNoIso, Photon_pfRelIso03_all, {})'.format(float(mass)))
         wmn2g=wmn2g.Define('best_2g_gamma1_pt_m{}'.format(mass),'raw_best_2g_m{}[0]'.format(mass))
@@ -344,6 +361,13 @@ def wmunuH(data,phi_mass,sample):
         wmn2g = wmn2g.Define("best_2g_sumID_m{}".format(mass), "raw_best_2g_m{m}[13]+raw_best_2g_m{m}[14]".format(m=mass))
 
     actions.append(wmn2g.Snapshot('wmn2g', sample+".root", cols,opts))
+    report = ROOT.RDataFrame(1)
+    r = wmn2g.Report()
+    for cut in r:
+        report = report.Define("report_{}_all".format(cut.GetName()), "{}".format(cut.GetAll()))
+        report = report.Define("report_{}_pass".format(cut.GetName()), "{}".format(cut.GetPass()))
+    actions.append(report.Snapshot("Report_wmn2g", sample+'.root', "", opts))
+
     for tree in ['Runs']:
         actions.append(dataframe[tree].Snapshot(tree, sample+".root", "", opts))
         
@@ -362,7 +386,7 @@ def zmumuH(data,phi_mass,sample):
     ####################
     
     #pass HLT
-    zmm = dataframe['Events'].Filter('HLT_passed','passed HLT')
+    zmm = dataframe['Events'].Filter('HLT_passed','passed_HLT')
     if data['isMC']:
         zmm = zmm.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{},sample_isMC)".format(data['era']))
         if data['customNanoAOD']:
@@ -371,18 +395,18 @@ def zmumuH(data,phi_mass,sample):
     zmm = muonAna(zmm, data['era'])
     zmm = electronAna(zmm, data['era'])
     #Look for + and - muons
-    zmm = zmm.Filter("Sum(Muon_charge[tight_muon]==1)>0 && Sum(Muon_charge[tight_muon]==-1)>0","At least one opposite sign muon pair, both passing tight ID and preselection")
+    zmm = zmm.Filter("Sum(Muon_charge[tight_muon]==1)>0 && Sum(Muon_charge[tight_muon]==-1)>0","Tight_muplus_muminus")
 
     #create the best Zmumu candidate and filter
     zmm = makeZ(zmm, "Muon")  
-    zmm = zmm.Filter("Z_mass>70&&Z_mass<110", "Dimuon mass between 70-110 GeV")  
+    zmm = zmm.Filter("Z_mass>70&&Z_mass<110", "dimuon_mass_70to110")  
 
     #Apply Thresholds to the muon pts and cut on muon pf iso
     ptThresh = 28 if data['era']=='2017' else 25
-    zmm = zmm.Filter("(Muon_pt[Z_idx[0]]>{p}||Muon_pt[Z_idx[1]]>{p})".format(p=ptThresh), "At least one muon in Z with pt>{}".format(ptThresh))
+    zmm = zmm.Filter("(Muon_pt[Z_idx[0]]>{p}||Muon_pt[Z_idx[1]]>{p})".format(p=ptThresh), "leading_mu_pt_over{}".format(ptThresh))
 
     #require just a super cluster
-    zmm = zmm.Filter("nPhoton>0","At least one photon")
+    zmm = zmm.Filter("nPhoton>0","at_least_1_photon")
     
     #Apply photon ID (no ISO)
     zmm = photonAna(zmm, data['era'])
@@ -397,8 +421,6 @@ def zmumuH(data,phi_mass,sample):
     #Now cut on the ll+gamma mass around the Z 
     zmm=zmm.Define("llgamma_mass","calculate_llgamma_mass(Z_idx,Muon_pt, Muon_eta, Muon_phi, Muon_mass,Photon_pt,Photon_eta,Photon_phi, Photon_isFSR)")
 
-    #zmm = zmm.Filter("Sum(Photon_preselection==1)>1", "At least 2 photons passing preselection")
-
     # Define loose photons: passing preselection and not FSR tagged
     zmm = zmm.Define("Photon_isLoose", "Photon_preselection==1&&Photon_isFSR==0")
 
@@ -406,7 +428,8 @@ def zmumuH(data,phi_mass,sample):
     ####################################
 
     #Al least Two good photons
-    zmm2g=zmm.Filter('Sum(Photon_isLoose==1)>1','At least 2 non FSR photons passing preselection')
+    zmm2g=zmm.Filter('Sum(Photon_preselection==1)>1','at_least_2_preselection_photons')
+    zmm2g=zmm2g.Filter('Sum(Photon_preselection==1 && Photon_isFSR==0)>1', "no_fsr_photons")
     for mass in phi_mass:
         zmm2g=zmm2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_isLoose, Photon_IdNoIso, Photon_pfRelIso03_fsrCorr, {})'.format(float(mass)))
         zmm2g=zmm2g.Define('best_2g_gamma1_pt_m{}'.format(mass),'raw_best_2g_m{}[0]'.format(mass))
@@ -482,10 +505,15 @@ def zmumuH(data,phi_mass,sample):
         zmm4g=zmm4g.Define('best_4g_corr_mass_m{}'.format(mass),'raw_best_4g_m{}[19]'.format(mass))
      
         
-
     actions.append(zmm2g.Snapshot('zmm2g',sample+'.root',cols, opts))
     #actions.append(zmm3g.Snapshot('Events',sample+'_zmm3g.root',cols))
     #actions.append(zmm4g.Snapshot('Events',sample+'_zmm4g.root',cols))
+    report = ROOT.RDataFrame(1)
+    r = zmm2g.Report()
+    for cut in r:
+        report = report.Define("report_{}_all".format(cut.GetName()), "{}".format(cut.GetAll()))
+        report = report.Define("report_{}_pass".format(cut.GetName()), "{}".format(cut.GetPass()))
+    actions.append(report.Snapshot("Report_zmm2g", sample+'.root', "", opts))
     for tree in ['Runs']:
         actions.append(dataframe[tree].Snapshot(tree, sample+'.root', "", opts))
         #actions.append(dataframe[tree].Snapshot(tree, sample+'_zmm3g.root', "", opts))
