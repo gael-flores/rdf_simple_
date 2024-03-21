@@ -68,23 +68,23 @@ def electronAna(dataframe, era = '2018'):
     electrons = electrons.Define("Electron_nloose", "Sum(loose_electron)")
     electrons = electrons.Define("Electron_ntight", "Sum(tight_electron)")
     electrons = electrons.Define("Electron_nveto", "Sum(veto_electron)")
-
+    
     for trigger in eleTrig[era]:
         electrons = electrons.Define("Electron_pass{}".format(trigger['name']), "matchTrigger(Electron_eta, Electron_phi, Electron_pdgId, TrigObj_eta, TrigObj_phi, TrigObj_pt, TrigObj_id, TrigObj_filterBits, {}, {})".format(trigger['bits'], trigger['pt']))
     electrons = electrons.Define("Electron_isTrigger", "||".join(["Electron_pass{}".format(trig['name']) for trig in eleTrig[era]]))
-
+    
     electrons = electrons.Define("ele_SFs_id", 'scaleFactors_2d(Electron_eta, Electron_pt, ELE_ID_{era}_sf, ELE_ID_{era}_binsX, ELE_ID_{era}_binsY, sample_isMC, tight_electron)'.format(era=era))
     electrons = electrons.Define("Electron_idSF_val", "ele_SFs_id[0]")
     electrons = electrons.Define("Electron_idSF_unc", "ele_SFs_id[1]")
-
+    
     electrons = electrons.Define("ele_SFs_reco", 'scaleFactors_eleReco(Electron_eta, Electron_eta, ELE_RECO_ptBelow20_{era}_sf, ELE_RECO_ptBelow20_{era}_binsX, ELE_RECO_ptBelow20_{era}_binsY,  ELE_RECO_ptAbove20_{era}_sf, ELE_RECO_ptAbove20_{era}_binsX, ELE_RECO_ptAbove20_{era}_binsY, sample_isMC, tight_electron)'.format(era=era))
-    electrons = electrons.Define("Electron_recoSF_val", "ele_SFs_id[0]")
-    electrons = electrons.Define("Electron_recoSF_unc", "ele_SFs_id[1]")
+    electrons = electrons.Define("Electron_recoSF_val", "ele_SFs_reco[0]")
+    electrons = electrons.Define("Electron_recoSF_unc", "ele_SFs_reco[1]")
     
     electrons = electrons.Define("ele_SFs_trig", "scaleFactors_2d(Electron_eta, Electron_pt, ELE_TRIG_{era}_sf, ELE_TRIG_{era}_binsX, ELE_TRIG_{era}_binsY, sample_isMC, Electron_pt>35)".format(era=era))
     electrons = electrons.Define("Electron_trigSF_val", "ele_SFs_trig[0]")
     electrons = electrons.Define("Electron_trigSF_unc", "ele_SFs_trig[1]")
-
+    
     return electrons
 
 # Must run muon + electron analyzer first to do overlap with loose leptons
@@ -318,13 +318,15 @@ def wmunuH(data,phi_mass,sample):
     ####################
 
     wmn = dataframe['Events'].Filter('HLT_passed', 'passed_HLT')
+    
     if data['isMC']:
         wmn = wmn.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
         if data['customNanoAOD']:
             wmn = genAna(wmn)
+    
     wmn = muonAna(wmn, data['era'])
     wmn = electronAna(wmn, data['era'])
-
+    
     wmn = wmn.Filter("Muon_ntight==1", "exactly_1_tight_muon")
     ptThresh = 28 if data['era']=='2017' else 25
     wmn = wmn.Filter("Sum(Muon_pt[tight_muon]>{})>0".format(ptThresh), "muon_pt_over{}".format(ptThresh))
@@ -335,6 +337,7 @@ def wmunuH(data,phi_mass,sample):
     wmn = photonAna(wmn, data['era'])
     
     wmn2g = wmn.Filter('Sum(Photon_preselection==1)>1', "at_least_2_preselection_photons")
+    
     for mass in phi_mass:
         wmn2g=wmn2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_IdNoIso, Photon_pfRelIso03_all, {})'.format(float(mass)))
         wmn2g=wmn2g.Define('best_2g_gamma1_pt_m{}'.format(mass),'raw_best_2g_m{}[0]'.format(mass))
