@@ -305,11 +305,10 @@ float calculate_llgamma_mass(const RVec<size_t>& idx,RVecF mpt, RVecF meta, RVec
 
 // Find index for scale factor given the value and the bin low edges
 int getBin(const float val, const std::vector<float> bins){
-  if (val < bins.front())
+  if (val <= bins.front())
     return 0;
   auto lower = std::lower_bound(bins.begin(), bins.end(), val); // Finds iterator of bin upper edge
   return (int) (std::distance(bins.begin(), lower) - 1);
-
 }
 
 // Get scale factors as a function of 2 variables
