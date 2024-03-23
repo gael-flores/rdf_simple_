@@ -127,7 +127,7 @@ for d,info in samp.samples.items():
             fi
             rm ${{FILE}}
             done
-            """.format(dataset=d,eos=options.eos,splitFactor=info['jobs'],part=i,options.analysis)
+            """.format(dataset=d,eos=options.eos,splitFactor=info['jobs'],part=i,analysis=options.analysis)
          #   print(shell)
             f=open("{dataset}_{part}_condor.sh".format(dataset=d,part=i),"w")
             f.write(shell)
