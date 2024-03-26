@@ -54,7 +54,7 @@ for d,info in samp.samples.items():
         tar -xzvf sandbox.tar.gz
         mkdir .dasmaps
         source ./setup.sh
-        python3 run.py {dataset}
+        python3 run.py -a {analysis} {dataset}
         echo python done
         
         OUTDIR={eos}
@@ -71,7 +71,7 @@ for d,info in samp.samples.items():
         fi
         rm ${{FILE}}
         done
-        """.format(dataset=d,eos=options.eos)
+        """.format(dataset=d,eos=options.eos,analysis=options.analysis)
         #print(shell)
         f=open("{dataset}_condor.sh".format(dataset=d),"w")
         f.write(shell)
@@ -110,7 +110,7 @@ for d,info in samp.samples.items():
             tar -xzvf sandbox.tar.gz
             mkdir .dasmaps
             source ./setup.sh
-            python3 run.py {dataset} -s {splitFactor} -p {part}
+            python3 run.py {dataset} -s {splitFactor} -p {part} -a {analysis}
             echo python done
         
             OUTDIR={eos}
@@ -127,7 +127,7 @@ for d,info in samp.samples.items():
             fi
             rm ${{FILE}}
             done
-            """.format(dataset=d,eos=options.eos,splitFactor=info['jobs'],part=i)
+            """.format(dataset=d,eos=options.eos,splitFactor=info['jobs'],part=i,analysis=options.analysis)
          #   print(shell)
             f=open("{dataset}_{part}_condor.sh".format(dataset=d,part=i),"w")
             f.write(shell)
