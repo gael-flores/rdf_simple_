@@ -566,3 +566,19 @@ std::vector< std::vector< std::vector<float>>> PHO_ID_2016preVFP_sf {
 std::vector<float> PHO_ID_2016preVFP_binsX {-2.5, -2.0, -1.566, -1.444, -0.8, 0.0, 0.8, 1.444, 1.566, 2.0};
 std::vector<float> PHO_ID_2016preVFP_binsY {20.0, 35.0, 50.0, 100.0, 200.0};
 
+// UL2018 Pixel seed veto
+std::vector< std::vector <float>> hasPix_UL2018_sf {
+  {0.9541752849602817, 0.0018514807519954704}, {0.8772187305636409, 0.005639814507750332}};
+
+// UL2017 Pixel seed veto
+std::vector< std::vector <float>> hasPix_UL2017_sf {
+  {0.9565933572493288, 0.002007102825239663}, {0.8603099494989258, 0.0059356983602159895}};
+
+// UL2016postVFP Pixel seed veto
+std::vector< std::vector <float>> hasPix_UL2016postVFP_sf {
+  {0.9741799406676783, 0.0035136623477086994}, {0.9370532767562471, 0.009989288359068616}};
+
+// UL2016preVFP Pixel seed veto
+std::vector< std::vector <float>> hasPix_UL2016preVFP_sf {
+  {0.9941713194697834, 0.002778662052504876}, {0.8710356999409731, 0.008920311147873486}};
+

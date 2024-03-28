@@ -82,8 +82,8 @@ def Zmmg(data, sample):
     zmmg = zmmg.Filter("Zg_deltaR_l1g < 0.8 || Zg_deltaR_l2g < 0.8", "Photon close to muon")
     zmmg = zmmg.Filter("Zg_deltaR_l1g > 0.1 && Zg_deltaR_l2g > 0.1", "Photon not too close to muon")
     zmmg = zmmg.Filter("Muon_pt[Zg_l1_idx] > 20 && Muon_pt[Zg_l2_idx] > 10", "Leading/subleading muon pt > 20/10")
-    actions.append(zmmg.Snapshot("Events", sample+"_zmmg.root", cols))
-    actions.append(dataframe['Runs'].Snapshot("Runs", sample+"_zmmg.root", "", opts))
+    actions.append(zmmg.Snapshot("zmmg", sample+".root", cols, opts))
+    actions.append(dataframe['Runs'].Snapshot("Runs", sample+".root", "", opts))
 
     return actions
 
