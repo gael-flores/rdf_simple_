@@ -105,6 +105,10 @@ def photonAna(dataframe, era = '2018'):
     photons = photons.Define("Photon_idSF_val", "pho_SFs_id[0]")
     photons = photons.Define("Photon_idSF_unc", "pho_SFs_id[1]")
 
+    photons = photons.Define("pho_SFs_pix", "getPixelSeedSF(Photon_isScEtaEB, Photon_isScEtaEE, hasPix_UL{}_sf, sample_isMC, !Photon_pixelSeed)".format(era))
+    photons = photons.Define("Photon_pixSF_val", "pho_SFs_pix[0]")
+    photons = photons.Define("Photon_pixSF_unc", "pho_SFs_pix[1]")
+
     return photons    
 
 def genAna(dataframe):
