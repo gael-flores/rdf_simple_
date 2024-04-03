@@ -89,6 +89,19 @@ RVec<size_t> best_zg(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecI charge, R
   return result;
 }
 
+RVecF Zgg_fsr(RVecF g_pt, RVecF g_eta, RVecF g_phi, const int idx1, const int idx2, RVecF l_pt, RVecF l_eta, RVecF l_phi, RVecF l_mass, RVec<size_t> z_idx){
+  RVecF out;
+  out.reserve(3);
+  ROOT::Math::PtEtaPhiMVector g1(g_pt[idx1], g_eta[idx1], g_phi[idx1], 0);
+  ROOT::Math::PtEtaPhiMVector g2(g_pt[idx2], g_eta[idx2], g_phi[idx2], 0);
+  ROOT::Math::PtEtaPhiMVector l1(l_pt[z_idx[0]], l_eta[z_idx[0]], l_phi[z_idx[0]], l_mass[z_idx[0]]);
+  ROOT::Math::PtEtaPhiMVector l2(l_pt[z_idx[1]], l_eta[z_idx[1]], l_phi[z_idx[1]], l_mass[z_idx[1]]);
+  out.emplace_back((l1+l2+g1).mass());
+  out.emplace_back((l1+l2+g2).mass());
+  out.emplace_back((l1+l2+g1+g2).mass());
+  return out;
+}
+
 RVec<bool> overlapClean(RVecF gphi, RVecF geta, RVecF lphi, RVecF leta){
   RVec<bool> out;
   out.reserve(gphi.size());
@@ -316,7 +329,7 @@ RVec<RVecF> scaleFactors_2d(RVecF x, RVecF y, std::vector <std::vector<std::vect
   RVec<RVecF> out;
   RVecF vals;
   RVecF uncs;
-  out.reserve(x.size());
+  out.reserve(2);
   vals.reserve(x.size());
   uncs.reserve(x.size());
   for (size_t i = 0; i < x.size(); i++){
@@ -340,7 +353,7 @@ RVec<RVecF> scaleFactors_3d(RVecF x, RVecF y, RVecF z, std::vector <std::vector<
   RVec<RVecF> out;
   RVecF vals;
   RVecF uncs;
-  out.reserve(x.size());
+  out.reserve(2);
   vals.reserve(x.size());
   uncs.reserve(x.size());
   for (size_t i = 0; i < x.size(); i++){
@@ -366,7 +379,7 @@ RVec<RVecF> scaleFactors_eleReco(RVecF eta, RVecF pt, std::vector <std::vector<s
   RVec<RVecF> out;
   RVecF vals;
   RVecF uncs;
-  out.reserve(pt.size());
+  out.reserve(2);
   vals.reserve(pt.size());
   uncs.reserve(pt.size());
   for (size_t i = 0; i < pt.size(); i++){
@@ -424,6 +437,39 @@ float getPUweight(const int truePU, std::vector<float> weights, const bool isMC)
   if (truePU > 99 || truePU < 0)
     return out;
   return weights[truePU];
+}
+
+RVec<RVecF> getPixelSeedSF(RVecB isEB, RVecB isEE, std::vector< std::vector<float>> weights, const bool isMC, RVecB selection){
+  RVec<RVecF> out;
+  RVecF vals;
+  RVecF uncs;
+  vals.reserve(isEB.size());
+  uncs.reserve(isEB.size());
+  for (size_t i = 0; i < isEB.size(); i++){
+    if (!isMC){
+      vals.emplace_back(1.0);
+      uncs.emplace_back(0.0);
+    }
+    else if (!selection[i]){
+      vals.emplace_back(1.0);
+      uncs.emplace_back(0.0);
+    }
+    else if (isEB[i]){
+      vals.emplace_back(weights[0][0]);
+      uncs.emplace_back(weights[0][1]);
+    }
+    else if (isEE[i]){
+      vals.emplace_back(weights[1][0]);
+      uncs.emplace_back(weights[1][1]);
+    }
+    else{
+      vals.emplace_back(1.0);
+      uncs.emplace_back(0.0);
+    }
+  }
+  out.emplace_back(vals);
+  out.emplace_back(uncs);
+  return out;
 }
 
 RVecF check_W_misID(const float e_pt, const float e_eta, const float e_phi, const float e_mass, RVecF g_pt, RVecF g_eta, RVecF g_phi, const int idx1, const int idx2){
