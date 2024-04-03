@@ -10,4 +10,4 @@ for v in ['ggZ', 'Z', 'Wplus', 'Wminus']:
                         'veto_triggers': [],
                         'era': '2016{}'.format(run),
                         'sigma': 1.0,
-                        'customNanoAOD': False}
+                        'customNanoAOD': True}
