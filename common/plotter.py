@@ -65,6 +65,9 @@ class rdf_plotter(plotter_base):
                 out[c] += getattr(event, c)
         report.Close()
         return out
+
+    def define(self, var, definition):
+        self.rdf = self.rdf.Define(var, definition)
         
     def hist1d(self,var,cuts,lumi,model,titlex = "",units = ""):
         corrString="1.0"
@@ -181,6 +184,10 @@ class merged_plotter(plotter_base):
         self.corrFactors=[]
         self.plotters = plotters
 
+    def define(self, var, definition):
+        for plotter in self.plotters:
+            plotter.define(var, definition)
+
     def hist1d(self,var,cuts,lumi,model,titlex = "",units = ""):
         h = None
         for plotter in self.plotters:
@@ -255,6 +262,10 @@ class combined_plotter(object):
         self.types.append(typeP)
         self.labels.append(label)
         self.names.append(name)
+
+    def define(self, var, definition):
+        for plotter in self.plotters:
+            plotter.define(var, definition)
 
     def draw_stack(self,var,cut,lumi,model,titlex = "", units = "",expandY=0.0,scaleFactors="(1)", verbose = True):
         canvas = ROOT.TCanvas("canvas","")
