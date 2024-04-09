@@ -502,7 +502,7 @@ RVecF best_2gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE, RV
       continue;
 
     RVecF result;
-    result.reserve(16);
+    result.reserve(18);
     VertexCalculator *calc = new VertexCalculator();
     //four vector
     ROOT::Math::PtEtaPhiMVector p0(pt[i1],eta[i1],phi[i1],0.0);
@@ -532,6 +532,8 @@ RVecF best_2gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE, RV
     result.emplace_back(gID[i1] && iso1<0.1);
     result.emplace_back(gID[i2] && iso2<0.1);
     result.emplace_back((p0+p1).pt());
+    result.emplace_back((p0+p1).eta());
+    result.emplace_back((p0+p1).phi());
     all_combos.emplace_back(result);
   }
   auto sortedIndices = ROOT::VecOps::Argsort(all_combos,compare_pair_withId);
