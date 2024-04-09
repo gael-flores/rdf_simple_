@@ -37,10 +37,12 @@ class plotter_base(object):
 
 
 class rdf_plotter(plotter_base):
-    def __init__(self,file,isMC=False,weight = "1.0",tree='Events',defaultCuts = "1.0"):
+    def __init__(self,file,isMC=False,weight = "1.0",tree='Events',defaultCuts = "1.0",report='report'):
         self.rdf = ROOT.RDataFrame(tree,file)
         self.weight=weight
         self.defaultCuts = defaultCuts
+        self.file = file
+        self.report = report
         super(rdf_plotter,self).__init__()
         #if MC read the sum of weights and weigh the event
         if isMC:
@@ -52,6 +54,21 @@ class rdf_plotter(plotter_base):
             self.weight = self.weight+'*(genWeight/{})*(sample_sigma)'.format(sumw if sumw>0 else 1.0)
             f.Close()
 
+    def readReport(self):
+        out = {}
+        report = ROOT.TFile(self.file).Get(self.report)
+        cuts = report.GetListOfBranches()
+        for c in cuts:
+            out[c] = 0
+        for event in report:
+            for c in cuts:
+                out[c] += getattr(event, c)
+        report.Close()
+        return out
+
+    def define(self, var, definition):
+        self.rdf = self.rdf.Define(var, definition)
+        
     def hist1d(self,var,cuts,lumi,model,titlex = "",units = ""):
         corrString="1.0"
         for corr in self.corrFactors:
@@ -97,13 +114,13 @@ class rdf_plotter(plotter_base):
         return h
 
 
-    def hist2d(self,var,cuts,lumi,model,titlex = "",unitsx = "",titley="",unitsy=""):
+    def hist2d(self,var1,var2,cuts,lumi,model,titlex = "",unitsx = "",titley="",unitsy=""):
         corrString="1.0"
         for corr in self.corrFactors:
             corrString = corrString+"*("+str(corr['value'])+")" 
         c = "("+self.defaultCuts+")*("+cuts+")*"+lumi+"*"+self.weight+"*("+corrString+")"
         rdf=self.rdf.Define('plot_weight',c)
-        h=rdf.Histo2D(model,var,'plot_weight')
+        h=rdf.Histo2D(model,var1,var2,'plot_weight')
         h.Sumw2()
         h.SetLineStyle(self.linestyle)
         h.SetLineColor(self.linecolor)
@@ -167,6 +184,10 @@ class merged_plotter(plotter_base):
         self.corrFactors=[]
         self.plotters = plotters
 
+    def define(self, var, definition):
+        for plotter in self.plotters:
+            plotter.define(var, definition)
+
     def hist1d(self,var,cuts,lumi,model,titlex = "",units = ""):
         h = None
         for plotter in self.plotters:
@@ -188,13 +209,13 @@ class merged_plotter(plotter_base):
         return h
 
 
-    def hist2d(self,var,cuts,lumi,model,titlex = "",unitsx = "",titley="",unitsy=""):
+    def hist2d(self,var1,var2,cuts,lumi,model,titlex = "",unitsx = "",titley="",unitsy=""):
         h = None
         for plotter in self.plotters:
             if h is None:
-                h = plotter.hist2d(var, cuts, lumi, model, titlex, units)
+                h = plotter.hist2d(var1,var2, cuts, lumi, model, titlex, unitsx, titley, unitsy)
             else:
-                h.Add(plotter.hist2d(var, cuts, lumi, model, titlex, units).GetValue())
+                h.Add(plotter.hist2d(var1,var2, cuts, lumi, model, titlex, unitsx, titley, unitsy).GetValue())
         h.Sumw2()
         h.SetLineStyle(self.linestyle)
         h.SetLineColor(self.linecolor)
@@ -212,6 +233,17 @@ class merged_plotter(plotter_base):
             h.GetYaxis().SetTitle(titley+ " ["+unitsy+"]")
         return h
 
+
+    def readReport(self):
+        out = {}
+        for plotter in self.plotters:
+            r = plotter.readReport()
+            for cut in r:
+                if cut in out:
+                    out[cut] += r[cut]
+                else:
+                    out[cut] = r[cut]
+        return out
 
 class combined_plotter(object):
     def __init__(self,defaultCut="1"):
@@ -231,7 +263,11 @@ class combined_plotter(object):
         self.labels.append(label)
         self.names.append(name)
 
-    def draw_stack(self,var,cut,lumi,model,titlex = "", units = "",expandY=0.0):
+    def define(self, var, definition):
+        for plotter in self.plotters:
+            plotter.define(var, definition)
+
+    def draw_stack(self,var,cut,lumi,model,titlex = "", units = "",expandY=0.0,scaleFactors="(1)", verbose = True):
         canvas = ROOT.TCanvas("canvas","")
 #        ROOT.gStyle.SetOptStat(0)
 #        ROOT.gStyle.SetOptTitle(0)
@@ -267,12 +303,13 @@ class combined_plotter(object):
 
         for (plotter,typeP,label,name) in zip(self.plotters,self.types,self.labels,self.names):
             if typeP == "signal" or typeP =="background":
-                hist = plotter.hist1d(var,cutL,lumi,model,titlex,units)
+                hist = plotter.hist1d(var,cutL+"*("+scaleFactors+")",lumi,model,titlex,units)
                 hist.SetName(name)
 
                 stack.Add(hist.GetValue())
                 hists.append(hist.GetValue())
-                print( label+" : %f\n" % hist.Integral())
+                if verbose:
+                    print( label+" : %f\n" % hist.Integral())
  
                 if typeP == "signal" :
                     signal+=hist.Integral()
@@ -287,7 +324,8 @@ class combined_plotter(object):
                 data=hist.GetValue()
                 dataG=convertToPoisson(hist.GetValue())
                 dataG.SetLineWidth(1)
-                print( label+" : %f\n" % hist.Integral())
+                if verbose:
+                    print( label+" : %f\n" % hist.Integral())
                 
        
         #if data not found plot stack only
@@ -362,15 +400,15 @@ class combined_plotter(object):
 
 
 
-
-        print("---------------------------")
-        print( "Signal = %f" %(signal))
-        print( "Bkg    = %f" %(background))
-        if data is not None:
-            print ("Observed = %f"%(data.Integral()))
-            integral = data.IntegralAndError(1,data.GetNbinsX(),error)
-            if background>0.0:
-                print ("Data/Bkg= {ratio} +- {err}".format(ratio=integral/background,err=math.sqrt(error.value*error.value/(background*background)+integral*integral*backgroundErr/(background*background*background*background))))
+        if verbose:
+            print("---------------------------")
+            print( "Signal = %f" %(signal))
+            print( "Bkg    = %f" %(background))
+            if data is not None:
+                print ("Observed = %f"%(data.Integral()))
+                integral = data.IntegralAndError(1,data.GetNbinsX(),error)
+                if background>0.0:
+                    print ("Data/Bkg= {ratio} +- {err}".format(ratio=integral/background,err=math.sqrt(error.value*error.value/(background*background)+integral*integral*backgroundErr/(background*background*background*background))))
 
 
         plot={'canvas':canvas,'stack':stack,'legend':legend,'data':data,'dataG':dataG}
