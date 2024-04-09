@@ -170,7 +170,8 @@ def zeeH(data,phi_mass,sample):
     #ANALYSIS CODE HERE#        
     ####################
     #pass HLT
-    zee = dataframe['Events'].Filter('HLT_passed','passed_HLT')
+    zee = dataframe['Events'].Filter("isGoodLumi", "passed_lumiFilter")
+    zee = zee.Filter('HLT_passed','passed_HLT')
     if data['isMC']:
         zee = zee.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{},sample_isMC)".format(data['era']))
         if data['customNanoAOD']:
@@ -253,7 +254,8 @@ def wenuH(data,phi_mass,sample):
     ####################
     #ANALYSIS CODE HERE#        
     ####################
-    wen = dataframe['Events'].Filter('HLT_passed', 'passed_HLT')
+    wen = dataframe['Events'].Filter("isGoodLumi", "passed_lumiFilter")
+    wen = wen.Filter('HLT_passed', 'passed_HLT')
     if data['isMC']:
         wen = wen.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
         if data['customNanoAOD']:
@@ -321,8 +323,8 @@ def wmunuH(data,phi_mass,sample):
     ####################
     #ANALYSIS CODE HERE#        
     ####################
-
-    wmn = dataframe['Events'].Filter('HLT_passed', 'passed_HLT')
+    wmn = dataframe['Events'].Filter("isGoodLumi", "passed_lumiFilter")
+    wmn = wmn.Filter('HLT_passed', 'passed_HLT')
     
     if data['isMC']:
         wmn = wmn.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
@@ -393,7 +395,8 @@ def zmumuH(data,phi_mass,sample):
     ####################
     
     #pass HLT
-    zmm = dataframe['Events'].Filter('HLT_passed','passed_HLT')
+    zmm = dataframe['Events'].Filter("isGoodLumi", "passed_lumiFilter")
+    zmm = zmm.Filter('HLT_passed','passed_HLT')
     if data['isMC']:
         zmm = zmm.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{},sample_isMC)".format(data['era']))
         if data['customNanoAOD']:

@@ -1,10 +1,42 @@
 import subprocess
 import ROOT
+import numpy as np
+import json, os
+ROOT.gInterpreter.Declare('#include "common/lumiFilter.h"')
+
+def make_jsonHelper(fjson):
+    jsondata = json.load(open(fjson))
+    runs = []
+    firstlumis = []
+    lastlumis = []
+
+    for run in jsondata:
+        for pair in jsondata[run]:
+            runs.append(run)
+            firstlumis.append(pair[0])
+            lastlumis.append(pair[1])
+            
+    jsonhelper = ROOT.JsonHelper(np.asarray(runs, dtype=np.uint), np.asarray(firstlumis, dtype=np.uint), np.asarray(lastlumis, dtype=np.uint))
+    return jsonhelper
 
 def load_meta_data(data):
     dataframe = {}
     #Declare dataframe
-    dataframe['Events'] =ROOT.RDataFrame('Events',data['files'])
+    dataframe['Events'] =ROOT.RDataFrame('Events',data['files'])   
+
+    # Apply golden JSON
+    if not data['isMC']:
+        jsonhelper = None
+        if "era" in data.keys():
+            if os.path.exists("data/JSON_{}.txt".format(data['era'][:4])): # Not elegant way to remove pre/postVFP from era definition
+                jsonhelper = make_jsonHelper("data/JSON_{}.txt".format(data['era'][:4]))
+        if jsonhelper is not None:
+            dataframe['Events'] = dataframe['Events'].Define("isGoodLumi", jsonhelper, ["run", "luminosityBlock"])
+        else:
+            dataframe['Events'] = dataframe['Events'].Define("isGoodLumi", "1")
+    else:
+        dataframe['Events'] = dataframe['Events'].Define("isGoodLumi", "1")
+
     #read the HLT string from the sample
     #dataframe=dataframe.DefinePerSample('HLTstring','rdfsampleinfo_.GetS("trigger")')
     dataframe['Events']=dataframe['Events'].Define('HLT_passed',data['trigger']) #need to fix to suppport trigger/amples!!!!
