@@ -1,6 +1,5 @@
 import subprocess
 import ROOT
-import numpy as np
 import json, os
 ROOT.gInterpreter.Declare('#include "common/lumiFilter.h"')
 
@@ -12,11 +11,11 @@ def make_jsonHelper(fjson):
 
     for run in jsondata:
         for pair in jsondata[run]:
-            runs.append(run)
-            firstlumis.append(pair[0])
-            lastlumis.append(pair[1])
-            
-    jsonhelper = ROOT.JsonHelper(np.asarray(runs, dtype=np.uint), np.asarray(firstlumis, dtype=np.uint), np.asarray(lastlumis, dtype=np.uint))
+            runs.append(int(run))
+            firstlumis.append(int(pair[0]))
+            lastlumis.append(int(pair[1]))
+    
+    jsonhelper = ROOT.JsonHelper(runs, firstlumis, lastlumis)
     return jsonhelper
 
 def load_meta_data(data):
@@ -28,7 +27,7 @@ def load_meta_data(data):
     if not data['isMC']:
         jsonhelper = None
         if "era" in data.keys():
-            if os.path.exists("data/JSON_{}.txt".format(data['era'][:4])): # Not elegant way to remove pre/postVFP from era definition
+            if os.path.exists("data/JSON_{}.txt".format(data['era'][:4])): # Non-elegant way to remove pre/postVFP from era definition
                 jsonhelper = make_jsonHelper("data/JSON_{}.txt".format(data['era'][:4]))
         if jsonhelper is not None:
             dataframe['Events'] = dataframe['Events'].Define("isGoodLumi", jsonhelper, ["run", "luminosityBlock"])
