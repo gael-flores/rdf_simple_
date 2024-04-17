@@ -1,10 +1,5 @@
 samples_data_2016 = {
 # Single Muon 2016 Data
-'SingleMuon_2016B_ver1_HIPM':{'dataset': '/SingleMuon/Run2016B-ver1_HIPM_UL2016_MiniAODv2_NanoAODv9-v2/NANOAOD',
-                             'triggers':['(HLT_IsoMu24||HLT_IsoTkMu24)'],
-                             'veto_triggers':[],
-                              'era':'2016preVFP',
-                              'jobs':2},
 'SingleMuon_2016B_ver2_HIPM':{'dataset': '/SingleMuon/Run2016B-ver2_HIPM_UL2016_MiniAODv2_NanoAODv9-v2/NANOAOD',
                              'triggers':['(HLT_IsoMu24||HLT_IsoTkMu24)'],
                              'veto_triggers':[],
@@ -47,11 +42,6 @@ samples_data_2016 = {
                     'jobs':8},
 
 # EGamma 2016 Data
-'SingleElectron_2016B_ver1_HIPM': {'dataset': '/SingleElectron/Run2016B-ver1_HIPM_UL2016_MiniAODv2_NanoAODv9-v2/NANOAOD',
-                                   'triggers': ['HLT_Ele27_WPTight_Gsf'],
-                                   'veto_triggers': ['(HLT_IsoMu24||HLT_IsoTkMu24)'],
-                                   'era': '2016preVFP',
-                                   'jobs': 2},
 'SingleElectron_2016B_ver2_HIPM': {'dataset': '/SingleElectron/Run2016B-ver2_HIPM_UL2016_MiniAODv2_NanoAODv9-v2/NANOAOD',
                                    'triggers': ['HLT_Ele27_WPTight_Gsf'],
                                    'veto_triggers': ['(HLT_IsoMu24||HLT_IsoTkMu24)'],
