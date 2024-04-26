@@ -591,3 +591,29 @@ RVecI isGenSignal(RVecI pdgId, RVecI motherIdx){
   }
   return out;
 }
+
+RVecF photonEnergyScale(RVecF eta, RVecU seedgain, std::vector<std::pair<unsigned int, std::vector<float>>> values, std::vector<std::pair<unsigned int, std::vector<float>>> binning, const bool isMC){
+  RVecF out;
+  out.reserve(eta.size());
+  for (size_t i = 0; i < eta.size(); i++){
+    if (!isMC){
+      out.emplace_back(1.0);
+      continue;
+    }
+    unsigned int gain = seedgain[i];
+    auto it_vals = std::find_if(values.begin(), values.end(),
+			   [gain](const std::pair<unsigned int, std::vector<float>>& element) { return element.first == gain;}
+			   );
+    auto it_bins = std::find_if(binning.begin(), binning.end(),
+			   [gain](const std::pair<unsigned int, std::vector<float>>& element) { return element.first == gain;}
+			   );
+    if (it_vals == values.end() || it_bins == binning.end())
+      out.emplace_back(1.0);
+    else{
+      int bin = getBin(eta[i], it_bins->second);
+      out.emplace_back(it_vals->second[bin]);
+    }
+  }
+  return out;
+}
+
