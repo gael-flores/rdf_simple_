@@ -110,6 +110,7 @@ def photonAna(dataframe, era = '2018'):
     photons = photons.Define("Photon_pixSF_unc", "pho_SFs_pix[1]")
 
     photons = photons.Define("Photon_energyScaleUp", "photonEnergyScale(Photon_eta, Photon_seedGain, PHO_scaledown_{}_val, PHO_scaledown_{}_bins, sample_isMC)".format(era, era))
+    photons = photons.Define("Photon_energyScaleDown", "photonEnergyScale(Photon_eta, Photon_seedGain, PHO_scaledown_{}_val, PHO_scaleup_{}_bins, sample_isMC)".format(era, era))
 
     return photons    
 

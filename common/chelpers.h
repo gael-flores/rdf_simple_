@@ -601,6 +601,8 @@ RVecF photonEnergyScale(RVecF eta, RVecU seedgain, std::vector<std::pair<unsigne
       continue;
     }
     unsigned int gain = seedgain[i];
+
+    // Find iterator for values/bins corresponding to the seedGain
     auto it_vals = std::find_if(values.begin(), values.end(),
 			   [gain](const std::pair<unsigned int, std::vector<float>>& element) { return element.first == gain;}
 			   );
