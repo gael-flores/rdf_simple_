@@ -51,7 +51,7 @@ class rdf_plotter(plotter_base):
             sumw = 0.0
             for event in t:
                 sumw += event.genEventSumw
-            self.weight = self.weight+'*(genWeight/{})*(sample_sigma)'.format(sumw if sumw>0 else 1.0)
+            self.weight = self.weight+'*(genWeight/{})*(sample_sigma)*(Pileup_weight)'.format(sumw if sumw>0 else 1.0)
             f.Close()
 
     def readReport(self):
@@ -68,6 +68,10 @@ class rdf_plotter(plotter_base):
 
     def define(self, var, definition):
         self.rdf = self.rdf.Define(var, definition)
+
+    def redefine(self, var, definition):
+        self.rdf = self.rdf.Redefine(var, definition)
+
         
     def hist1d(self,var,cuts,lumi,model,titlex = "",units = ""):
         corrString="1.0"
@@ -87,6 +91,9 @@ class rdf_plotter(plotter_base):
             h.GetXaxis().SetTitle(titlex)
         else:
             h.GetXaxis().SetTitle(titlex+ " ["+units+"]")
+        for n in range(1, h.GetNbinsX()+1):
+            if h.GetBinContent(n) < 0:
+                h.SetBinContent(n, 0)
         return h
 
 
@@ -188,6 +195,10 @@ class merged_plotter(plotter_base):
         for plotter in self.plotters:
             plotter.define(var, definition)
 
+    def redefine(self, var, definition):
+        for plotter in self.plotters:
+            plotter.redefine(var, definition)
+
     def hist1d(self,var,cuts,lumi,model,titlex = "",units = ""):
         h = None
         for plotter in self.plotters:
@@ -195,6 +206,10 @@ class merged_plotter(plotter_base):
                 h = plotter.hist1d(var, cuts, lumi, model, titlex, units)
             else:
                 h.Add(plotter.hist1d(var, cuts, lumi, model, titlex, units).GetValue())
+        if h is None:
+            tmprdf = ROOT.RDataFrame(1)
+            tmprdf = tmprdf.Define("x", "0")
+            h = tmprdf.Define("goodX", "x!=0").Histo1D(model, "goodX")
         h.Sumw2()
         h.SetLineStyle(self.linestyle)
         h.SetLineColor(self.linecolor)
@@ -267,7 +282,12 @@ class combined_plotter(object):
         for plotter in self.plotters:
             plotter.define(var, definition)
 
-    def draw_stack(self,var,cut,lumi,model,titlex = "", units = "",expandY=0.0,scaleFactors="(1)", verbose = True):
+    def redefine(self, var, definition):
+        for plotter in self.plotters:
+            plotter.redefine(var, definition)
+
+
+    def draw_stack(self,var,cut,lumi,model,titlex = "", units = "",expandY=0.0,SFs="(1)", verbose = False, prelim = "Preliminary", lumi_label = ""):
         canvas = ROOT.TCanvas("canvas","")
 #        ROOT.gStyle.SetOptStat(0)
 #        ROOT.gStyle.SetOptTitle(0)
@@ -303,7 +323,7 @@ class combined_plotter(object):
 
         for (plotter,typeP,label,name) in zip(self.plotters,self.types,self.labels,self.names):
             if typeP == "signal" or typeP =="background":
-                hist = plotter.hist1d(var,cutL+"*("+scaleFactors+")",lumi,model,titlex,units)
+                hist = plotter.hist1d(var,cutL+"*("+SFs+")",lumi,model,titlex,units)
                 hist.SetName(name)
 
                 stack.Add(hist.GetValue())
@@ -389,6 +409,20 @@ class combined_plotter(object):
             if typeP == "signal":
                 legend.AddEntry(histo,label,"f")
 
+        tex_prelim = ROOT.TLatex()
+        if prelim != "":
+            tex_prelim.SetTextSize(0.03)
+            tex_prelim.DrawLatexNDC(.11, .91, "#scale[1.5]{CMS}"+" {}".format(prelim))
+            tex_prelim.Draw("same")
+        
+        float_lumi = float(lumi)
+        float_lumi = float_lumi/1000.
+        tex_lumi = ROOT.TLatex()
+        tex_lumi.SetTextSize(0.035)
+        tex_lumi.SetTextAlign(31)
+        tex_lumi.DrawLatexNDC(.93, .91, "13 TeV, {:.1f}".format(float_lumi) + " fb^{-1}")
+        tex_lumi.Draw("same")
+
 
  #       ROOT.SetOwnership(legend,False)
 
@@ -410,11 +444,9 @@ class combined_plotter(object):
                 if background>0.0:
                     print ("Data/Bkg= {ratio} +- {err}".format(ratio=integral/background,err=math.sqrt(error.value*error.value/(background*background)+integral*integral*backgroundErr/(background*background*background*background))))
 
-
-        plot={'canvas':canvas,'stack':stack,'legend':legend,'data':data,'dataG':dataG}
         canvas.RedrawAxis()
         canvas.Update()
-
+        plot={'canvas':canvas,'stack':stack,'legend':legend,'data':data,'dataG':dataG,'hists':hists,'prelim':tex_prelim, 'lumi': tex_lumi}
 
         return plot
 
@@ -422,7 +454,7 @@ class combined_plotter(object):
 # The nostack option normalizes the background and signal
 # contributions separately. Without this all MC contributions
 # are normalized together and drawn stacked
-    def draw_comp(self,var,cut,model,titlex = "", units = "",expandY=0.0,nostack=True,prelim="Preliminary"): 
+    def draw_comp(self,var,cut,model,titlex = "", units = "",expandY=0.0,nostack=True,prelim="Preliminary",SFs = "(1)"): 
         canvas = ROOT.TCanvas("canvas","")
 #        ROOT.gStyle.SetOptStat(0)
 #        ROOT.gStyle.SetOptTitle(0)
@@ -456,7 +488,7 @@ class combined_plotter(object):
         cutL="("+self.defaultCut+")*("+cut+")"
         scale = 0.0
         for (plotter,typeP,label,name) in zip(self.plotters,self.types,self.labels,self.names):
-            hist = plotter.hist1d(var,cutL,"1",model,titlex,units)
+            hist = plotter.hist1d(var,cutL+"*("+SFs+")","1",model,titlex,units)
             hist.SetFillStyle(0)
             hist.SetName(name+label)
             labels[hist.GetValue()] = label
