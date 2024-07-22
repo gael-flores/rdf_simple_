@@ -5,6 +5,9 @@ import pickle
 from array import array
 import ctypes
 import math
+
+drawprelim = True
+
 class plotter_base(object):
 
     def __init__(self):
@@ -287,7 +290,7 @@ class combined_plotter(object):
             plotter.redefine(var, definition)
 
 
-    def draw_stack(self,var,cut,lumi,model,titlex = "", units = "",expandY=0.0,SFs="(1)", verbose = False, prelim = "Preliminary", lumi_label = ""):
+    def draw_stack(self,var,cut,lumi,model,titlex = "", units = "",expandY=0.0,SFs="(1)", verbose = False, prelim = "Work in progress", lumi_label = ""):
         canvas = ROOT.TCanvas("canvas","")
 #        ROOT.gStyle.SetOptStat(0)
 #        ROOT.gStyle.SetOptTitle(0)
@@ -410,17 +413,18 @@ class combined_plotter(object):
                 legend.AddEntry(histo,label,"f")
 
         tex_prelim = ROOT.TLatex()
-        if prelim != "":
-            tex_prelim.SetTextSize(0.03)
-            tex_prelim.DrawLatexNDC(.11, .91, "#scale[1.5]{CMS}"+" {}".format(prelim))
-            tex_prelim.Draw("same")
+        if drawprelim:
+            if prelim != "":
+                tex_prelim.SetTextSize(0.03)
+                tex_prelim.DrawLatexNDC(.11, .91, "#scale[1.5]{CMS}"+" {}".format(prelim))
+                tex_prelim.Draw("same")
         
         float_lumi = float(lumi)
         float_lumi = float_lumi/1000.
         tex_lumi = ROOT.TLatex()
         tex_lumi.SetTextSize(0.035)
         tex_lumi.SetTextAlign(31)
-        tex_lumi.DrawLatexNDC(.93, .91, "13 TeV, {:.1f}".format(float_lumi) + " fb^{-1}")
+        tex_lumi.DrawLatexNDC(.93, .91, "13 TeV ({:.1f}".format(float_lumi) + " fb^{-1})")
         tex_lumi.Draw("same")
 
 
@@ -454,7 +458,7 @@ class combined_plotter(object):
 # The nostack option normalizes the background and signal
 # contributions separately. Without this all MC contributions
 # are normalized together and drawn stacked
-    def draw_comp(self,var,cut,model,titlex = "", units = "",expandY=0.0,nostack=True,prelim="Preliminary",SFs = "(1)"): 
+    def draw_comp(self,var,cut,model,titlex = "", units = "",expandY=0.0,nostack=True,prelim="Work in progress",SFs = "(1)"): 
         canvas = ROOT.TCanvas("canvas","")
 #        ROOT.gStyle.SetOptStat(0)
 #        ROOT.gStyle.SetOptTitle(0)
@@ -540,20 +544,12 @@ class combined_plotter(object):
         ROOT.SetOwnership(legend, False)
         legend.Draw()
         
-        tex_prelim = ROOT.TLatex()
-        if prelim != "":
-            tex_prelim.SetTextSize(0.03)
-            tex_prelim.DrawLatexNDC(.11, .91, "#scale[1.5]{CMS}"+" {}".format(prelim))
-            tex_prelim.Draw("same")
-
-        pt = ROOT.TPaveText(0.1577181,0.9562937,0.9580537,0.9947552,"brNDC")
-        pt.SetBorderSize(0)
-        pt.SetTextAlign(12)
-        pt.SetFillStyle(0)
-        pt.SetTextFont(42)
-        pt.SetTextSize(0.03)
-        text = pt.AddText(0.01,0.5,"CMS simulation")
-        pt.Draw()   
+        if drawprelim:
+            tex_prelim = ROOT.TLatex()
+            if prelim != "":
+                tex_prelim.SetTextSize(0.03)
+                tex_prelim.DrawLatexNDC(.11, .91, "#scale[1.5]{CMS}"+" {}".format(prelim))
+                tex_prelim.Draw("same")
         
         canvas.Update()
 
