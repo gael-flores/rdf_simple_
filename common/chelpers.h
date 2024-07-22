@@ -1,3 +1,6 @@
+#ifndef CHELPERS
+#define CHELPERS
+
 #include "ROOT/RDataFrame.hxx"
 #include "ROOT/RVec.hxx"
 #include "TCanvas.h"
@@ -619,3 +622,5 @@ RVecF photonEnergyScale(RVecF eta, RVecU seedgain, std::vector<std::pair<unsigne
   return out;
 }
 
+
+#endif

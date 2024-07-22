@@ -1,3 +1,6 @@
+#ifndef SCALEFACTORS
+#define SCALEFACTORS
+
 // 2018UL Muon tight pf Isolation, sf[bin_absEta][bin_pt] = [val, unc]
 std::vector< std::vector< std::vector<float>>> MU_ISO_2018_sf {
   { {0.985735190676012, 0.01306328308431419}, {0.9911547460745371, 0.011532284674203133}, {0.989432336095935, 0.007322133690677097}, {0.9943204928081568, 0.001305865429290037}, {0.9961167954677284, 0.00017443909861140865}, {0.9966949292852951, 0.0008332986854625898}, {0.9982728698780494, 0.00033903928477072574} },
@@ -606,3 +609,5 @@ std::vector<std::pair<uint, std::vector<float>>> PHO_scaleup_2016postVFP_bins {{
 
 std::vector<std::pair<unsigned int, std::vector<float>>> PHO_scaledown_2016postVFP_val {{12, {0.9985, 0.99925, 0.9995, 0.9995, 0.99925, 0.9985}}, {6, {0.99, 0.995, 0.995, 0.995, 0.995, 0.99}}, {1, {0.97, 0.98, 0.98, 0.98, 0.98, 0.97}}};
 std::vector<std::pair<uint, std::vector<float>>> PHO_scaledown_2016postVFP_bins {{12, {-5.0, -1.442, -1.0, 0.0, 1.0, 1.442, 5.0}}, {6, {-5.0, -1.442, -1.0, 0.0, 1.0, 1.442, 5.0}}, {1, {-5.0, -1.442, -1.0, 0.0, 1.0, 1.442, 5.0}}};
+
+#endif
