@@ -540,61 +540,84 @@ RVecF best_2gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE, RV
   return all_combos[sortedIndices[0]];
 }
 
-RVecF best_3gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,float mass) {
-  RVec<RVecF> all_combos;  
-  RVecF result;
-    result.reserve(14);
+RVecF best_3gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,RVecI isLoose ,RVecI gID, RVecF gIso,float mass) {  
+  RVec<RVecF> all_combos;
+  auto idx_cmb = ROOT::VecOps::Combinations(pt, 3);
+  for (size_t i = 0; i < idx_cmb[0].size(); i++) {
+    const auto i1 = idx_cmb[0][i];
+    const auto i2 = idx_cmb[1][i];
+    const auto i3 = idx_cmb[2][i];
+      
+    if (!(isLoose[i1] && isLoose[i2] && isLoose[i3])) // only use preselected photons
+      continue;
+
+    RVecF result;
+    result.reserve(18);
     VertexCalculator *calc = new VertexCalculator();
     std::vector<float> best_pair;
     best_pair.reserve(14);
-    int other_i;
     float raw_m;
+    int g1;
+    int g2;
+    int g3;
     //four vector
-    ROOT::Math::PtEtaPhiMVector p0(pt[0],eta[0],phi[0],0.0);
-    ROOT::Math::PtEtaPhiMVector p1(pt[1],eta[1],phi[1],0.0);
-    ROOT::Math::PtEtaPhiMVector p2(pt[2],eta[2],phi[2],0.0);
-    
+    ROOT::Math::PtEtaPhiMVector p0(pt[i1],eta[i1],phi[i1],0.0);
+    ROOT::Math::PtEtaPhiMVector p1(pt[i2],eta[i2],phi[i2],0.0);
+    ROOT::Math::PtEtaPhiMVector p2(pt[i3],eta[i3],phi[i3],0.0);
 
     //First Pair
-    std::vector<float> pair_1 = calc->getVertexInfo(pt[0],eta[0],phi[0],EE[0],EB[0],pt[1],eta[1],phi[1],EE[1],EB[1],mass);
+    std::vector<float> pair_1 = calc->getVertexInfo(pt[i1],eta[i1],phi[i1],EE[i1],EB[i1],pt[i2],eta[i2],phi[i2],EE[i2],EB[i2],mass);
 
     //second pair
-    std::vector<float> pair_2 = calc->getVertexInfo(pt[0],eta[0],phi[0],EE[0],EB[0],pt[2],eta[2],phi[2],EE[2],EB[2],mass);
+    std::vector<float> pair_2 = calc->getVertexInfo(pt[i1],eta[i1],phi[i1],EE[i1],EB[i1],pt[i3],eta[i3],phi[i3],EE[i3],EB[i3],mass);
 
     //third pair
-    std::vector<float> pair_3 = calc->getVertexInfo(pt[1],eta[1],phi[1],EE[1],EB[1],pt[2],eta[2],phi[2],EE[2],EB[2],mass);
+    std::vector<float> pair_3 = calc->getVertexInfo(pt[i2],eta[i2],phi[i2],EE[i2],EB[i2],pt[i3],eta[i3],phi[i3],EE[i3],EB[i3],mass);
 
-  
+
     if (compare_pair(pair_1,pair_2)) {
       if (compare_pair(pair_1,pair_3)){
         best_pair.insert(best_pair.end(),pair_1.begin(),pair_1.end());
+        g1 = i1;
+        g2 = i2;
+        g3 = i3;
         raw_m = (p0+p1).M();
-        other_i = 2;
+
+        
 
       } else {
         best_pair.insert(best_pair.end(),pair_3.begin(),pair_3.end());
+        g1 = i2;
+        g2 = i3;
+        g3 = i1;
         raw_m = (p1+p2).M();
-        other_i = 0;
-
+        
       }
       
     } else if (compare_pair(pair_2,pair_3)) {
       best_pair.insert(best_pair.end(),pair_2.begin(),pair_2.end());
+      g1 = i1;
+      g2 = i3;
+      g3 = i2;
       raw_m = (p0+p2).M();
-      other_i = 1;
+      
 
       } else {
         best_pair.insert(best_pair.end(),pair_3.begin(),pair_3.end());
+        g1 = i2;
+        g2 = i3;
+        g3 = i1;
         raw_m = (p1+p2).M();
-        other_i = 0;
+        
 
       }
+
     ROOT::Math::PtEtaPhiMVector pc0(best_pair[0],best_pair[1],best_pair[2],0.0);
     ROOT::Math::PtEtaPhiMVector pc1(best_pair[3],best_pair[4],best_pair[5],0.0);
-    ROOT::Math::PtEtaPhiMVector pc2(pt[other_i],eta[other_i],phi[other_i],0.0);
+    ROOT::Math::PtEtaPhiMVector pc2(pt[g3],eta[g3],phi[g3],0.0);
 
-    delete calc;
-  
+    delete calc;   
+
     result.emplace_back(best_pair[0]);
     result.emplace_back(best_pair[1]);
     result.emplace_back(best_pair[2]);
@@ -604,18 +627,21 @@ RVecF best_3gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
     result.emplace_back(best_pair[6]);
     result.emplace_back(best_pair[7]);
     result.emplace_back(raw_m);
-    result.emplace_back(pt[other_i]);
-    result.emplace_back(eta[other_i]);
-    result.emplace_back(phi[other_i]);
+    result.emplace_back(gID[g1] && gIso[g1]<0.1);
+    result.emplace_back(gID[g2] && gIso[g2]<0.1);
+    result.emplace_back(gID[g3] && gIso[g3]<0.1);
+    result.emplace_back(pt[g3]);
+    result.emplace_back(eta[g3]);
+    result.emplace_back(phi[g3]);
     result.emplace_back((p0+p1+p2).M());
     result.emplace_back((pc0+pc1+pc2).M());
+    result.emplace_back(DeltaPhi(phi[g1],phi[g2]));
+    result.emplace_back(DeltaR(eta[g1],eta[g2],phi[g1],phi[g2]));
     all_combos.emplace_back(result);
-  
+  }
   auto sortedIndices = ROOT::VecOps::Argsort(all_combos,compare_pair);
-
   return all_combos[sortedIndices[0]];
 }
-
 
 bool compare_quad(const RVecF& q1,const RVecF& q2) {
       ROOT::Math::PtEtaPhiMVector p1_A1(q1[0],q1[1],q1[2],0.0);
@@ -753,7 +779,7 @@ bool compare_quad_pairing(const std::vector<float>p1_A,const std::vector<float>p
 } 
 
 
-RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,float mass) {
+RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,RVecI isLoose, RVecI gID, RVecF gIso, float mass) {
 
   RVec<RVecF> all_combos;
   RVecF result;
@@ -768,12 +794,20 @@ RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
   std::vector<float> best_B;
   best_A.reserve(20);
   best_B.reserve(20);
+  int g1;
+  int g2;
+  int g3;
+  int g4;
 
   for (size_t i = 0; i < idx_cmb[0].size(); i++) {
     const auto i1 = idx_cmb[0][i];
     const auto i2 = idx_cmb[1][i];
     const auto i3 = idx_cmb[2][i];
     const auto i4 = idx_cmb[3][i];
+
+    if (!(isLoose[i1] && isLoose[i2] && isLoose[i3] && isLoose[i4])) // only use preselected photons
+      continue;
+
     result.clear();
     best23_A.clear();
     best23_B.clear();
@@ -807,6 +841,10 @@ RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
     if (compare_quad_pairing(pairing2_A,pairing2_B,pairing3_A,pairing3_B)) {
       best23_A.insert(best23_A.end(),pairing2_A.begin(),pairing2_A.end());
       best23_B.insert(best23_B.end(),pairing2_B.begin(),pairing2_B.end());
+      g1 = i1;
+      g2 = i3;
+      g3 = i2;
+      g4 = i4;
       pA = p0+p2;
       pB = p1+p3;
       
@@ -814,12 +852,20 @@ RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
     else {
       best23_A.insert(best23_A.end(),pairing3_A.begin(),pairing3_A.end());
       best23_B.insert(best23_B.end(),pairing3_B.begin(),pairing3_B.end());
+      g1 = i1;
+      g2 = i4;
+      g3 = i2;
+      g4 = i3;
       pA=p0+p3;
       pB=p1+p2;
     }
     if (compare_quad_pairing(pairing1_A,pairing1_B,best23_A,best23_B)) {
       best_A.insert(best_A.end(),pairing1_A.begin(),pairing1_A.end());
       best_B.insert(best_B.end(),pairing1_B.begin(),pairing1_B.end());
+      g1 = i1;
+      g2 = i2;
+      g3 = i3;
+      g4 = i4;
       pA=p0+p1;
       pB=p2+p3;
     }
@@ -855,10 +901,10 @@ RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,flo
     ROOT::Math::PtEtaPhiMVector pc3(best_B[3],best_B[4],best_B[5],0.0);
     result.emplace_back((pc0+pc1+pc2+pc3).M());
     //indices of used photons
-    result.emplace_back(i1);
-    result.emplace_back(i2);
-    result.emplace_back(i3);
-    result.emplace_back(i4);
+    result.emplace_back(gID[g1] && gIso[g1]<0.1);
+    result.emplace_back(gID[g2] && gIso[g2]<0.1);
+    result.emplace_back(gID[g3] && gIso[g3]<0.1);
+    result.emplace_back(gID[g4] && gIso[g4]<0.1);
     all_combos.emplace_back(result);
   }
   delete calc;  
