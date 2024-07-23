@@ -53,7 +53,7 @@ for d,info in samp.samples.items():
         echo starting script
         tar -xzvf sandbox.tar.gz
         mkdir .dasmaps
-        source /cvmfs/sft.cern.ch/lcg/views/LCG_105/x86_64-el9-gcc11-opt/setup.sh
+        source ./setup.sh
         python3 run.py -a {analysis} {dataset}
         echo python done
         
@@ -109,7 +109,7 @@ for d,info in samp.samples.items():
             echo starting script
             tar -xzvf sandbox.tar.gz
             mkdir .dasmaps
-            source /cvmfs/sft.cern.ch/lcg/views/LCG_105/x86_64-el9-gcc11-opt/setup.sh
+            source ./setup.sh
             python3 run.py {dataset} -s {splitFactor} -p {part} -a {analysis}
             echo python done
         
