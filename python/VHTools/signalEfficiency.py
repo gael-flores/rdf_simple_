@@ -1,6 +1,6 @@
 import ROOT, sys, glob
 sys.path.append("/home/tyler/DDP/rdf_simple/")
-ROOT.gInterpreter.Declare('#include "interface/signalEfficiency.h"')
+ROOT.gInterpreter.Declare('#include "common/signalEfficiency.h"')
 ROOT.gInterpreter.Declare('#include "common/chelpers.h"')
 from analysis.VH import *
 ROOT.ROOT.EnableImplicitMT()
