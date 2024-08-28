@@ -1,5 +1,5 @@
 from common.plotter import *
-from python.VHcuts import *
+from python.VHTools.VHcuts import *
 import ROOT
 import glob
 import array
@@ -28,10 +28,10 @@ lumiUnc = {'2018': 1.025,
            '2017': 1.023,
            '2016': 1.012}
 
-xsecs = {'ggZ': "0.1057",
-        'Z': "0.8696",
-        'Wplus': "0.84",
-        'Wminus': "0.5328"}
+xsecs = {'ggZ': "0.1227",
+        'Z': "0.8839",
+        'Wplus': "0.9426",
+        'Wminus': "0.5983"}
 
 BRs = {"Z": "(.03363+.03366+.033696)",
        "W": "(.1063+.1071+.1138)"}
@@ -270,7 +270,7 @@ def rebinTH1(hist, quantiles, binsM, binsLxy, lxyMin, lxyMax):
             tmpTH1.SetBinContent(i, hist.GetBinContent(i + binsLxy*binM))
         tmpTH1.GetQuantiles(len(quants), q[binM], quants)
         for i in range(len(q[binM])):
-            bins.append(binsLxy*binM + hist.GetXaxis().FindBin(q[binM][i]))
+            bins.append(binsLxy*binM + tmpTH1.GetXaxis().FindBin(q[binM][i]))
     bins.append(binsM*binsLxy)
     out = array.array('d')
     # Remove repeated bin entries
