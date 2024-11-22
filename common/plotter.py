@@ -2,9 +2,16 @@ import ROOT
 import sys
 from array import array
 import pickle
-from array import array
 import ctypes
 import math
+import common.tdrstyle as tdrstyle
+import common.CMS_lumi as CMS_lumi
+sty = tdrstyle.setTDRStyle()
+
+### = commented out to test tdrStyle, uncomment if not using
+
+drawprelim = True
+
 class plotter_base(object):
 
     def __init__(self):
@@ -51,7 +58,7 @@ class rdf_plotter(plotter_base):
             sumw = 0.0
             for event in t:
                 sumw += event.genEventSumw
-            self.weight = self.weight+'*(genWeight/{})*(sample_sigma)'.format(sumw if sumw>0 else 1.0)
+            self.weight = self.weight+'*(genWeight/{})*(sample_sigma)*(Pileup_weight)'.format(sumw if sumw>0 else 1.0)
             f.Close()
 
     def readReport(self):
@@ -68,6 +75,10 @@ class rdf_plotter(plotter_base):
 
     def define(self, var, definition):
         self.rdf = self.rdf.Define(var, definition)
+
+    def redefine(self, var, definition):
+        self.rdf = self.rdf.Redefine(var, definition)
+
         
     def hist1d(self,var,cuts,lumi,model,titlex = "",units = ""):
         corrString="1.0"
@@ -87,6 +98,9 @@ class rdf_plotter(plotter_base):
             h.GetXaxis().SetTitle(titlex)
         else:
             h.GetXaxis().SetTitle(titlex+ " ["+units+"]")
+        for n in range(1, h.GetNbinsX()+1):
+            if h.GetBinContent(n) < 0:
+                h.SetBinContent(n, 0)
         return h
 
 
@@ -188,6 +202,10 @@ class merged_plotter(plotter_base):
         for plotter in self.plotters:
             plotter.define(var, definition)
 
+    def redefine(self, var, definition):
+        for plotter in self.plotters:
+            plotter.redefine(var, definition)
+
     def hist1d(self,var,cuts,lumi,model,titlex = "",units = ""):
         h = None
         for plotter in self.plotters:
@@ -195,6 +213,10 @@ class merged_plotter(plotter_base):
                 h = plotter.hist1d(var, cuts, lumi, model, titlex, units)
             else:
                 h.Add(plotter.hist1d(var, cuts, lumi, model, titlex, units).GetValue())
+        if h is None:
+            tmprdf = ROOT.RDataFrame(1)
+            tmprdf = tmprdf.Define("x", "0")
+            h = tmprdf.Define("goodX", "x!=0").Histo1D(model, "goodX")
         h.Sumw2()
         h.SetLineStyle(self.linestyle)
         h.SetLineColor(self.linecolor)
@@ -267,8 +289,14 @@ class combined_plotter(object):
         for plotter in self.plotters:
             plotter.define(var, definition)
 
-    def draw_stack(self,var,cut,lumi,model,titlex = "", units = "",expandY=0.0,scaleFactors="(1)", verbose = True):
-        canvas = ROOT.TCanvas("canvas","")
+    def redefine(self, var, definition):
+        for plotter in self.plotters:
+            plotter.redefine(var, definition)
+
+
+    def draw_stack(self,var,cut,lumi,model,titlex = "", units = "",expandY=0.0,SFs="(1)", verbose = False, prelim = "Work in progress", lumi_label = "", outOfFrame = 1):
+###        canvas = ROOT.TCanvas("canvas","")
+        canvas = ROOT.TCanvas("canvas", "", 800, 600)
 #        ROOT.gStyle.SetOptStat(0)
 #        ROOT.gStyle.SetOptTitle(0)
 #        canvas.Range(-68.75,-7.5,856.25,42.5)
@@ -278,7 +306,7 @@ class combined_plotter(object):
 #        canvas.SetTickx(1)
 #        canvas.SetTicky(1)
 #        canvas.SetLeftMargin(0.15)
-        canvas.SetRightMargin(0.05)
+###        canvas.SetRightMargin(0.05) #commented to test tdrStyle
 #        canvas.SetTopMargin(0.05)
 #        canvas.SetBottomMargin(0.15)
 #        canvas.SetFrameFillStyle(0)
@@ -286,6 +314,9 @@ class combined_plotter(object):
 #        canvas.SetFrameFillStyle(0)
 #        canvas.SetFrameBorderMode(0)
 
+        canvas.SetTopMargin(0.055) # testing tdr style
+        canvas.SetBottomMargin(0.12) # testing
+        canvas.SetLeftMargin(0.12) # testing
 
         canvas.cd()
         hists=[]
@@ -303,7 +334,7 @@ class combined_plotter(object):
 
         for (plotter,typeP,label,name) in zip(self.plotters,self.types,self.labels,self.names):
             if typeP == "signal" or typeP =="background":
-                hist = plotter.hist1d(var,cutL+"*("+scaleFactors+")",lumi,model,titlex,units)
+                hist = plotter.hist1d(var,cutL+"*("+SFs+")",lumi,model,titlex,units)
                 hist.SetName(name)
 
                 stack.Add(hist.GetValue())
@@ -369,7 +400,8 @@ class combined_plotter(object):
         if data !=None:
             dataG.Draw("Psame")              
 
-        legend = ROOT.TLegend(0.62,0.6,0.92,0.90,"","brNDC")
+        ###legend = ROOT.TLegend(0.62,0.6,0.92,0.90,"","brNDC")
+        legend = ROOT.TLegend(0.63,0.64,0.93,0.94,"","brNDC") # if using tdrstyle
         legend.SetBorderSize(0)
         legend.SetLineColor(1)
         legend.SetLineStyle(1)
@@ -389,6 +421,24 @@ class combined_plotter(object):
             if typeP == "signal":
                 legend.AddEntry(histo,label,"f")
 
+        ###tex_prelim = ROOT.TLatex()
+        ###if drawprelim:
+        ###    if prelim != "":
+        ###        tex_prelim.SetTextSize(0.03)
+        ###        tex_prelim.DrawLatexNDC(.11, .91, "#scale[1.5]{CMS}"+" {}".format(prelim))
+        ###        tex_prelim.Draw("same")
+        
+        float_lumi = float(lumi)
+        float_lumi = float_lumi/1000.
+        ###tex_lumi = ROOT.TLatex()
+        ###tex_lumi.SetTextSize(0.035)
+        ###tex_lumi.SetTextAlign(31)
+        ###tex_lumi.DrawLatexNDC(.93, .91, "13 TeV ({:.1f}".format(float_lumi) + " fb^{-1})")
+        ###tex_lumi.Draw("same")
+        if outOfFrame:
+            CMS_lumi.CMS_lumi(canvas, 4, 0, relPosX=0.077, lumi_13TeV = str(float_lumi), extraText = prelim)
+        else:
+            CMS_lumi.CMS_lumi(canvas, 4, 10, lumi_13TeV = str(float_lumi), extraText = prelim)
 
  #       ROOT.SetOwnership(legend,False)
 
@@ -410,11 +460,10 @@ class combined_plotter(object):
                 if background>0.0:
                     print ("Data/Bkg= {ratio} +- {err}".format(ratio=integral/background,err=math.sqrt(error.value*error.value/(background*background)+integral*integral*backgroundErr/(background*background*background*background))))
 
-
-        plot={'canvas':canvas,'stack':stack,'legend':legend,'data':data,'dataG':dataG}
         canvas.RedrawAxis()
         canvas.Update()
-
+        ###plot={'canvas':canvas,'stack':stack,'legend':legend,'data':data,'dataG':dataG,'hists':hists,'prelim':tex_prelim, 'lumi': tex_lumi}
+        plot={'canvas':canvas,'stack':stack,'legend':legend,'data':data,'dataG':dataG,'hists':hists}
 
         return plot
 
@@ -422,8 +471,9 @@ class combined_plotter(object):
 # The nostack option normalizes the background and signal
 # contributions separately. Without this all MC contributions
 # are normalized together and drawn stacked
-    def draw_comp(self,var,cut,model,titlex = "", units = "",expandY=0.0,nostack=True,prelim="Preliminary"): 
-        canvas = ROOT.TCanvas("canvas","")
+    def draw_comp(self,var,cut,model,titlex = "", units = "",expandY=0.0,nostack=True,prelim="Work in progress",SFs = "(1)", outOfFrame = 1): 
+        ###canvas = ROOT.TCanvas("canvas","")
+        canvas = ROOT.TCanvas("canvas", "", 800, 600)
 #        ROOT.gStyle.SetOptStat(0)
 #        ROOT.gStyle.SetOptTitle(0)
 #        canvas.Range(-68.75,-7.5,856.25,42.5)
@@ -433,13 +483,17 @@ class combined_plotter(object):
 #        canvas.SetTickx(1)
 #        canvas.SetTicky(1)
 #        canvas.SetLeftMargin(0.15)
-        canvas.SetRightMargin(0.05)
+###        canvas.SetRightMargin(0.05)
 #        canvas.SetTopMargin(0.05)
 #        canvas.SetBottomMargin(0.15)
 #        canvas.SetFrameFillStyle(0)
 #        canvas.SetFrameBorderMode(0)
 #        canvas.SetFrameFillStyle(0)
 #        canvas.SetFrameBorderMode(0)
+
+        canvas.SetTopMargin(0.055) # testing tdr style
+        canvas.SetBottomMargin(0.12) # testing
+        canvas.SetLeftMargin(0.12) # testing
 
 
         canvas.cd()
@@ -456,7 +510,7 @@ class combined_plotter(object):
         cutL="("+self.defaultCut+")*("+cut+")"
         scale = 0.0
         for (plotter,typeP,label,name) in zip(self.plotters,self.types,self.labels,self.names):
-            hist = plotter.hist1d(var,cutL,"1",model,titlex,units)
+            hist = plotter.hist1d(var,cutL+"*("+SFs+")","1",model,titlex,units)
             hist.SetFillStyle(0)
             hist.SetName(name+label)
             labels[hist.GetValue()] = label
@@ -487,7 +541,7 @@ class combined_plotter(object):
             for h in data:
                 h.Draw("hist,same")
 
-        canvas.SetLeftMargin(canvas.GetLeftMargin()*1.15)
+        ###canvas.SetLeftMargin(canvas.GetLeftMargin()*1.15)
         stack.SetMinimum(0)
         if len(units):
             stack.GetXaxis().SetTitle(titlex + " ["+units+"]")
@@ -499,7 +553,16 @@ class combined_plotter(object):
         stack.GetYaxis().SetTitleSize(0.05)
         stack.GetXaxis().SetTitleSize(0.05)
 
-        legend = ROOT.TLegend(0.6, 0.6, 0.9, 0.9)
+        #legend = ROOT.TLegend(0.6, 0.6, 0.9, 0.9)
+        legend = ROOT.TLegend(0.61,0.64,0.91,0.94,"","brNDC") # if using tdrstyle
+        legend.SetBorderSize(0)
+        legend.SetLineColor(1)
+        legend.SetLineStyle(1)
+        legend.SetLineWidth(1)
+        legend.SetFillColor(0)
+        legend.SetFillStyle(0)
+        legend.SetTextFont(42)
+
         legend.SetFillColor(ROOT.kWhite)
         for histo in labels.keys():
             legend.AddEntry(histo, labels[histo], 'lf')
@@ -508,21 +571,17 @@ class combined_plotter(object):
         ROOT.SetOwnership(legend, False)
         legend.Draw()
         
-        tex_prelim = ROOT.TLatex()
-        if prelim != "":
-            tex_prelim.SetTextSize(0.03)
-            tex_prelim.DrawLatexNDC(.11, .91, "#scale[1.5]{CMS}"+" {}".format(prelim))
-            tex_prelim.Draw("same")
-
-        pt = ROOT.TPaveText(0.1577181,0.9562937,0.9580537,0.9947552,"brNDC")
-        pt.SetBorderSize(0)
-        pt.SetTextAlign(12)
-        pt.SetFillStyle(0)
-        pt.SetTextFont(42)
-        pt.SetTextSize(0.03)
-        text = pt.AddText(0.01,0.5,"CMS simulation")
-        pt.Draw()   
+        #if drawprelim:
+        #    tex_prelim = ROOT.TLatex()
+        #    if prelim != "":
+        #        tex_prelim.SetTextSize(0.03)
+        #        tex_prelim.DrawLatexNDC(.11, .91, "#scale[1.5]{CMS}"+" {}".format(prelim))
+        #        tex_prelim.Draw("same")
         
+        if outOfFrame:
+            CMS_lumi.CMS_lumi(canvas, 0, 0, relPosX=0.077, extraText = prelim)
+        else:
+            CMS_lumi.CMS_lumi(canvas, 0, 10, extraText = prelim)
         canvas.Update()
 
         return {'canvas': canvas, 'stack': stack, 'legend': legend, 'data': data, 'hists': hists}
