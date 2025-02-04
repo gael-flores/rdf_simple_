@@ -231,6 +231,9 @@ def getPlotters(era,prod,sampleDir,mass_list,modelIndependent=False):
                                     sigPlotters[-1].addCorrectionFactor(str(21080./59830), "flat")
                                     #Monte carlo normalized to affected luminosity of 38.75fb-1 veto events is affected region defined by HEM cuts
                                     sigPlotters.append(rdf_plotter(sample, True, tree = ana, defaultCuts = cutsHEM))
+                                    #Michalis: THIS PLOTTER NEEDS the weight
+                                    sigPlotters[-1].addCorrectionFactor(weight, "flat")
+
                                     sigPlotters[-1].addCorrectionFactor(str(38750./59830), "flat")
                                     redoPhotonID(sigPlotters[-1], era, isMC=True)
 
