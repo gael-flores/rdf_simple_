@@ -115,7 +115,9 @@ customBins = {
         }
 
 
+
 for m in masses:
+
     print("Making card for {}->{}, m={}".format(v,l,m))
     # Getting the required plotters
     plotters = startVH.getPlotters(era, prod, "/uscms/home/gfavila/nobackup/rdf_simple_/DDP/",[m], modelIndependent = modelIndependent)
@@ -128,8 +130,6 @@ for m in masses:
     loose_sb = dataEMU[startVH.ana[v][l]].hist1d("best_2g_dxy_m{}".format(m), cuts['cr'][v][l][m]+"&&best_2g_raw_mass_m{}>65".format(m), "1", ("loose_sb_{}_{}_m{}".format(v,l,m), "", 50, -1400, 0))
     tight_sb = dataEMU[startVH.ana[v][l]].hist1d("best_2g_dxy_m{}".format(m), cuts['sr'][v][l][m]+"&&best_2g_raw_mass_m{}>65".format(m), "1", ("loose_sb_{}_{}_m{}".format(v,l,m), "", 50, -1400, 0))
     
-    z_tight_sb = dataEMU[startVH.ana[v][l]].hist1d("Z_mass", cuts['sr'][v][l][m]+"&&best_2g_raw_mass_m{}>65".format(m), "1", ("z_loose_sb_{}_{}_m{}".format(v,l,m), "", 50, -1400, 0))
-    z_loose_sb = dataEMU[startVH.ana[v][l]].hist1d("Z_mass", cuts['sr'][v][l][m]+"&&best_2g_raw_mass_m{}>65".format(m), "1", ("loose_sb_{}_{}_m{}".format(v,l,m), "", 50, -1400, 0))
     
     # normalization scale factor
     scale = tight_sb.Integral() / loose_sb.Integral() if loose_sb.Integral() > 0 else 1.0
@@ -147,11 +147,6 @@ for m in masses:
     background = ROOT.gDirectory.Get("data_loose_rebinned")
     background = fillZeroBins(background, 0.001)
     background.Write("background", ROOT.TObject.kOverwrite)
-
-    l = 'ELE'
-    z = startVH.ana['Z'][l].hist1d("Z_mass", cuts['Z'][l]+"&&"+cuts['photons'][options.mass]+"&&best_2g_sumID_m30=={}".format(i), startVH.lumi[year], ("z_mass_{}_preselection{}".format(l,sfx), "", 20, 70, 110), SFs = sfs['Z'][l][options.mass], titlex = "m({}{}) [GeV]".format(lep,lep))
-
-    Z_mass_loose_sb = loose_sb = dataEMU[startVH.ana[v][l]].hist1d("best_2g_dxy_m{}".format(m), cuts['cr'][v][l][m]+"&&best_2g_raw_mass_m{}>65".format(m), "1", ("loose_sb_{}_{}_m{}".format(v,l,m), "", 50, -1400, 0))
 
     # Get observed data
     data_obs = dataEMU[startVH.ana[v][l]].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), cuts['sr'][v][l][m], "1", ("data_tight_{}_{}_m{}".format(v,l,m), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
@@ -320,8 +315,8 @@ for m in masses:
 
                 sigScaleDown['g'][corr][channel] = fillZeroBins(sigDown[channel], 0)
 
+        sig_list = []
         # Now make the cards
-        
         for i in range(data_obs.GetNbinsX()):
             skip_channel = {channel: False for channel in channels}
             for channel in channels:        
@@ -335,6 +330,7 @@ for m in masses:
 
             # Process channels that are not marked to skip
             for channel in channels:
+
                 if skip_channel[channel]:
                     continue  # Skip processing for this channel
             
@@ -412,3 +408,15 @@ for m in masses:
                     card.write(s)
                 card.close()
             print(f'done with lifetime {ctau}')
+            for channel in kept_channels:
+                sig_list.append({"bin":i,"channel":channel,"rate":0.1*sig[channel].GetBinContent(i+1)})
+            sig_list.append({"bin":i,"channel":"background","rate":background.GetBinContent(i+1)})
+            
+        print(sig_list)
+        
+        import csv        
+        with open(f"{v}_{l}_m{m}_ctau{ctau}_{era}.csv",'w',newline='') as csvfile:
+            fieldnames = ["bin","channel","rate"]
+            writer = csv.DictWriter(csvfile, fieldnames = fieldnames)
+            writer.writeheader()
+            writer.writerows(sig_list)
