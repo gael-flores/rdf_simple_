@@ -78,6 +78,22 @@ class rdf_plotter(plotter_base):
 
     def redefine(self, var, definition):
         self.rdf = self.rdf.Redefine(var, definition)
+    
+    def display(self,var):
+        self.rdf.Display(var).Print()
+
+    def filter(self,condition):
+        '''
+        Inputs
+        ======
+        condition(string): condition to be used for filtering the dataframe that evaluates to True (1) or False (0)
+        new_var(string): name of the new column  
+        
+        Returns
+        =======
+        RDataFrame with filter applied
+        '''
+        self.rdf = self.rdf.Filter(condition)
 
         
     def hist1d(self,var,cuts,lumi,model,titlex = "",units = ""):
@@ -238,23 +254,29 @@ class merged_plotter(plotter_base):
                 h = plotter.hist2d(var1,var2, cuts, lumi, model, titlex, unitsx, titley, unitsy)
             else:
                 h.Add(plotter.hist2d(var1,var2, cuts, lumi, model, titlex, unitsx, titley, unitsy).GetValue())
-        h.Sumw2()
-        h.SetLineStyle(self.linestyle)
-        h.SetLineColor(self.linecolor)
-        h.SetLineWidth(self.linewidth)
-        h.SetFillStyle(self.fillstyle)
-        h.SetFillColor(self.fillcolor)
-        h.SetMarkerStyle(self.markerstyle)
-        if unitsx=="":
-            h.GetXaxis().SetTitle(titlex)
+        if h is None:
+            return h
         else:
-            h.GetXaxis().SetTitle(titlex+ " ["+unitsx+"]")
-        if unitsy=="":
-            h.GetYaxis().SetTitle(titley)
-        else:
-            h.GetYaxis().SetTitle(titley+ " ["+unitsy+"]")
-        return h
-
+            h.Sumw2()
+            h.SetLineStyle(self.linestyle)
+            h.SetLineColor(self.linecolor)
+            h.SetLineWidth(self.linewidth)
+            h.SetFillStyle(self.fillstyle)
+            h.SetFillColor(self.fillcolor)
+            h.SetMarkerStyle(self.markerstyle)
+            if unitsx=="":
+                h.GetXaxis().SetTitle(titlex)
+            else:
+                h.GetXaxis().SetTitle(titlex+ " ["+unitsx+"]")
+            if unitsy=="":
+                h.GetYaxis().SetTitle(titley)
+            else:
+                h.GetYaxis().SetTitle(titley+ " ["+unitsy+"]")
+            return h
+    
+    def display(self,var):
+        for plotter in self.plotters:
+            plotter.display(var)
 
     def readReport(self):
         out = {}
