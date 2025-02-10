@@ -1075,31 +1075,6 @@ RVecF best_4gamma_1bad(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> E
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 RVecF minMatchDR(const RVecF& photonEta,const RVecF& photonPhi,const RVecF& genEta,const RVecF& genPhi) {
   RVecF output;
   for (int i=0;i<photonEta.size();++i) {
