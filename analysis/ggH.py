@@ -17,9 +17,8 @@ iso = {'2017': 'Photon_pfRelIso03_all',
        '2022': 'Photon_pfRelIso03_all',
        '2023': 'Photon_pfRelIso03_all_Fall17V2'}
 
-#indices fed into this function determined by vector output of best_4gamma function
+#indices of raw_best_4g_m{} determined by "result" output of best_4gamma functions
 #in ddp_vertex. we saved the indices of best 4 in ddp_vertex.h as 24,25,26,27
-
 ID_dict1_ggH4g={
  'Photon_preselection':'==1'}
 ID_dict2_ggH4g={
