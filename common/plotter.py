@@ -295,7 +295,7 @@ class combined_plotter(object):
             plotter.redefine(var, definition)
 
 
-    def draw_stack(self,var,cut,lumi,model,title='', titlex = "", units = "",expandY=0.0,SFs="(1)", verbose = False, prelim = "Work in progress", lumi_label = "", outOfFrame = 1):
+    def draw_stack(self,var,cut,lumi,model, titlex = "", units = "",expandY=0.0,SFs="(1)", verbose = False, prelim = "Work in progress", lumi_label = "", outOfFrame = 1):
 ###        canvas = ROOT.TCanvas("canvas","")
         canvas = ROOT.TCanvas("canvas", "", 800, 600)
 #        ROOT.gStyle.SetOptStat(0)
@@ -468,13 +468,6 @@ class combined_plotter(object):
 
         canvas.RedrawAxis()
 
-        if title:
-            latex_title=ROOT.TLatex()
-            latex_title.SetNDC()
-            latex_title.SetTextSize(0.025)
-            latex_title.DrawLatex(0.4, 0.95, title)
-            canvas.Update()
-
 
 
         canvas.Update()
@@ -487,7 +480,7 @@ class combined_plotter(object):
 # The nostack option normalizes the background and signal
 # contributions separately. Without this all MC contributions
 # are normalized together and drawn stacked
-    def draw_comp(self,var,cut,model,title="", titlex = "", units = "",expandY=0.0,nostack=True,prelim="Work in progress",SFs = "(1)", outOfFrame = 1): 
+    def draw_comp(self,var,cut,model, titlex = "", units = "",expandY=0.0,nostack=True,prelim="Work in progress",SFs = "(1)", outOfFrame = 1): 
         ###canvas = ROOT.TCanvas("canvas","")
         canvas = ROOT.TCanvas("canvas", "", 800, 600)
 #        ROOT.gStyle.SetOptStat(0)
@@ -601,14 +594,6 @@ class combined_plotter(object):
             CMS_lumi.CMS_lumi(canvas, 0, 0, relPosX=0.077, extraText = prelim)
         else:
             CMS_lumi.CMS_lumi(canvas, 0, 10, extraText = prelim)
-
-        if title:
-            latex_title=ROOT.TLatex()
-            latex_title.SetNDC()
-            latex_title.SetTextSize(0.025)
-            latex_title.DrawLatex(0.4, 0.95, title)
-            canvas.Update()
-
 
 
 
