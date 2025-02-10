@@ -1,8 +1,8 @@
 import ROOT
 import importlib
-# Enable multi-threading
+#Enable multi-threading
 #ROOT.ROOT.EnableImplicitMT()
-ROOT.ROOT.DisableImplicitMT()
+#ROOT.ROOT.DisableImplicitMT()
 ROOT.gInterpreter.Declare('#include "common/chelpers.h"')
 from common.pyhelpers import *
 from optparse import OptionParser
@@ -28,7 +28,7 @@ samp = importlib.import_module('analysis.{}samples'.format(options.analysis))
 #root://cmsxrootd.fnal.gov//
 actions=[]
 for sample in args:
-    data=createDataSet(samp.samples[sample],options.splitFactor,options.processPart,'root://xrootd-cms.infn.it//')
+    data=createDataSet(samp.samples[sample],options.splitFactor,options.processPart,'root://cmsxrootd.fnal.gov//')
     actions.extend(an.analysis(data,sample))
 ROOT.RDF.RunGraphs(actions)
 

@@ -21,7 +21,7 @@ def make_jsonHelper(fjson):
 def load_meta_data(data):
     dataframe = {}
     #Declare dataframe
-    dataframe['Events'] =ROOT.RDataFrame('Events',data['files'])   
+    dataframe['Events'] =ROOT.RDataFrame('Events',data['files'])
 
     # Apply golden JSON
     if not data['isMC']:
@@ -61,7 +61,10 @@ def loadSample(info,locator='root://cms-xrd-global.cern.ch//'):
     else:
         p = subprocess.Popen('/cvmfs/cms.cern.ch/common/dasgoclient -dasmaps=./ -query="file dataset={}"'.format(info['dataset']), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         for line in p.stdout.readlines():
-            files.append(locator+(line.decode('ASCII').split('\n')[0]))
+            rootfile = line.decode('ASCII').split('\n')[0]
+            if '.root' not in rootfile:
+                continue
+            files.append(locator+rootfile)
         retval = p.wait()
     triggerStr=[]
     for t in info['triggers']:

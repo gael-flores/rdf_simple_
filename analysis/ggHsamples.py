@@ -2,7 +2,7 @@ samples = {}
 
 # Import samples for all eras
 for era in ['2018']:
-    for s in ['signal']:
+    for s in ["signal", "data"]:
         cmd = """
 from analysis.samples.ggHsamples_{s}_{era} import *
 for s in samples_{s}_{era}:

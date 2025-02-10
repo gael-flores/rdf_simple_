@@ -47,6 +47,7 @@ class rdf_plotter(plotter_base):
     def __init__(self,file,isMC=False,weight = "1.0",tree='Events',defaultCuts = "1.0",report='report'):
         self.rdf = ROOT.RDataFrame(tree,file)
         self.weight=weight
+        self.isMC=isMC
         self.defaultCuts = defaultCuts
         self.file = file
         self.report = report
@@ -294,7 +295,7 @@ class combined_plotter(object):
             plotter.redefine(var, definition)
 
 
-    def draw_stack(self,var,cut,lumi,model,titlex = "", units = "",expandY=0.0,SFs="(1)", verbose = False, prelim = "Work in progress", lumi_label = "", outOfFrame = 1):
+    def draw_stack(self,var,cut,lumi,model,title='', titlex = "", units = "",expandY=0.0,SFs="(1)", verbose = False, prelim = "Work in progress", lumi_label = "", outOfFrame = 1):
 ###        canvas = ROOT.TCanvas("canvas","")
         canvas = ROOT.TCanvas("canvas", "", 800, 600)
 #        ROOT.gStyle.SetOptStat(0)
@@ -334,11 +335,16 @@ class combined_plotter(object):
 
         for (plotter,typeP,label,name) in zip(self.plotters,self.types,self.labels,self.names):
             if typeP == "signal" or typeP =="background":
-                hist = plotter.hist1d(var,cutL+"*("+SFs+")",lumi,model,titlex,units)
-                hist.SetName(name)
-
-                stack.Add(hist.GetValue())
-                hists.append(hist.GetValue())
+                if plotter.isMC:
+                    hist = plotter.hist1d(var,cutL+"*("+SFs+")",lumi,model,titlex,units)
+                    hist.SetName(name)
+                    stack.Add(hist.GetValue())
+                    hists.append(hist.GetValue())
+                else:
+                    hist = plotter.hist1d(var,cutL+"*("+SFs+")",'1',model,titlex,units)
+                    hist.SetName(name)
+                    stack.Add(hist.GetValue())
+                    hists.append(hist.GetValue())
                 if verbose:
                     print( label+" : %f\n" % hist.Integral())
  
@@ -357,7 +363,7 @@ class combined_plotter(object):
                 dataG.SetLineWidth(1)
                 if verbose:
                     print( label+" : %f\n" % hist.Integral())
-                
+       
        
         #if data not found plot stack only
         if data != None:                  
@@ -461,6 +467,16 @@ class combined_plotter(object):
                     print ("Data/Bkg= {ratio} +- {err}".format(ratio=integral/background,err=math.sqrt(error.value*error.value/(background*background)+integral*integral*backgroundErr/(background*background*background*background))))
 
         canvas.RedrawAxis()
+
+        if title:
+            latex_title=ROOT.TLatex()
+            latex_title.SetNDC()
+            latex_title.SetTextSize(0.025)
+            latex_title.DrawLatex(0.4, 0.95, title)
+            canvas.Update()
+
+
+
         canvas.Update()
         ###plot={'canvas':canvas,'stack':stack,'legend':legend,'data':data,'dataG':dataG,'hists':hists,'prelim':tex_prelim, 'lumi': tex_lumi}
         plot={'canvas':canvas,'stack':stack,'legend':legend,'data':data,'dataG':dataG,'hists':hists}
@@ -471,7 +487,7 @@ class combined_plotter(object):
 # The nostack option normalizes the background and signal
 # contributions separately. Without this all MC contributions
 # are normalized together and drawn stacked
-    def draw_comp(self,var,cut,model,titlex = "", units = "",expandY=0.0,nostack=True,prelim="Work in progress",SFs = "(1)", outOfFrame = 1): 
+    def draw_comp(self,var,cut,model,title="", titlex = "", units = "",expandY=0.0,nostack=True,prelim="Work in progress",SFs = "(1)", outOfFrame = 1): 
         ###canvas = ROOT.TCanvas("canvas","")
         canvas = ROOT.TCanvas("canvas", "", 800, 600)
 #        ROOT.gStyle.SetOptStat(0)
@@ -509,6 +525,9 @@ class combined_plotter(object):
 
         cutL="("+self.defaultCut+")*("+cut+")"
         scale = 0.0
+
+
+
         for (plotter,typeP,label,name) in zip(self.plotters,self.types,self.labels,self.names):
             hist = plotter.hist1d(var,cutL+"*("+SFs+")","1",model,titlex,units)
             hist.SetFillStyle(0)
@@ -582,6 +601,19 @@ class combined_plotter(object):
             CMS_lumi.CMS_lumi(canvas, 0, 0, relPosX=0.077, extraText = prelim)
         else:
             CMS_lumi.CMS_lumi(canvas, 0, 10, extraText = prelim)
+
+        if title:
+            latex_title=ROOT.TLatex()
+            latex_title.SetNDC()
+            latex_title.SetTextSize(0.025)
+            latex_title.DrawLatex(0.4, 0.95, title)
+            canvas.Update()
+
+
+
+
+
+
         canvas.Update()
 
         return {'canvas': canvas, 'stack': stack, 'legend': legend, 'data': data, 'hists': hists}

@@ -638,8 +638,8 @@ RVecF best_3gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,RVe
     result.emplace_back(DeltaPhi(phi[g1],phi[g2]));
     result.emplace_back(DeltaR(eta[g1],eta[g2],phi[g1],phi[g2]));
 	result.emplace_back(g1);
-	result.emplace_back(g2);
-	result.emplace_back(g3);
+    result.emplace_back(g2);
+    result.emplace_back(g3);
     all_combos.emplace_back(result);
   }
   auto sortedIndices = ROOT::VecOps::Argsort(all_combos,compare_pair);
@@ -909,9 +909,9 @@ RVecF best_4gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE,RVe
     result.emplace_back(gID[g3] && gIso[g3]<0.1);
     result.emplace_back(gID[g4] && gIso[g4]<0.1);
 	result.emplace_back(g1);
-	result.emplace_back(g2);
-	result.emplace_back(g3);
-	result.emplace_back(g4);
+    result.emplace_back(g2);
+    result.emplace_back(g3);
+    result.emplace_back(g4);
     all_combos.emplace_back(result);
   }
   delete calc;  
@@ -953,9 +953,9 @@ RVecF best_4gamma_1bad(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> E
     const auto i3 = idx_cmb[2][i];
     const auto i4 = idx_cmb[3][i];
 
-	int loose_number = isLoose[i1]+isLoose[i2]+isLoose[i3]+isLoose[i4];
-	if (loose_number != 3)
-		continue;
+    int loose_number = isLoose[i1]+isLoose[i2]+isLoose[i3]+isLoose[i4];
+    if (loose_number != 3)
+      continue;
 
 
     result.clear();
@@ -1055,10 +1055,10 @@ RVecF best_4gamma_1bad(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> E
     result.emplace_back(gID[g2] && gIso[g2]<0.1);
     result.emplace_back(gID[g3] && gIso[g3]<0.1);
     result.emplace_back(gID[g4] && gIso[g4]<0.1);
-	result.emplace_back(g1);
-	result.emplace_back(g2);
-	result.emplace_back(g3);
-	result.emplace_back(g4);
+    result.emplace_back(g1);
+    result.emplace_back(g2);
+    result.emplace_back(g3);
+    result.emplace_back(g4);
     all_combos.emplace_back(result);
   }
   delete calc;  
@@ -1072,6 +1072,32 @@ RVecF best_4gamma_1bad(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> E
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 RVecF minMatchDR(const RVecF& photonEta,const RVecF& photonPhi,const RVecF& genEta,const RVecF& genPhi) {
