@@ -1,21 +1,23 @@
 import ROOT, sys, os, array
-sys.path.append("/home/tyler/DDP/rdf_simple/")
+sys.path.append("/uscms/home/gfavila/nobackup/rdf_simple_/")
 ROOT.gROOT.SetBatch(True)
 
 ROOT.gInterpreter.Declare('#include "common/datacardHelpers.h"')
 import optparse
 parser = optparse.OptionParser()
 parser.add_option("-e", "--era", dest = "era", default = "2018", help = "2016, 2017, 2018")
+parser.add_option("-a", "--mass", dest = "mass", default = 15,type=int ,help = "15,20,30,40,50,55")
 parser.add_option("-d", "--date", dest = "date", default = "03_18_24", help = "current date (to name directory)")
 parser.add_option("-p", "--prod", dest = "prod", default = "03_26_24", help = "sample production date")
 parser.add_option("-b", "--blind", dest = "blind", action="store_true", default = False, help = "Blind data, sets data_obs = expected")
 parser.add_option("-v", "--v", dest = "v", default = 'Z', help = "V category (Z or W)")
 parser.add_option("-l", "--lep", dest = "l", default = 'MU', help = "lepton category (ELE or MU)")
 parser.add_option("-m", "--model", dest = "model", default = "SM", help = "SM or model_indep")
+#skips ttH and ggZH for model indep
 (options,args) = parser.parse_args()
 
 from python.VHTools.VHcuts import * 
-from startVH import *
+import startVH
 
 model_sfx = ""
 modelIndependent = False
@@ -24,12 +26,21 @@ if options.model != "SM":
     modelIndependent = True
 
 era = options.era
+mass = options.mass
 date = options.date
 prod = options.prod
 v = options.v
 l = options.l
 
-binsM = 4
+
+#cant be too fine 
+if v == 'Z' and mass == 15 and l == 'ELE':
+    binsM = 2
+elif v == 'Z' and mass ==20 and l == 'ELE':
+    binsM = 2
+else:
+    binsM =4
+    
 binsLxy = 110
 lxyMin = -10
 lxyMax = 100
@@ -44,55 +55,105 @@ def fillZeroBins(hist, thresh):
             hist.SetBinContent(i,thresh)
     return hist
 
-xsecUnc = {'W': [-0.005, 0.007],
-           'Z': [-0.031, 0.038]}
+#source https://twiki.cern.ch/twiki/bin/view/LHCPhysics/CERNYellowReportPageAt13TeV
+#asymetric
+xsecUnc = {'WH'  : [0.005, -0.007],
+           'ZH'  : [0.038, -0.031],
+           'ggZH': [0.251, -0.189],
+           'ttH' : [0.058, -0.092]}
 
-pdfUnc = {'W': 1.018,
-          'Z': 1.016}
+#symmetric
+pdfUnc = {'WH'  : 1.019,
+          'ZH'  : 1.016,
+          'ggZH': 1.024,
+          'ttH' : 1.036}
+
+masses = [mass]
+channels = ['ZH','ttH','WH','ggZH']
 
 # Which lifetime to use for ctau reweighing
-lifetimes = {0: 0, 3: 10, 10: 10, 14: 10, 20: 20, 32: 20, 50: 50, 70: 50, 100: 100, 316: 1000, 1000: 1000}
+#lifetimes = {0: 0, 3: 10, 10: 10, 14: 10, 20: 20, 32: 20, 50: 50, 70: 50, 100: 100, 316: 1000, 1000: 1000}
+lifetimes = {0:0, 10:10,20:20,50:50, 100:100, 1000:1000}
 
-# Binning quantiles
-quantiles = {'W': array.array('d', [.2, .4, .6, .8]),
-             'Z': array.array('d', [.25, .5, .75])}
+customBins = {
+            'W': {
+                'ELE': {
+                    15:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                    20:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                    30:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                    40:array.array('d' , [0.0,50.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                    50:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                    55:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                },
+                'MU': {
+                    15:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                    20:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                    30:array.array('d' , [0.0,25.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                    40:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                    50:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                    55:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                }
+            },
+            'Z': {
+                'ELE': {
+                    15:array.array('d' , [0.0,36.0,72.0,110.0,220.0]),
+                    20:array.array('d' , [0.0,110.0,138.0,165.0,192.0,220.0]),
+                    30:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                    40:array.array('d' , [0.0,50.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,350.0,370.0,440.0]),
+                    50:array.array('d' , [0.0,50.0,110.0,138.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                    55:array.array('d' , [0.0,50.0,110.0,138.0,192.0,220.0,248.0,275.0,330.0,360.0,440.0]),
+                },
+                'MU': {
+                    15:array.array('d' , [0.0,50.0,80.0,110.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                    20:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                    30:array.array('d' , [0.0,50.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                    40:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,350.0,370.0,440.0]),
+                    50:array.array('d' , [0.0,50.0,80.0,110.0,138.0,192.0,220.0,275.0,302.0,330.0,360.0,440.0]),
+                    55:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
+                }
+            }
+        }
 
-# Getting the required plotters
-plotters = getPlotters(era, prod, "/home/tyler/samples/DDP/rdf_samples", modelIndependent = modelIndependent)
-dataEMU = plotters['dataEMU']
-signal = plotters['signal']
+
 
 for m in masses:
-    print("Making card for {}->{}, m={}".format(v,l,m))         
+
+    print("Making card for {}->{}, m={}".format(v,l,m))
+    # Getting the required plotters
+    plotters = startVH.getPlotters(era, prod, "/uscms/home/gfavila/nobackup/rdf_simple_/DDP/",[m], modelIndependent = modelIndependent)
+    dataEMU = plotters['dataEMU']
+    signal = plotters['signal']
+    
     f = ROOT.TFile("datacardInputs_{}H_{}_m{}_{}{}.root".format(v,l,m,era,model_sfx), "UPDATE")
 
     # negative lxy sidebands for loose (anti-ID) and tight (ID)
-    loose_sb = dataEMU[ana[v][l]].hist1d("best_2g_dxy_m{}".format(m), cuts['cr'][v][l][m]+"&&best_2g_raw_mass_m{}>65".format(m), "1", ("loose_sb_{}_{}_m{}".format(v,l,m), "", 50, -1400, 0))
-    tight_sb = dataEMU[ana[v][l]].hist1d("best_2g_dxy_m{}".format(m), cuts['sr'][v][l][m]+"&&best_2g_raw_mass_m{}>65".format(m), "1", ("loose_sb_{}_{}_m{}".format(v,l,m), "", 50, -1400, 0))
+    loose_sb = dataEMU[startVH.ana[v][l]].hist1d("best_2g_dxy_m{}".format(m), cuts['cr'][v][l][m]+"&&best_2g_raw_mass_m{}>65".format(m), "1", ("loose_sb_{}_{}_m{}".format(v,l,m), "", 50, -1400, 0))
+    tight_sb = dataEMU[startVH.ana[v][l]].hist1d("best_2g_dxy_m{}".format(m), cuts['sr'][v][l][m]+"&&best_2g_raw_mass_m{}>65".format(m), "1", ("loose_sb_{}_{}_m{}".format(v,l,m), "", 50, -1400, 0))
+    
     
     # normalization scale factor
     scale = tight_sb.Integral() / loose_sb.Integral() if loose_sb.Integral() > 0 else 1.0
-
     loose_sb.Write("loose_sideband", ROOT.TObject.kOverwrite)
     tight_sb.Write("tight_sideband", ROOT.TObject.kOverwrite)
+    
 
     # Get predicted background from antiID region
-    background = dataEMU[ana[v][l]].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), cuts['cr'][v][l][m], "1", ("data_loose_{}_{}_m{}".format(v,l,m), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
+    background = dataEMU[startVH.ana[v][l]].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), cuts['cr'][v][l][m], "1", ("data_loose_{}_{}_m{}".format(v,l,m), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
     background.Scale(scale)
     background.Write("data_loose", ROOT.TObject.kOverwrite)
-    background = unfoldTH2(background)
-    binsX = rebinTH1(background, quantiles[v], binsM, binsLxy, lxyMin, lxyMax)
+    background = startVH.unfoldTH2(background)
+    binsX = customBins[v][l][m]
     background.Rebin(len(binsX) - 1, "data_loose_rebinned", binsX)
     background = ROOT.gDirectory.Get("data_loose_rebinned")
-
     background = fillZeroBins(background, 0.001)
     background.Write("background", ROOT.TObject.kOverwrite)
 
     # Get observed data
-    data_obs = dataEMU[ana[v][l]].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), cuts['sr'][v][l][m], "1", ("data_tight_{}_{}_m{}".format(v,l,m), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-    data_obs = unfoldTH2(data_obs)
+    data_obs = dataEMU[startVH.ana[v][l]].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), cuts['sr'][v][l][m], "1", ("data_tight_{}_{}_m{}".format(v,l,m), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
+    data_obs = startVH.unfoldTH2(data_obs)
     data_obs.Rebin(len(binsX) - 1, "data_tight_rebinned", binsX)
     data_obs = ROOT.gDirectory.Get("data_tight_rebinned")
+
     # Only write if not blind, else use expected background
     if not options.blind:
         data_obs.Write("data_obs", ROOT.TObject.kOverwrite)
@@ -103,27 +164,27 @@ for m in masses:
         data_obs.Write("data_obs", ROOT.TObject.kOverwrite)
 
     # Scale factors
-    sfs = getSF(scaleFactors[v][l] + scaleFactors['g'][m])
-
+    sfs = startVH.getSF(startVH.scaleFactors[v][l] + startVH.scaleFactors['g'][m])
+    #TODO import signals from config file, which doesn't exist yet
     # Defining photon scale corrections
-    for ct in ctaus:
+    for ct in startVH.ctaus:
+        for channel in channels:
+            # energy scale/smearing corrections
+            # First get the scaled/smeared energies
+            signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("Photon_ptSmearUp", "ptSmearUp(Photon_pt, Photon_eta, Photon_phi, Photon_dEsigmaUp)")
+            signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("Photon_ptSmearDown", "ptSmearDown(Photon_pt, Photon_eta, Photon_phi, Photon_dEsigmaDown)")
+            if 'tt' not in channel:
+                signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("Photon_energyScaleUp", "photonEnergyScale(Photon_eta, Photon_seedGain, PHO_scaledown_{era}_val, PHO_scaledown_{era}_bins, sample_isMC)".format(era = "2016preVFP" if options.era=="2016" else options.era))
+                signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("Photon_energyScaleDown", "photonEnergyScale(Photon_eta, Photon_seedGain, PHO_scaleup_{era}_val, PHO_scaledown_{era}_bins, sample_isMC)".format(era = "2016preVFP" if options.era=="2016" else options.era))
+            signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("Photon_ptScaleUp", "Photon_pt*Photon_energyScaleUp")
+            signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("Photon_ptScaleDown", "Photon_pt*Photon_energyScaleDown")
 
-        # energy scale/smearing corrections
-        # First get the scaled/smeared energies
-        signal[ana[v][l]][m][ct]['2G2Q'].define("Photon_ptSmearUp", "ptSmearUp(Photon_pt, Photon_eta, Photon_phi, Photon_dEsigmaUp)")
-        signal[ana[v][l]][m][ct]['2G2Q'].define("Photon_ptSmearDown", "ptSmearDown(Photon_pt, Photon_eta, Photon_phi, Photon_dEsigmaDown)")
-        signal[ana[v][l]][m][ct]['2G2Q'].define("Photon_energyScaleUp", "photonEnergyScale(Photon_eta, Photon_seedGain, PHO_scaledown_{era}_val, PHO_scaledown_{era}_bins, sample_isMC)".format(era = "2016preVFP" if options.era=="2016" else options.era))
-        signal[ana[v][l]][m][ct]['2G2Q'].define("Photon_energyScaleDown", "photonEnergyScale(Photon_eta, Photon_seedGain, PHO_scaleup_{era}_val, PHO_scaledown_{era}_bins, sample_isMC)".format(era = "2016preVFP" if options.era=="2016" else options.era))
-        signal[ana[v][l]][m][ct]['2G2Q'].define("Photon_ptScaleUp", "Photon_pt*Photon_energyScaleUp")
-        signal[ana[v][l]][m][ct]['2G2Q'].define("Photon_ptScaleDown", "Photon_pt*Photon_energyScaleDown")
-
-        # Then calculate the vertex/raw mass with scaled/smeared values
-        for corr in ['Scale', 'Smear']:
-            for d in ['Up', 'Down']:
-                signal[ana[v][l]][m][ct]['2G2Q'].define("best_2g_{}{}_m{}_info".format(corr,d,m), "getDxy(Photon_pt{}{}, Photon_eta, Photon_phi, Photon_isScEtaEB, Photon_isScEtaEE, best_2g_idx1_m{}, best_2g_idx2_m{}, {})".format(corr, d, m, m, m))
-                signal[ana[v][l]][m][ct]['2G2Q'].define("best_2g_dxy_{}{}_m{}".format(corr,d,m), "best_2g_{}{}_m{}_info[0]".format(corr,d,m))
-                signal[ana[v][l]][m][ct]['2G2Q'].define("best_2g_raw_mass_{}{}_m{}".format(corr,d,m), "best_2g_{}{}_m{}_info[1]".format(corr,d,m))
-
+            # Then calculate the vertex/raw mass with scaled/smeared values
+            for corr in ['Scale', 'Smear']:
+                for d in ['Up', 'Down']:
+                    signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("best_2g_{}{}_m{}_info".format(corr,d,m), "getDxy(Photon_pt{}{}, Photon_eta, Photon_phi, Photon_isScEtaEB, Photon_isScEtaEE, best_2g_idx1_m{}, best_2g_idx2_m{}, {})".format(corr, d, m, m, m))
+                    signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("best_2g_dxy_{}{}_m{}".format(corr,d,m), "best_2g_{}{}_m{}_info[0]".format(corr,d,m))
+                    signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("best_2g_raw_mass_{}{}_m{}".format(corr,d,m), "best_2g_{}{}_m{}_info[1]".format(corr,d,m))
 
     # Now get expected signal for each lifetime
     for ctau in lifetimes:
@@ -136,14 +197,25 @@ for m in masses:
         if ct not in [0, 10, 20, 50, 100, 1000]:
             ct = min([x for x in [0,10,20,50,100,1000] if x >= ctau], key = lambda x: abs(x-ctau))
             reweight = "(reweight_{}to{})".format(ct, ctau)
-            signal[ana[v][l]][m][ct]['2G2Q'].define("reweight_{}to{}".format(ct,ctau), "reweightCT(GenPart_ctau[abs(GenPart_pdgId)==9000006], {}/10., {}/10.)".format(ct, ctau))
+            for channel in channels:
+                signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("reweight_{}to{}".format(ct,ctau), "reweightCT(GenPart_ctau[abs(GenPart_pdgId)==9000006], {}/10., {}/10.)".format(ct, ctau))
 
         # Nominal signal
-        sig = signal[ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfs+")*("+reweight+")", lumi[era], ("sig_{}_{}_m{}_ct{}".format(v,l,m,ct), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-        sig = unfoldTH2(sig)
-        sig.Rebin(len(binsX) - 1, "HToPhiPhi_ctau{}".format(ctau), binsX)
-        sig = ROOT.gDirectory.Get("HToPhiPhi_ctau{}".format(ctau))
-        sig.Write("HToPhiPhi_ctau{}".format(ctau), ROOT.TObject.kOverwrite)
+        sig ={}
+        remove = []
+        for channel in channels:
+            sig[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfs+")*("+reweight+")", startVH.lumi[era], ("sig_{}_{}_m{}_ct{}".format(v,l,m,ct), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
+            if sig[channel] == None:
+                print(f'\nRemoving channel {channel}\n')
+                remove.append(channel)
+            else:
+                sig[channel] = startVH.unfoldTH2(sig[channel])
+                sig[channel].Rebin(len(binsX) - 1, f"{channel}_HToPhiPhi_ctau{ctau}", binsX)
+                sig[channel] = ROOT.gDirectory.Get(f"{channel}_HToPhiPhi_ctau{ctau}")
+                sig[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}", ROOT.TObject.kOverwrite)
+        
+        for channel in remove:
+            channels.remove(channel)
 
         # Energy scale/smearing corrections, scale factor corrections
         sigScaleUp = {}
@@ -153,120 +225,198 @@ for m in masses:
         sigScaleDown[v] = {}
         if l == 'ELE':
             for sf in ['reco', 'id', 'trig']:
-                sfUp, sfDown = getSF(scaleFactors[v][l] + scaleFactors['g'][m], 'Electron_{}'.format(sf))
-                sigUp = signal[ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfUp+")*("+reweight+")", lumi[era], ("sig_ele{}Up_{}_{}_m{}_ct{}".format(sf,v,l,m,ct), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-                sigUp = unfoldTH2(sigUp)
-                sigUp.Rebin(len(binsX) - 1, "sig_ele{}Up_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), binsX)
-                sigUp = ROOT.gDirectory.Get("sig_ele{}Up_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau))
-                sigUp.Write("HToPhiPhi_ctau{}_ele_{}Up".format(ctau, sf), ROOT.TObject.kOverwrite)
+                sfUp, sfDown = startVH.getSF(startVH.scaleFactors[v][l] + startVH.scaleFactors['g'][m], 'Electron_{}'.format(sf))
+                sigUp = {}
+                sigDown = {}
+                sigScaleUp[v][sf] = {}
+                sigScaleDown[v][sf] = {}
+                for channel in channels:
+                    sigUp[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfUp+")*("+reweight+")", startVH.lumi[era], ("sig_ele{}Up_{}_{}_m{}_ct{}".format(sf,v,l,m,ct), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
+                    sigUp[channel] = startVH.unfoldTH2(sigUp[channel])
+                    sigUp[channel].Rebin(len(binsX) - 1, f"sig_ele{sf}Up_{v}_{l}_m{m}_ct{ctau}", binsX)
+                    sigUp[channel] = ROOT.gDirectory.Get(f"sig_ele{sf}Up_{v}_{l}_m{m}_ct{ctau}")
+                    sigUp[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}_ele_{sf}Up", ROOT.TObject.kOverwrite)
+                    sigScaleUp[v][sf][channel] = fillZeroBins(sigUp[channel], 0)
 
-                sigScaleUp[v][sf] = fillZeroBins(sigUp, 0)
+                    sigDown[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfDown+")*("+reweight+")", startVH.lumi[era], ("sig_ele{}Down_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
+                    sigDown[channel] = startVH.unfoldTH2(sigDown[channel])
+                    sigDown[channel].Rebin(len(binsX) - 1, f"sig_ele{sf}Down_{v}_{l}_m{m}_ct{ctau}", binsX)
+                    sigDown[channel] = ROOT.gDirectory.Get(f"sig_ele{sf}Down_{v}_{l}_m{m}_ct{ctau}")
+                    sigDown[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}_ele_{sf}Down", ROOT.TObject.kOverwrite)
 
-                sigDown = signal[ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfDown+")*("+reweight+")", lumi[era], ("sig_ele{}Down_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-                sigDown = unfoldTH2(sigDown)
-                sigDown.Rebin(len(binsX) - 1, "sig_ele{}Down_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), binsX)
-                sigDown = ROOT.gDirectory.Get("sig_ele{}Down_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau))
-                sigDown.Write("HToPhiPhi_ctau{}_ele_{}Down".format(ctau, sf), ROOT.TObject.kOverwrite)
-
-                sigScaleDown[v][sf] = fillZeroBins(sigDown, 0)
+                    sigScaleDown[v][sf][channel] = fillZeroBins(sigDown[channel], 0)
 
         if l == 'MU':
             for sf in ['reco', 'id', 'trig', 'iso']:
-                sfUp, sfDown = getSF(scaleFactors[v][l] + scaleFactors['g'][m], 'Muon_{}'.format(sf))
-                sigUp = signal[ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfUp+")*("+reweight+")", lumi[era], ("sig_mu{}Up_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-                sigUp = unfoldTH2(sigUp)
-                sigUp.Rebin(len(binsX) - 1, "sig_mu{}Up_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), binsX)
-                sigUp = ROOT.gDirectory.Get("sig_mu{}Up_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau))
-                sigUp.Write("HToPhiPhi_ctau{}_mu_{}Up".format(ctau, sf), ROOT.TObject.kOverwrite)
+                sfUp, sfDown = startVH.getSF(startVH.scaleFactors[v][l] + startVH.scaleFactors['g'][m], 'Muon_{}'.format(sf))
+                sigUp={}
+                sigDown={}
+                sigScaleUp[v][sf] = {}
+                sigScaleDown[v][sf] = {}
+                for channel in channels:
+                    sigUp[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfUp+")*("+reweight+")", startVH.lumi[era], ("sig_mu{}Up_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
+                    sigUp[channel] = startVH.unfoldTH2(sigUp[channel])
+                    sigUp[channel].Rebin(len(binsX) - 1, f"sig_mu{sf}Up_{v}_{l}_m{m}_ct{ctau}", binsX)
+                    sigUp[channel] = ROOT.gDirectory.Get(f"sig_mu{sf}Up_{v}_{l}_m{m}_ct{ctau}")
+                    sigUp[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}_mu_{sf}Up", ROOT.TObject.kOverwrite)
 
-                sigScaleUp[v][sf] = fillZeroBins(sigUp, 0)
+                    sigScaleUp[v][sf][channel] = fillZeroBins(sigUp[channel], 0)
 
-                sigDown = signal[ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfDown+")*("+reweight+")", lumi[era], ("sig_mu{}Down_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-                sigDown = unfoldTH2(sigDown)
-                sigDown.Rebin(len(binsX) - 1, "sig_mu{}Down_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), binsX)
-                sigDown = ROOT.gDirectory.Get("sig_mu{}Down_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau))
-                sigDown.Write("HToPhiPhi_ctau{}_mu_{}Down".format(ctau, sf), ROOT.TObject.kOverwrite)
+                    sigDown[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfDown+")*("+reweight+")", startVH.lumi[era], ("sig_mu{}Down_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
+                    sigDown[channel] = startVH.unfoldTH2(sigDown[channel])
+                    sigDown[channel].Rebin(len(binsX) - 1, f"sig_mu{sf}Down_{v}_{l}_m{m}_ct{ctau}", binsX)
+                    sigDown[channel] = ROOT.gDirectory.Get(f"sig_mu{sf}Down_{v}_{l}_m{m}_ct{ctau}")
+                    sigDown[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}_mu_{sf}Down", ROOT.TObject.kOverwrite)
 
-                sigScaleDown[v][sf] = fillZeroBins(sigDown, 0)
+                    sigScaleDown[v][sf][channel] = fillZeroBins(sigDown[channel], 0)
 
         sigScaleUp['g'] = {}
         sigScaleDown['g'] = {}
         for sf in ['id', 'pix']:
-            sfUp, sfDown = getSF(scaleFactors[v][l] + scaleFactors['g'][m], "Photon_{}".format(sf))
-            sigUp = signal[ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfUp+")*("+reweight+")", lumi[era], ("sig_pho{}Up_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-            sigUp = unfoldTH2(sigUp)
-            sigUp.Rebin(len(binsX) - 1, "sig_pho{}Up_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), binsX)
-            sigUp = ROOT.gDirectory.Get("sig_pho{}Up_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau))
-            sigUp.Write("HToPhiPhi_ctau{}_pho_{}Up".format(ctau, sf), ROOT.TObject.kOverwrite)
+            sfUp, sfDown = startVH.getSF(startVH.scaleFactors[v][l] + startVH.scaleFactors['g'][m], "Photon_{}".format(sf))
+            sigScaleUp['g'][sf] = {}
+            sigScaleDown['g'][sf] = {}
+            for channel in channels:
+                sigUp[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfUp+")*("+reweight+")", startVH.lumi[era], ("sig_pho{}Up_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
+                sigUp[channel] = startVH.unfoldTH2(sigUp[channel])
+                sigUp[channel].Rebin(len(binsX) - 1, f"sig_pho{sf}Up_{v}_{l}_m{m}_ct{ctau}", binsX)
+                sigUp[channel] = ROOT.gDirectory.Get(f"sig_pho{sf}Up_{v}_{l}_m{m}_ct{ctau}")
+                sigUp[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}_pho_{sf}Up", ROOT.TObject.kOverwrite)
 
-            sigScaleUp['g'][sf] = fillZeroBins(sigUp, 0)
+                sigScaleUp['g'][sf][channel] = fillZeroBins(sigUp[channel], 0)
 
-            sigDown = signal[ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfDown+")*("+reweight+")", lumi[era], ("sig_pho{}Down_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-            sigDown = unfoldTH2(sigDown)
-            sigDown.Rebin(len(binsX) - 1, "sig_pho{}Down_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), binsX)
-            sigDown = ROOT.gDirectory.Get("sig_pho{}Down_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau))
-            sigDown.Write("HToPhiPhi_ctau{}_pho_{}Down".format(ctau, sf), ROOT.TObject.kOverwrite)
+                sigDown[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfDown+")*("+reweight+")", startVH.lumi[era], ("sig_pho{}Down_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
+                sigDown[channel] = startVH.unfoldTH2(sigDown[channel])
+                sigDown[channel].Rebin(len(binsX) - 1, f"sig_pho{sf}Down_{v}_{l}_m{m}_ct{ctau}", binsX)
+                sigDown[channel] = ROOT.gDirectory.Get(f"sig_pho{sf}Down_{v}_{l}_m{m}_ct{ctau}")
+                sigDown[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}_pho_{sf}Down", ROOT.TObject.kOverwrite)
 
-            sigScaleDown['g'][sf] = fillZeroBins(sigDown, 0)
-
+                sigScaleDown['g'][sf][channel] = fillZeroBins(sigDown[channel], 0)
+        
         for corr in ['Scale', 'Smear']:
+            sigUp = {}
+            sigDown = {}
+            sigScaleUp['g'][corr] = {}
+            sigScaleDown['g'][corr]={}
+            for channel in channels:
+                sigUp[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_{}Up_m{}".format(corr,m), "best_2g_dxy_{}Up_m{}".format(corr,m), "("+cuts['sr'][v][l][m]+")*("+sfs+")*("+reweight+")", startVH.lumi[era], ("sig_pho{}Up_{}_{}_m{}_ct{}".format(corr,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
+                sigUp[channel] = startVH.unfoldTH2(sigUp[channel])
+                sigUp[channel].Rebin(len(binsX) - 1, f"sig_pho{corr}Up_{v}_{l}_m{m}_ct{ctau}", binsX)
+                sigUp[channel] = ROOT.gDirectory.Get(f"sig_pho{corr}Up_{v}_{l}_m{m}_ct{ctau}")
+                sigUp[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}_pho_{corr}Up", ROOT.TObject.kOverwrite)
 
-            sigUp = signal[ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_{}Up_m{}".format(corr,m), "best_2g_dxy_{}Up_m{}".format(corr,m), "("+cuts['sr'][v][l][m]+")*("+sfs+")*("+reweight+")", lumi[era], ("sig_pho{}Up_{}_{}_m{}_ct{}".format(corr,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-            sigUp = unfoldTH2(sigUp)
-            sigUp.Rebin(len(binsX) - 1, "sig_pho{}Up_{}_{}_m{}_ct{}".format(corr,v,l,m,ctau), binsX)
-            sigUp = ROOT.gDirectory.Get("sig_pho{}Up_{}_{}_m{}_ct{}".format(corr,v,l,m,ctau))
-            sigUp.Write("HToPhiPhi_ctau{}_pho_{}Up".format(ctau, corr), ROOT.TObject.kOverwrite)
+                sigScaleUp['g'][corr][channel] = fillZeroBins(sigUp[channel], 0)
 
-            sigScaleUp['g'][corr] = fillZeroBins(sigUp, 0)
+                sigDown[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_{}Down_m{}".format(corr,m), "best_2g_dxy_{}Down_m{}".format(corr,m), "("+cuts['sr'][v][l][m]+")*("+sfs+")*("+reweight+")", startVH.lumi[era], ("sig_pho{}Down_{}_{}_m{}_ct{}".format(corr,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
+                sigDown[channel] = startVH.unfoldTH2(sigDown[channel])
+                sigDown[channel].Rebin(len(binsX) - 1, f"sig_pho{corr}Down_{v}_{l}_m{m}_ct{ctau}", binsX)
+                sigDown[channel] = ROOT.gDirectory.Get(f"sig_pho{corr}Down_{v}_{l}_m{m}_ct{ctau}")
+                sigDown[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}_pho_{corr}Down", ROOT.TObject.kOverwrite)
 
-            sigDown = signal[ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_{}Down_m{}".format(corr,m), "best_2g_dxy_{}Down_m{}".format(corr,m), "("+cuts['sr'][v][l][m]+")*("+sfs+")*("+reweight+")", lumi[era], ("sig_pho{}Down_{}_{}_m{}_ct{}".format(corr,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-            sigDown = unfoldTH2(sigDown)
-            sigDown.Rebin(len(binsX) - 1, "sig_pho{}Down_{}_{}_m{}_ct{}".format(corr,v,l,m,ctau), binsX)
-            sigDown = ROOT.gDirectory.Get("sig_pho{}Down_{}_{}_m{}_ct{}".format(corr,v,l,m,ctau))
-            sigDown.Write("HToPhiPhi_ctau{}_pho_{}Down".format(ctau, corr), ROOT.TObject.kOverwrite)
+                sigScaleDown['g'][corr][channel] = fillZeroBins(sigDown[channel], 0)
 
-            sigScaleDown['g'][corr] = fillZeroBins(sigDown, 0)
-
+        sig_list = []
         # Now make the cards
         for i in range(data_obs.GetNbinsX()):
-            if sig.GetBinContent(i+1) <= 0:
-                continue
-            card = open("datacard_{}_bin{}.txt".format(cat, i), "w")
-            card.write("imax 1\n")
-            card.write("jmax 1\n")
-            card.write("kmax *\n")
-            card.write('-------------------------\n')
-            card.write("bin {}_bin{}\n".format(cat, i))
-            card.write("observation {}\n".format(data_obs.GetBinContent(i+1)))
-            card.write('-------------------------\n')
-            card.write("bin\t{}_bin{}\t{}_bin{}\n".format(cat, i, cat, i))
-            card.write("process\tHToPhiPhi_ctau{}\tbackground\n".format(ctau))
-            card.write("process\t0\t1\n")
-            card.write("rate\t{}\t{}\n".format(0.1*sig.GetBinContent(i+1), background.GetBinContent(i+1)))
-            card.write('-------------------------\n')
-            card.write("CMS_lumi_{}\tlnN\t{}\t-\n".format(era, lumiUnc[era]))
-            card.write("CMS_pileup_{}\tlnN\t1.05\t-\n".format(era))
-            if options.model == "SM":
-                card.write("CMS_xsec_{}\tlnN\t{}/{}\t-\n".format(v, (1.0+xsecUnc[v][0])/1.0, (1.0+xsecUnc[v][1])/1.0))
-                card.write("CMS_pdf_{}\tlnN\t{}\t-\n".format(v, pdfUnc[v]))
-            card.write("CMS_bkg_{}_norm\tgmN\t{}\t-\t{}\n".format(cat, int(tight_sb.Integral()), background.GetBinContent(i+1)/tight_sb.Integral()))
-            card.write("CMS_bkg_{}_bin{}_shape\tlnN\t-\t1.4\n".format(cat, i))
+            skip_channel = {channel: False for channel in channels}
+            for channel in channels:        
+                # Check bin content for the current channel
+                if sig[channel].GetBinContent(i + 1) <= 0:
+                    skip_channel[channel] = True  # Mark channel to be skipped
+            kept_channels = []
+            for channel in channels:
+                if not skip_channel[channel]:
+                    kept_channels.append(channel)
 
-            for sf in sigScaleUp[v]:
-                errUp = sigScaleUp[v][sf].GetBinContent(i+1) / sig.GetBinContent(i+1)
-                errDown = sigScaleDown[v][sf].GetBinContent(i+1) / sig.GetBinContent(i+1)
-                if errUp == 0:
-                    errUp = 1.0
-                if errDown == 0:
-                    errDown = 1.0
-                card.write("CMS_{}_{}\tlnN\t{}/{}\t-\n".format(l,sf,errDown, errUp))
-            for sf in sigScaleUp['g']:
-                errUp = sigScaleUp['g'][sf].GetBinContent(i+1) / sig.GetBinContent(i+1)
-                errDown = sigScaleDown['g'][sf].GetBinContent(i+1) / sig.GetBinContent(i+1)
-                if errUp == 0:
-                    errUp = 1.0
-                if errDown == 0:
-                    errDown = 1.0
-                card.write("CMS_gamma_{}\tlnN\t{}/{}\t-\n".format(sf,errDown,errUp))
+            # Process channels that are not marked to skip
+            for channel in channels:
 
-            card.close()
+                if skip_channel[channel]:
+                    continue  # Skip processing for this channel
+            
+                # Process the channel here if it's not skipped
+                print(f"Processing {channel} at bin {i} for lifetime {ctau}")
+
+                card = open("datacard_{}_bin{}.txt".format(cat, i), "w")
+                card.write("imax 1\n")
+                card.write("jmax *\n")
+                card.write("kmax *\n")
+                card.write('--------------------------------------------------\n')
+                card.write("bin {}_bin{}\n".format(cat, i))
+                card.write("observation {}\n".format(data_obs.GetBinContent(i+1)))
+                card.write('--------------------------------------------------\n')
+                bin = "bin\t"
+                process = "process\t"
+                iprocess= "process\t"
+                rate="rate\t"
+                for ichannel,channel in enumerate(kept_channels):
+                    bin+=f"{cat}_bin{i}\t"
+                    process+=f"{channel}_HToPhiPhi_ctau{ctau}\t"
+                    iprocess+=f"{-ichannel}\t"
+                    rate+=f"{0.1*sig[channel].GetBinContent(i+1)}\t"
+                bin+=f"{cat}_bin{i}\n"
+                process+="\tbackground\n"
+                iprocess+="1\n"
+                rate+=f"{background.GetBinContent(i+1)}\n"
+                card.write(bin)
+                card.write(process)
+                card.write(iprocess)
+                card.write(rate)
+                card.write('--------------------------------------------------\n')
+                card.write(f"CMS.lumi_{era}\tlnN\t"+f"{startVH.lumiUnc[era]}\t"*len(kept_channels)+"-\n")
+                card.write(f"CMS_pileup_{era}\tlnN\t"+"1.05\t"*len(kept_channels)+"-\n")
+                if options.model == "SM":
+                        for ichannel,channel in enumerate(kept_channels):
+                            card.write(f"CMS_xsec_{channel}\tlnN\t" + 
+                                    "-\t"*ichannel +
+                                    f"{(1.0+xsecUnc[channel][0])/1.0}/{(1.0+xsecUnc[channel][1])/1.0}\t" +
+                                    "-\t"*(len(kept_channels) - ichannel - 1) +
+                                    "-\n")
+                            card.write(f"CMS_pdf_{channel}\tlnN\t"+
+                                    "-\t"*ichannel +
+                                    f"{pdfUnc[channel]}\t" +
+                                    "-\t"*(len(kept_channels) - ichannel - 1) +
+                                    "-\n")
+                        #card.write(f"CMS_xsec_{v}\tlnN\t"+f"{(1.0+xsecUnc[v][0])/1.0}/{(1.0+xsecUnc[v][1])/1.0}\t"*len(channels)+"-\n")
+                        #card.write(f"CMS_pdf_{v}\tlnN\t"+f"{pdfUnc[v]}\t"*len(channels)+"-\n")
+                card.write(f"CMS_bkg_{cat}_norm\tgmN\t{int(tight_sb.Integral())}\t"+f"-\t"*len(kept_channels)+f"{background.GetBinContent(i+1)/tight_sb.Integral()}\n")
+                card.write(f"CMS_bkg_{cat}_bin{i}_shape\tlnN\t"+f"-\t"*len(kept_channels)+"1.4\n")
+                
+                for sf in sigScaleUp[v]:
+                    s = f"CMS_{l}_{sf}\tlnN\t"
+                    for ichannel,channel in enumerate(kept_channels):
+                        errUp = sigScaleUp[v][sf][channel].GetBinContent(i+1) / sig[channel].GetBinContent(i+1)
+                        errDown = sigScaleDown[v][sf][channel].GetBinContent(i+1) / sig[channel].GetBinContent(i+1)
+                        if errUp == 0:
+                            errUp = 1.0
+                        if errDown == 0:
+                            errDown = 1.0
+                        s+=f"{errDown}/{errUp}\t"
+                    s+="-\n"
+                    card.write(s)
+                for sf in sigScaleUp['g']:
+                    s = f"CMS_gamma_{sf}\tlnN\t"
+                    for ichannel, channel in enumerate(kept_channels):
+                        errUp = sigScaleUp['g'][sf][channel].GetBinContent(i+1) / sig[channel].GetBinContent(i+1)
+                        errDown = sigScaleDown['g'][sf][channel].GetBinContent(i+1) / sig[channel].GetBinContent(i+1)
+                        if errUp == 0:
+                            errUp = 1.0
+                        if errDown == 0:
+                            errDown = 1.0
+                        s+=f"{errDown}/{errUp}\t"
+                    s+="-\n"
+                    card.write(s)
+                card.close()
+            print(f'done with lifetime {ctau}')
+            for channel in kept_channels:
+                sig_list.append({"bin":i,"channel":channel,"rate":0.1*sig[channel].GetBinContent(i+1)})
+            sig_list.append({"bin":i,"channel":"background","rate":background.GetBinContent(i+1)})
+            
+        print(sig_list)
+        
+        import csv        
+        with open(f"{v}_{l}_m{m}_ctau{ctau}_{era}.csv",'w',newline='') as csvfile:
+            fieldnames = ["bin","channel","rate"]
+            writer = csv.DictWriter(csvfile, fieldnames = fieldnames)
+            writer.writeheader()
+            writer.writerows(sig_list)

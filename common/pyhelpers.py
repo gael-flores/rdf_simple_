@@ -21,8 +21,7 @@ def make_jsonHelper(fjson):
 def load_meta_data(data):
     dataframe = {}
     #Declare dataframe
-    dataframe['Events'] =ROOT.RDataFrame('Events',data['files'])
-
+    dataframe['Events'] =ROOT.RDataFrame('Events',data['files'])   
     # Apply golden JSON
     if not data['isMC']:
         jsonhelper = None

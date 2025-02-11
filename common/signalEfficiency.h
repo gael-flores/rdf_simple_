@@ -99,7 +99,8 @@ RVecF getDecayDxy(RVecF vx, RVecF vy, RVecI motherIdx){
   }
   return out;
 }
-
+//TODO Duplucate this function 
+// anti-ID: fail by 
 RVecI passIDNoIso(RVecI bitmaps){
   RVecI out;
   out.reserve(bitmaps.size());
@@ -110,6 +111,21 @@ RVecI passIDNoIso(RVecI bitmaps){
     bool passChIso = (bitmap>>8&3) >= 1;
     bool passNeuIso = (bitmap>>10&3) >= 1;
     out.emplace_back(passSIEIE && passHOE && passChIso && passNeuIso);
+  }
+  return out;
+}
+
+RVecI failIDby_HoE_SIEIE(RVecI bitmaps){
+  RVecI out;
+  out.reserve(bitmaps.size());
+  for (size_t i = 0; i < bitmaps.size(); i++){
+    int bitmap = bitmaps[i];
+    bool failSIEIE = (bitmap>>6&3) == 0;
+    bool failHOE = (bitmap>>4&3) == 0;
+    bool passChIso = (bitmap>>8&3) >= 1;
+    bool passNeuIso = (bitmap>>10&3) >= 1;
+    bool passPhIso = (bitmap>>12&3) >= 1;
+    out.emplace_back(failSIEIE && failHOE && passChIso && passNeuIso && passPhIso);
   }
   return out;
 }
