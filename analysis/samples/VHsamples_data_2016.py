@@ -83,3 +83,11 @@ samples_data_2016 = {
                          'era': '2016postVFP',
                          'jobs': 8},
 }
+
+#samples_data_2016 = {
+#'SingleElectron_2016H': {'dataset': '/SingleElectron/Run2016H-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD',
+#                         'triggers': ['HLT_Ele27_WPTight_Gsf'],
+#                         'veto_triggers': ['(HLT_IsoMu24||HLT_IsoTkMu24)'],
+#                         'era': '2016postVFP',
+#                         'jobs': 8},
+#}
