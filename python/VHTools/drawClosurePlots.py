@@ -3,11 +3,14 @@ import sys
 sys.path.append("/uscms/home/gfavila/nobackup/rdf_simple_/")
 import common.tdrstyle as tdrstyle
 import common.CMS_lumi as CMS_lumi
+from python.VHTools.config import *
+from python.VHTools.py_helpers import *
 sty = tdrstyle.setTDRStyle()
 import ROOT, math, os
 #from python.plotEditor import plotter as plotEditor
 #pe = plotEditor()
 ROOT.gROOT.SetBatch(True)
+import numpy as np
 
 import optparse
 parser = optparse.OptionParser()
@@ -23,47 +26,11 @@ date = options.date
 if not os.path.isdir("datacards_{}".format(date)):
     os.mkdir("datacards_{}".format(date))
 os.chdir("datacards_{}".format(date))
-dir_to_save = f"/uscms/home/gfavila/nobackup/rdf_simple_/datacards_{date}/plots/"
 
-intLumi = {'2018': 59830,
-           '2017': 41480,
-           '2016': 36310,
-           'Run2': 137620
-}   
+if not os.path.isdir("plots/closure"):
+    os.mkdir("plots/closure")
 
-lumi = {'2018': '59830',
-        '2017': '41480',
-        '2016': '36310',
-        'Run2': '137620'
-}   
-
-lumifb = {'2018': "59.83",
-          '2017': '41.48',
-          '2016': '36.31'}
-
-
-def fetchError(q, n):
-    l = 0
-    if n!=0:
-        l = ROOT.Math.chisquared_quantile_c(1.0-q, 2.0*n)/2.0
-    u = ROOT.Math.chisquared_quantile_c(q, 2.0*n+2)/2.0
-    return [l,u]
-
-# Poisson points for histogram
-def getPoisson(h):
-    q = (1-0.6827)/2.0
-    gRate = ROOT.TGraphAsymmErrors()
-    n = 0
-    for i in range(1, h.GetNbinsX()+1):
-        thresh = h.GetBinCenter(i)
-        N = h.GetBinContent(i)
-        #if N == 0:
-        #    continue
-        gRate.SetPoint(n, thresh, N)
-        error = fetchError(q, N)
-        gRate.SetPointError(n, 0, 0, (N-error[0]), (error[1]-N))
-        n+=1
-    return gRate
+dir_to_save = f"/uscms/home/gfavila/nobackup/rdf_simple_/datacards_{date}/plots/closure/"
 
 # Poisson points for histogram that will be scaled (needs x errors for shaded error bands)
 def getPoisson2(h, scale):
@@ -98,7 +65,7 @@ def compareSideband(loose, tight, m, name, header):
     tight_pois.SetMarkerColor(ROOT.kBlack)
     tight_pois.SetMarkerStyle(20)
 
-    errors = getPoisson2(loose, tight.Integral()/loose.Integral())
+    errors = getPoisson(loose, tight.Integral()/loose.Integral())
     errors.SetFillStyle(3244)
     errors.SetFillColor(ROOT.kAzure-6)
     errors.SetMarkerSize(0)
@@ -184,119 +151,6 @@ def compareSideband(loose, tight, m, name, header):
     del loose
     del c
 
-
-# Compare background and signal distributions for 0 and 100 mm ctau
-def compareSignalW(background, WHsignal0, WHsignal100, ttHsignal0,ttHsignal100, m, name, header,v, blind= False):
-    
-    background.SetLineColor(ROOT.kAzure+5)
-    background.SetLineWidth(3)
-    background.SetFillColor(ROOT.kAzure+5)
-    background.SetFillStyle(1001)
-
-    WHsignal0.SetLineColor(ROOT.kRed)
-    WHsignal0.SetLineWidth(3)
-    WHsignal0.SetFillStyle(0)
-    WHsignal0.Add(background)
-
-    WHsignal100.SetLineColor(ROOT.kRed)
-    WHsignal100.SetLineWidth(3)
-    WHsignal100.SetFillStyle(0)
-    WHsignal100.Add(background)
-    WHsignal100.SetLineStyle(2)
-    
-    ttHsignal0.SetLineColor(ROOT.kBlue)
-    ttHsignal0.SetLineWidth(3)
-    ttHsignal0.SetFillStyle(0)
-
-    ttHsignal100.SetLineColor(ROOT.kBlue)
-    ttHsignal100.SetLineWidth(3)
-    ttHsignal100.SetFillStyle(0)
-    ttHsignal100.Add(background)
-    ttHsignal100.SetLineStyle(2)
-
-    #Stack both signals on top of background
-    stk = ROOT.THStack()
-    stk.Add(background)
-    stk.Add(ttHsignal0)
-    stk.SetMaximum(1.2*max(stk.GetMaximum(), WHsignal0.GetMaximum()))
-    #will be on same canvas
-    c = ROOT.TCanvas("c", '', 800, 600)
-    c.SetRightMargin(0.05)
-    stk.Draw("hist")
-    WHsignal0.Draw("hist,same")
-    ttHsignal100.Draw("hist,same")
-    WHsignal100.Draw("hist,same")
-
-    if drawprelim:
-        CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = lumifb[options.era], extraText = "Preliminary")
-    errors = ROOT.TGraphErrors(background.GetNbinsX())
-    
-    #Stack everything together
-    for i in range(background.GetNbinsX()):
-        errors.SetPoint(i, background.GetBinCenter(i+1), background.GetBinContent(i+1))
-        errors.SetPointError(i, background.GetBinWidth(i+1)/2, background.GetBinContent(i+1) * 0.4)
-    errors.SetFillStyle(3244)
-    errors.SetFillColor(ROOT.kAzure-6)
-    errors.SetMarkerSize(0)
-    errors.SetLineWidth(0)
-    errors.Draw("e2, same")
-
-    cat = ROOT.TLatex()
-    cat.SetTextSize(0.035)
-    cat.DrawLatexNDC(0.16, 0.8, header)
-    cat.Draw("same")
-    leg = ROOT.TLegend(0.15, 0.56, 0.56, 0.78)
-    leg.SetBorderSize(0)
-    leg.SetFillStyle(0)
-    leg.AddEntry(background, "Predicted background", "lf")
-    if v == 'W':
-        #separate WH and ttH - don't do Z
-        leg.AddEntry(WHsignal0, "WH Signal, c#tau = 0 mm", "lf")
-        leg.AddEntry(WHsignal100, "WH Signal, c#tau = 100 mm", "lf")
-        leg.AddEntry(ttHsignal0, "ttH Signal, c#tau = 0 mm", "lf")
-        leg.AddEntry(ttHsignal100, "ttH Signal, c#tau = 100 mm", "lf")
-    elif v == 'Z':
-        leg.AddEntry(signal0, "Signal, c#tau = 0 mm", "lf")
-        leg.AddEntry(signal100, "Signal, c#tau = 100 mm", "lf")
-    br = ROOT.TH1D()
-    br.SetLineWidth(0)
-    br.SetMarkerSize(0)
-    br.SetFillStyle(0)
-    leg.AddEntry(br, "BR(H#rightarrow#Phi#Phi)#timesBR(#Phi#rightarrow#gamma#gamma)=0.05", "l")
-    leg.Draw("same")
-    stk.GetYaxis().SetTitle("Events")
-    stk.GetXaxis().SetLabelSize(0)
-    lines = ROOT.TH1D("lines", "", binsM, 0, binsLxy*binsM)
-    for i in range(1, binsM//2 + 1):
-        lines.SetBinContent(2*i, 10000)
-    lines.SetFillStyle(0)
-    lines.SetLineColor(ROOT.kBlack)
-    lines.SetLineWidth(2)
-    lines.SetLineStyle(2)
-    lines.Draw("hist,same")
-    c.Update()
-    a1 = ROOT.TGaxis(ROOT.gPad.GetUxmin(), ROOT.gPad.GetUymin(), ROOT.gPad.GetUxmax(), ROOT.gPad.GetUymin(), 0, binsM*11, binsM*11, "+")
-    for n in range(0, 11*binsM):
-        if (n%11)%2 == 0:
-            a1.ChangeLabel(n+1, -1, 0.025, -1, -1, -1, "{}".format((n*10)%110-10))
-        else:
-            a1.ChangeLabel(n+1, -1, 0.0, -1, -1, -1, "")
-    a1.ChangeLabel(11*binsM+1, -1, 0.0, -1, -1, -1, "")
-    a1.SetTitle("L_{xy} [cm]")
-    a1.Draw()
-    a2 = ROOT.TGaxis(ROOT.gPad.GetUxmin(), ROOT.gPad.GetUymax(), ROOT.gPad.GetUxmax(), ROOT.gPad.GetUymax(), 0, binsM, binsM, "-")
-    for n in range(binsM):
-        a2.ChangeLabel(n+1, -1, 0.022, -1, -1, -1, "{:.2f} #leq m(#gamma,#gamma) < {:.2f} GeV".format(4+(m+1.)/binsM*n, 4+(m+1.)/binsM*(n+1)))
-    a2.SetLabelOffset(-0.065)
-    a2.CenterLabels()
-    a2.Draw()
-
-    c.cd()
-    
-    c.Write(name, ROOT.TObject.kOverwrite)
-    c.SaveAs(name+".png")
-    c.SaveAs(name+".pdf")
-
 def compareSignal(background, signal0, signal100, m, name, header,v, blind= False):
     
     background.SetLineColor(ROOT.kAzure+5)
@@ -325,7 +179,7 @@ def compareSignal(background, signal0, signal100, m, name, header,v, blind= Fals
     signal100.Draw("hist,same")
 
     if drawprelim:
-        CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = lumifb[options.era], extraText = "Work in progress")
+        CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = lumifb[options.era], extraText = "Preliminary")
     errors = ROOT.TGraphErrors(background.GetNbinsX())
     
     #Stack everything together
@@ -352,7 +206,8 @@ def compareSignal(background, signal0, signal100, m, name, header,v, blind= Fals
     br.SetLineWidth(0)
     br.SetMarkerSize(0)
     br.SetFillStyle(0)
-    leg.AddEntry(br, "BR(H#rightarrow#Phi#Phi)#timesBR(#Phi#rightarrow#gamma#gamma)=0.05", "l")
+    #leg.AddEntry(br, "BR(H#rightarrow#Phi#Phi)#timesBR(#Phi#rightarrow#gamma#gamma)=0.05", "l")
+    leg.AddEntry(br, "BR(H#rightarrow#Phi#Phi)#timesBR(#Phi#rightarrow#gamma#gamma)=0.00933", "l")
     leg.Draw("same")
     stk.GetYaxis().SetTitle("Events")
     stk.GetXaxis().SetLabelSize(0)
@@ -396,21 +251,46 @@ def compareSignal(background, signal0, signal100, m, name, header,v, blind= Fals
     del c
 
 # Compare background, obs data, and signal distributions
-def compareAll(background, data, signal0, signal100, m, name, header,v, blind= False):
+def compareAll(background, data, signal0, signal100, m,l, name, header,v,scale,sigScale=0.1,blind= False):
+
+    signal0.Scale(sigScale)
+    signal100.Scale(sigScale)
     
+    data.Write(f"{v}H_{l}_m{m}_data", ROOT.TObject.kOverwrite)
+    
+    #this is a Tgraph of the errors
+    bkg_pois = getPoisson(background,scale)
+
+    #Now the background can be rescaled
+    background.Scale(scale)
     background.SetLineColor(ROOT.kAzure+5)
+    #background.SetLineColor(ROOT.kBlack)
     background.SetLineWidth(3)
     background.SetFillColor(ROOT.kAzure+5)
     background.SetFillStyle(1001)
+    background.Write(f"{v}H_{l}_m{m}_bkg", ROOT.TObject.kOverwrite)
+
+    
+
+    Nbins = signal0.GetNbinsX() 
+    for bin in range(1,Nbins+1):
+        print(f"bin {bin} sig0    ---", signal0.GetBinContent(bin))
+        print(f"bin {bin} sig100  ---", signal100.GetBinContent(bin))
+        print(f"bin {bin} bkg     ---", background.GetBinContent(bin))
+        print(f"bin {bin} data    ---", data.GetBinContent(bin))
+        print("")
+
     signal0.SetLineColor(ROOT.kRed)
     signal0.SetLineWidth(3)
     signal0.SetFillStyle(0)
+    signal0.Write(f"{v}H_{l}_m{m}_sig0", ROOT.TObject.kOverwrite)
     signal100.SetLineColor(ROOT.kRed)
     signal100.SetLineWidth(3)
     signal100.SetFillStyle(0)
-    signal100.Add(background)
     signal100.SetLineStyle(2)
-
+    signal100.Write(f"{v}H_{l}_m{m}_sig100", ROOT.TObject.kOverwrite)
+    signal100.Add(background)
+    
     data_pois = getPoisson(data)
     data_pois.SetLineColor(ROOT.kBlack)
     data_pois.SetMarkerColor(ROOT.kBlack)
@@ -418,19 +298,30 @@ def compareAll(background, data, signal0, signal100, m, name, header,v, blind= F
 
     stk = ROOT.THStack()
     stk.Add(background)
-    stk.Add(signal0)
-    stk.SetMaximum(1.75*max(stk.GetMaximum(), signal100.GetMaximum(), (data.GetBinContent(data.GetMaximumBin())+data.GetBinError(data.GetMaximumBin()))))
+    if draw_sig:
+        stk.Add(signal0)
+        stk.SetMaximum(1.75*max(stk.GetMaximum(), signal100.GetMaximum(), (data.GetBinContent(data.GetMaximumBin())+data.GetBinError(data.GetMaximumBin()))))
+    else:
+        stk.SetMaximum(1.5*max(stk.GetMaximum(), get_max_y_with_error(data_pois)))
+
+    
+
+    #stk.SetMaximum(80)
     c = ROOT.TCanvas("c", '', 800, 600)
     c.SetRightMargin(0.05)
     stk.Draw("hist")
-    signal100.Draw("hist,same")
+    
+    if draw_sig:
+        signal100.Draw("hist,same")
     data_pois.Draw("p,same")
     if drawprelim:
         CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = lumifb[options.era], extraText = "Preliminary")
     errors = ROOT.TGraphErrors(background.GetNbinsX())
-    for i in range(background.GetNbinsX()):
-        errors.SetPoint(i, background.GetBinCenter(i+1), background.GetBinContent(i+1))
-        errors.SetPointError(i, background.GetBinWidth(i+1)/2, background.GetBinContent(i+1) * 0.4)
+    #TODO: change these to poisson errors
+    #for i in range(background.GetNbinsX()):
+    #    errors.SetPoint(i, background.GetBinCenter(i+1), background.GetBinContent(i+1))
+    #    errors.SetPointError(i, background.GetBinWidth(i+1)/2, background.GetBinContent(i+1) * 0.4)
+    errors = bkg_pois
     errors.SetFillStyle(3244)
     errors.SetFillColor(ROOT.kAzure-6)
     errors.SetMarkerSize(0)
@@ -441,22 +332,43 @@ def compareAll(background, data, signal0, signal100, m, name, header,v, blind= F
     cat.SetTextSize(0.035)
     cat.DrawLatexNDC(0.16, 0.8, header)
     cat.Draw("same")
+    
+
+    if show_chi_sq:
+        chi_sq, dof = chi_squared_graphs(data_pois,bkg_pois)
+        cat2 = ROOT.TLatex()
+        cat2.SetTextSize(0.035)
+        cat2.DrawLatexNDC(0.73, 0.8, r"#chi^{2} = "+f"{chi_sq:.3f}" + f" dof: {dof}")
+        cat2.Draw("same")
+    
     leg = ROOT.TLegend(0.15, 0.56, 0.56, 0.78)
     leg.SetBorderSize(0)
     leg.SetFillStyle(0)
-    leg.AddEntry(background, "Predicted background", "lf")
-    leg.AddEntry(data_pois, "Observed", "lp")
-    if v == 'W':
-        leg.AddEntry(signal0, "Signal, c#tau = 0 mm", "lf")
-        leg.AddEntry(signal100, "Signal, c#tau = 100 mm", "lf")
-    elif v == 'Z':
-        leg.AddEntry(signal0, "Signal, c#tau = 0 mm", "lf")
-        leg.AddEntry(signal100, "Signal, c#tau = 100 mm", "lf")
+    if not closure:
+        if postfit:
+            leg.AddEntry(background, "Post-Fit Predicted Background", "f")
+        else:
+            leg.AddEntry(background, "Pre-Fit Predicted Background", "f")
+        leg.AddEntry(data_pois, "Observed", "lp")
+    else:
+        leg.AddEntry(background, "antiID + antiID data", "f")
+        leg.AddEntry(data_pois, "antiID + ID data", "lp")
+    if draw_sig:
+        if postfit:
+            leg.AddEntry(signal0, "Post-Fit Signal, c#tau = 0 mm", "lf")
+            leg.AddEntry(signal100, "Post-Fit Signal, c#tau = 100 mm", "lf")
+        else:
+            leg.AddEntry(signal0, "Pre-Fit Signal, c#tau = 0 mm", "lf")
+            leg.AddEntry(signal100, "Pre-Fit Signal, c#tau = 100 mm", "lf")
     br = ROOT.TH1D()
     br.SetLineWidth(0)
     br.SetMarkerSize(0)
     br.SetFillStyle(0)
-    leg.AddEntry(br, "BR(H#rightarrow#Phi#Phi)#timesBR(#Phi#rightarrow#gamma#gamma)=0.05", "l")
+    if draw_sig:
+        if postfit:
+            leg.AddEntry(br, "BR(H#rightarrow#Phi#Phi)#timesBR(#Phi#rightarrow#gamma#gamma) = "+f"r*{0.5*sigScale:.2f}", "l")
+        else:
+            leg.AddEntry(br, "BR(H#rightarrow#Phi#Phi)#timesBR(#Phi#rightarrow#gamma#gamma) =  0.5", "l")   
     leg.Draw("same")
     stk.GetYaxis().SetTitle("Events")
     stk.GetXaxis().SetLabelSize(0)
@@ -488,24 +400,37 @@ def compareAll(background, data, signal0, signal100, m, name, header,v, blind= F
     c.cd()
     
     c.Write(name, ROOT.TObject.kOverwrite)
-    c.SaveAs(name+".png")
-    c.SaveAs(name+".pdf")
+    if closure:
+        c.SaveAs(dir_to_save+name+"_closure.png")
+        c.SaveAs(dir_to_save+name+"_closure.pdf")
+    else:
+        c.SaveAs(dir_to_save+name+".png")
+        c.SaveAs(dir_to_save+name+".pdf")
 
+    c.Close()
 
-headers = {}
-headers['W'] = {}
-headers['W']['ELE'] = "W#rightarrowe#nu"
-headers['W']['MU'] = "W#rightarrow#mu#nu"
-headers['Z'] = {}
-headers['Z']['ELE'] = "Z#rightarrowee"
-headers['Z']['MU'] = "Z#rightarrow#mu#mu"
 
 fOut = ROOT.TFile("validation_{}.root".format(options.era), "UPDATE")
 binsLxy = 110
 
-#for v in ['W', 'Z']:
+postfit = False
+show_chi_sq = False
+draw_sig = False
+closure = True
+if closure == True:
+    loose_name = "closure_sideband"
+    tight_name = "loose_sideband"   
+    bkg = "closure_loose_scaled"
+    data= "closure_tight"
+else:    
+    loose_name = "loose_sideband"
+    tight_name = "tight_sideband"
+    bkg = "background"
+    data = "data_obs"
+
+
 for v in ['W','Z']:
-    for l in ['ELE','MU']:
+    for l in ['MU','ELE']:
         m = int(options.mass)
         if v == 'Z' and m == 15 and l == 'ELE':
             binsM = 2
@@ -513,65 +438,113 @@ for v in ['W','Z']:
             binsM = 2
         else:
             binsM =4
-        f = ROOT.TFile("datacardInputs_{}H_{}_m{}_{}.root".format(v,l,m,options.era))
+        if options.era == 'Run2':
+            if not postfit:
+                f16         = ROOT.TFile(f"datacardInputs_{v}H_{l}_m{m}_2016.root")
+                f17         = ROOT.TFile(f"datacardInputs_{v}H_{l}_m{m}_2017.root")
+                f18         = ROOT.TFile(f"datacardInputs_{v}H_{l}_m{m}_2018.root")
+
+                loose_sb    = f16.Get(loose_name) + f17.Get(loose_name) + f18.Get(loose_name)
+                tight_sb    = f16.Get(tight_name) + f17.Get(tight_name) + f18.Get(tight_name)
+
+
+                loose       = f16.Get(bkg) + f17.Get(bkg) + f18.Get(bkg)
+                tight       = f16.Get(data) + f17.Get(data) + f18.Get(data)
+                
+                sig0   =  f16.Get("ZH_HToPhiPhi_ctau0")    + f16.Get("ggZH_HToPhiPhi_ctau0") + \
+                        f17.Get("ZH_HToPhiPhi_ctau0")    + f17.Get("ggZH_HToPhiPhi_ctau0") + \
+                        f18.Get("ZH_HToPhiPhi_ctau0")    + f18.Get("ggZH_HToPhiPhi_ctau0")   
+                
+                sig100 =  f16.Get("ZH_HToPhiPhi_ctau100")  + f16.Get("ggZH_HToPhiPhi_ctau100") + \
+                        f17.Get("ZH_HToPhiPhi_ctau100")  + f17.Get("ggZH_HToPhiPhi_ctau100") + \
+                        f18.Get("ZH_HToPhiPhi_ctau100")  + f18.Get("ggZH_HToPhiPhi_ctau100") 
+    
+                try: 
+                    sig0   += f16.Get("ttH_HToPhiPhi_ctau0")    + f17.Get("ttH_HToPhiPhi_ctau0")    + f18.Get("ttH_HToPhiPhi_ctau0")
+                    sig100 += f16.Get("ttH_HToPhiPhi_ctau100")  + f17.Get("ttH_HToPhiPhi_ctau100")  + f18.Get("ttH_HToPhiPhi_ctau100")
+                except NotImplementedError:
+                    print("no ttH contribution")
+                try:
+                    sig0   += f16.Get("WH_HToPhiPhi_ctau0")    + f17.Get("WH_HToPhiPhi_ctau0")    + f18.Get("WH_HToPhiPhi_ctau0")  
+                    sig100 += f16.Get("WH_HToPhiPhi_ctau100")  + f17.Get("WH_HToPhiPhi_ctau100")  + f18.Get("WH_HToPhiPhi_ctau100")  
+                except NotImplementedError:
+                    print('no WH contribution')
+                sigScale = 0.1
+            else:
+                f         = ROOT.TFile(f"postFit_{v}H_{l}_m{m}_Run2.root")
+                
+                loose_sb    = f.Get(loose_name)
+                tight_sb    = f.Get(tight_name)
+
+                loose       = f.Get(bkg)
+                tight       = f.Get(data)
+                
+                sig0 = f.Get("sig0")
+                sig100 = f.Get("sig100")
+
+                sigScale = 1
+            
+
+        else:
+
+            if not postfit:
+                f           = ROOT.TFile(f"datacardInputs_{v}H_{l}_m{m}_{options.era}.root")
+            else:
+                f           = ROOT.TFile(f"postFit_{v}H_{l}_m{m}_{options.era}.root")
+
+            loose_sb    = f.Get(loose_name)
+            tight_sb    = f.Get(tight_name)
+
+            loose       = f.Get(bkg)
+            tight       = f.Get(data)
+
+            
+            if not postfit:
+                sig0   = f.Get("ZH_HToPhiPhi_ctau0")    + f.Get("ggZH_HToPhiPhi_ctau0")
+                
+                sig100 = f.Get("ZH_HToPhiPhi_ctau100")  + f.Get("ggZH_HToPhiPhi_ctau100")
+    
+                try: 
+                    sig0   += f.Get("ttH_HToPhiPhi_ctau0")
+                    sig100 += f.Get("ttH_HToPhiPhi_ctau100")
+                except NotImplementedError:
+                    print("no ttH contribution")
+                try:
+                    sig0   += f.Get("WH_HToPhiPhi_ctau0")
+                    sig100 += f.Get("WH_HToPhiPhi_ctau100")
+                except NotImplementedError:
+                    print('no WH contribution')
+                sigScale = 0.1
+            else:
+                sig0 = f.Get("sig0")
+                sig100 = f.Get("sig100")
+                loose_sb    = f.Get(loose_name)
+                tight_sb    = f.Get(tight_name)
+                sigScale = 1
         fOut.cd()
-        loose_sb = f.Get("loose_sideband")
-        tight_sb = f.Get("tight_sideband")
+        
         if v == 'Z':
             loose_sb.RebinX(5)
             tight_sb.RebinX(5)
-        loose = f.Get("background")
-        tight = f.Get("data_obs")
-        compareSideband(loose_sb, tight_sb, m, "closure_{}H_{}_m{}_sideband_{}".format(v,l,m,options.era), "m(#gamma#gamma) > m_{H}/2, "+headers[v][l]+" m_{#Phi} = "+"{} GeV".format(m))
-        
-        if v =='Z':
-            sig0   = f.Get("ZH_HToPhiPhi_ctau0")    + f.Get("ggZH_HToPhiPhi_ctau0")
-            sig100 = f.Get("ZH_HToPhiPhi_ctau100")  + f.Get("ggZH_HToPhiPhi_ctau100")
-            try: 
-                sig0   += f.Get("ttH_HToPhiPhi_ctau0")
-                sig100 += f.Get("ttH_HToPhiPhi_ctau100")
-            except NotImplementedError:
-                print("no ttH contribution")
-            
-            try:
-                sig0   += f.Get("WH_HToPhiPhi_ctau0")
-                sig100 += f.Get("WH_HToPhiPhi_ctau100")
-            except NotImplementedError:
-                print('no WH contribution')
-        else:
-            sig0   = f.Get("ZH_HToPhiPhi_ctau0")    + f.Get("ggZH_HToPhiPhi_ctau0")   + f.Get("ttH_HToPhiPhi_ctau0")   + f.Get("WH_HToPhiPhi_ctau0")
-            sig100 = f.Get("ZH_HToPhiPhi_ctau100")  + f.Get("ggZH_HToPhiPhi_ctau100") + f.Get("ttH_HToPhiPhi_ctau100")  + f.Get("WH_HToPhiPhi_ctau100")
-        sig0.Scale(0.1)
-        sig100.Scale(0.1)
 
-        compareSignal(loose, sig0, sig100, m, "closure_{}H_{}_m{}_signal_{}".format(v,l,m,options.era), "Signal Region, "+headers[v][l]+" m_{#Phi}="+"{} GeV".format(m),v)
+        scale = tight_sb.Integral()/loose_sb.Integral()
+        
+        loose_sb.Write("data_loose", ROOT.TObject.kOverwrite)
+        tight_sb.Write("data_tight", ROOT.TObject.kOverwrite)
+
+        #Unscale the histogram to the the proper Poisson errors
+        loose.Scale(1/scale)       
+        
+        
+        compareSideband(loose_sb, tight_sb, m, "closure_{}H_{}_m{}_sideband_{}".format(v,l,m,options.era), "m(#gamma#gamma) > 65 GeV, "+headers[v][l]+" m_{#Phi} = "+"{} GeV".format(m))
+        
+        
+        #sigScale = 0.37327*0.1
+        
+    
+        #compareSignal(loose, sig0, sig100, m, "closure_{}H_{}_m{}_signal_{}".format(v,l,m,options.era), "Signal Region, "+headers[v][l]+" m_{#Phi}="+"{} GeV".format(m),v)
         if not options.blind:
-            compareAll(loose, tight, sig0, sig100, m, "{}H_{}_m{}_data_{}".format(v,l,m,options.era), "Signal Region, "+headers[v][l]+" m_{#Phi}="+"{} GeV".format(m))
-        """
+            #NOTE: loose is unscaled
+            compareAll(loose, tight, sig0, sig100, m,l, "{}H_{}_m{}_data_{}".format(v,l,m,options.era), "Signal Region, "+headers[v][l]+" m_{#Phi}="+"{} GeV".format(m),v,scale,sigScale=sigScale)
 
-        if v == 'Z':
-            sig0 = f.Get("ZH_HToPhiPhi_ctau0")  + f.Get("ggZH_HToPhiPhi_ctau0")
-            sig0.Scale(0.1)
-            sig100 = f.Get("ZH_HToPhiPhi_ctau100")  + f.Get("ggZH_HToPhiPhi_ctau100")
-            sig100.Scale(0.1)
-            compareSignalZ(loose, sig0, sig100, m, "closure_{}H_{}_m{}_signal_{}".format(v,l,m,options.era), "Signal Region, "+headers[v][l]+" m_{#Phi}="+"{} GeV".format(m),v)
-            if not options.blind:
-                compareAll(loose, tight, sig0, sig100, m, "{}H_{}_m{}_data_{}".format(v,l,m,options.era), "Signal Region, "+headers[v][l]+" m_{#Phi}="+"{} GeV".format(m))
-        
-        elif v == 'W':
-            WHsig0  = f.Get("WH_HToPhiPhi_ctau0")
-            ttHsig0 = f.Get("ttH_HToPhiPhi_ctau0")
-
-            WHsig0.Scale(0.1)
-            ttHsig0.Scale(0.1)
-            
-            WHsig100  = f.Get("WH_HToPhiPhi_ctau100")
-            ttHsig100 = f.Get("ttH_HToPhiPhi_ctau100")
-            WHsig100.Scale(0.1)
-            ttHsig100.Scale(0.1)
-            compareSignal(loose, WHsig0, WHsig100,ttHsig0,ttHsig100, m, "closure_{}H_{}_m{}_signal_{}".format(v,l,m,options.era), "Signal Region, "+headers[v][l]+" m_{#Phi}="+"{} GeV".format(m),v)
-
-            if not options.blind:
-                compareAll(loose, tight, sig0, sig100, m, "{}H_{}_m{}_data_{}".format(v,l,m,options.era), "Signal Region, "+headers[v][l]+" m_{#Phi}="+"{} GeV".format(m))
-        """
 fOut.Close()

@@ -1,8 +1,14 @@
 import ROOT, sys, os, array
 sys.path.append("/uscms/home/gfavila/nobackup/rdf_simple_/")
 ROOT.gROOT.SetBatch(True)
+import numpy as np
+from python.VHTools.py_helpers import *
+from python.VHTools.config import *
+from python.VHTools.VHcuts import * 
+from typing import Callable
 
-ROOT.gInterpreter.Declare('#include "common/datacardHelpers.h"')
+
+ROOT.gInterpreter.Declare('#include "/uscms/home/gfavila/nobackup/rdf_simple_/common/datacardHelpers.h"')
 import optparse
 parser = optparse.OptionParser()
 parser.add_option("-e", "--era", dest = "era", default = "2018", help = "2016, 2017, 2018")
@@ -13,10 +19,10 @@ parser.add_option("-b", "--blind", dest = "blind", action="store_true", default 
 parser.add_option("-v", "--v", dest = "v", default = 'Z', help = "V category (Z or W)")
 parser.add_option("-l", "--lep", dest = "l", default = 'MU', help = "lepton category (ELE or MU)")
 parser.add_option("-m", "--model", dest = "model", default = "SM", help = "SM or model_indep")
-#skips ttH and ggZH for model indep
+
 (options,args) = parser.parse_args()
 
-from python.VHTools.VHcuts import * 
+
 import startVH
 
 model_sfx = ""
@@ -34,6 +40,8 @@ l = options.l
 
 
 #cant be too fine 
+if v == 'Z' and mass == 7 and l == 'ELE':
+    binsM = 2
 if v == 'Z' and mass == 15 and l == 'ELE':
     binsM = 2
 elif v == 'Z' and mass ==20 and l == 'ELE':
@@ -49,374 +57,409 @@ if not os.path.isdir("datacards_{}".format(date)):
     os.mkdir("datacards_{}".format(date))
 os.chdir("datacards_{}".format(date))
 
-def fillZeroBins(hist, thresh):
-    for i in range(1, hist.GetNbinsX()+1):
-        if hist.GetBinContent(i) <= 0:
-            hist.SetBinContent(i,thresh)
-    return hist
+if not os.path.isdir("plots"):
+    os.mkdir("plots")
 
-#source https://twiki.cern.ch/twiki/bin/view/LHCPhysics/CERNYellowReportPageAt13TeV
-#asymetric
-xsecUnc = {'WH'  : [0.005, -0.007],
-           'ZH'  : [0.038, -0.031],
-           'ggZH': [0.251, -0.189],
-           'ttH' : [0.058, -0.092]}
-
-#symmetric
-pdfUnc = {'WH'  : 1.019,
-          'ZH'  : 1.016,
-          'ggZH': 1.024,
-          'ttH' : 1.036}
 
 masses = [mass]
-channels = ['ZH','ttH','WH','ggZH']
-
-# Which lifetime to use for ctau reweighing
-#lifetimes = {0: 0, 3: 10, 10: 10, 14: 10, 20: 20, 32: 20, 50: 50, 70: 50, 100: 100, 316: 1000, 1000: 1000}
-lifetimes = {0:0, 10:10,20:20,50:50, 100:100, 1000:1000}
-
-customBins = {
-            'W': {
-                'ELE': {
-                    15:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                    20:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                    30:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                    40:array.array('d' , [0.0,50.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                    50:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                    55:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                },
-                'MU': {
-                    15:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                    20:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                    30:array.array('d' , [0.0,25.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                    40:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                    50:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                    55:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                }
-            },
-            'Z': {
-                'ELE': {
-                    15:array.array('d' , [0.0,36.0,72.0,110.0,220.0]),
-                    20:array.array('d' , [0.0,110.0,138.0,165.0,192.0,220.0]),
-                    30:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                    40:array.array('d' , [0.0,50.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,350.0,370.0,440.0]),
-                    50:array.array('d' , [0.0,50.0,110.0,138.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                    55:array.array('d' , [0.0,50.0,110.0,138.0,192.0,220.0,248.0,275.0,330.0,360.0,440.0]),
-                },
-                'MU': {
-                    15:array.array('d' , [0.0,50.0,80.0,110.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                    20:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                    30:array.array('d' , [0.0,50.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                    40:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,350.0,370.0,440.0]),
-                    50:array.array('d' , [0.0,50.0,80.0,110.0,138.0,192.0,220.0,275.0,302.0,330.0,360.0,440.0]),
-                    55:array.array('d' , [0.0,50.0,80.0,110.0,138.0,165.0,192.0,220.0,248.0,275.0,302.0,330.0,360.0,440.0]),
-                }
-            }
-        }
 
 
+lifetimes = {0:0,10:10,20:20,50:50,100:100,1000:1000}
+#lifetimes = {0}
 
-for m in masses:
 
-    print("Making card for {}->{}, m={}".format(v,l,m))
-    # Getting the required plotters
-    plotters = startVH.getPlotters(era, prod, "/uscms/home/gfavila/nobackup/rdf_simple_/DDP/",[m], modelIndependent = modelIndependent)
-    dataEMU = plotters['dataEMU']
-    signal = plotters['signal']
-    
-    f = ROOT.TFile("datacardInputs_{}H_{}_m{}_{}{}.root".format(v,l,m,era,model_sfx), "UPDATE")
+#for m in masses:
+m = mass
 
-    # negative lxy sidebands for loose (anti-ID) and tight (ID)
-    loose_sb = dataEMU[startVH.ana[v][l]].hist1d("best_2g_dxy_m{}".format(m), cuts['cr'][v][l][m]+"&&best_2g_raw_mass_m{}>65".format(m), "1", ("loose_sb_{}_{}_m{}".format(v,l,m), "", 50, -1400, 0))
-    tight_sb = dataEMU[startVH.ana[v][l]].hist1d("best_2g_dxy_m{}".format(m), cuts['sr'][v][l][m]+"&&best_2g_raw_mass_m{}>65".format(m), "1", ("loose_sb_{}_{}_m{}".format(v,l,m), "", 50, -1400, 0))
-    
-    
-    # normalization scale factor
-    scale = tight_sb.Integral() / loose_sb.Integral() if loose_sb.Integral() > 0 else 1.0
-    loose_sb.Write("loose_sideband", ROOT.TObject.kOverwrite)
-    tight_sb.Write("tight_sideband", ROOT.TObject.kOverwrite)
-    
+#Rebin according to custom bins
+binsX = customBins[v][l][m]
 
-    # Get predicted background from antiID region
-    background = dataEMU[startVH.ana[v][l]].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), cuts['cr'][v][l][m], "1", ("data_loose_{}_{}_m{}".format(v,l,m), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-    background.Scale(scale)
-    background.Write("data_loose", ROOT.TObject.kOverwrite)
-    background = startVH.unfoldTH2(background)
-    binsX = customBins[v][l][m]
-    background.Rebin(len(binsX) - 1, "data_loose_rebinned", binsX)
-    background = ROOT.gDirectory.Get("data_loose_rebinned")
-    background = fillZeroBins(background, 0.001)
-    background.Write("background", ROOT.TObject.kOverwrite)
+# Scale factors
+sfs = startVH.getSF(startVH.scaleFactors[v][l] + startVH.scaleFactors['g'][m])
+final_selection_cuts = f"{cuts['sr'][v][l][m]}"
 
-    # Get observed data
-    data_obs = dataEMU[startVH.ana[v][l]].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), cuts['sr'][v][l][m], "1", ("data_tight_{}_{}_m{}".format(v,l,m), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-    data_obs = startVH.unfoldTH2(data_obs)
-    data_obs.Rebin(len(binsX) - 1, "data_tight_rebinned", binsX)
-    data_obs = ROOT.gDirectory.Get("data_tight_rebinned")
+def unfoldRebin(histogram,name,binsX = binsX):
+    unfolded = startVH.unfoldTH2(histogram)
+    unfolded.Rebin(len(binsX) - 1, name, binsX)
+    rebinned = ROOT.gDirectory.Get(name)
+    return(rebinned)
 
-    # Only write if not blind, else use expected background
-    if not options.blind:
-        data_obs.Write("data_obs", ROOT.TObject.kOverwrite)
+def data_histogram_setup(binsM:int = binsM, binsLxy:int = binsLxy, lxyMin:float = lxyMin, lxyMax:float = lxyMax, v:str=v,l:str=l,m:int=m) -> Callable:
+    def make_histogram(name:str,appliedCuts:str):
+        histogram = dataEMU[startVH.ana[v][l]].hist2d(
+            f"best_2g_raw_mass_m{m}",
+            f"best_2g_dxy_m{m}",
+            f"({appliedCuts})", 
+            "(1)", 
+            (name+f"_{v}_{l}_{m}", "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
+        return histogram
+    return make_histogram
+
+def monteCarlo_histogram_setup(appliedCuts:str =final_selection_cuts, binsM:int = binsM, binsLxy:int = binsLxy, lxyMin:float = lxyMin, lxyMax:float = lxyMax, v:str=v,l:str=l,m:int=m) -> Callable:
+    def make_channel_histogram(ct:int, channel:str, name:str, scaleFactors:list[str], correction:str=""):
+        histogram = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d(
+            f"best_2g_raw_mass{correction}_m{m}",
+            f"best_2g_dxy{correction}_m{m}",
+            f"({appliedCuts})*({scaleFactors})", 
+            startVH.lumi[era], 
+            (name, "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
+        return histogram
+    return make_channel_histogram
+
+def processChannels(name,scaleFactors,ct,appliedCuts=final_selection_cuts,histogram_suffix = '',correction="") -> dict[str]:
+    sig = {}
+    channels_to_remove = []
+    global channels
+    for channel in channels:
+        if (histogram := make_histogram(ct,channel,name,scaleFactors,correction)):
+            histogram  = unfoldRebin(histogram,name)
+            histogram.Write(f"{channel}_HToPhiPhi_ctau{ct}" + histogram_suffix, ROOT.TObject.kOverwrite)
+            sig[channel] = histogram
+        else:
+            print("Removing channel ",channel)
+            channels_to_remove.append(channel)
+            continue
+
+    for channel in channels_to_remove:
+        channels.remove(channel)
+        
+    return sig
+
+def processLeptonScaleFactors(l:str, ct:int, v:str=v) -> tuple:
+    # Energy scale/smearing corrections, scale factor corrections
+    sigScaleUp = {}
+    sigScaleDown = {}
+
+    sigScaleUp[v] = {}
+    sigScaleDown[v] = {}
+
+    if l == 'ELE':
+        lepton = "Electron"
+        lepton_lowerCase   = 'ele'
+        list_of_scaleFactors = ['reco', 'id', 'trig']
     else:
-        data_obs = ROOT.TH1D("data_obs", "", len(binsX) - 1, binsX)
-        for i in range(1, data_obs.GetNbinsX()+1):
-            data_obs.SetBinContent(i, int(round(background.GetBinContent(background.FindBin(background.GetBinCenter(i))))))
-        data_obs.Write("data_obs", ROOT.TObject.kOverwrite)
+        lepton = "Muon"
+        lepton_lowerCase   = 'mu'
+        list_of_scaleFactors = ['reco', 'id', 'trig','iso']
+    
+    for scaleFactor in list_of_scaleFactors:
+        
+        scaleFactor_name = f'{lepton}_{scaleFactor}'
+        
+        sfUp,sfDown = startVH.getSF(startVH.scaleFactors[v][l] + startVH.scaleFactors['g'][m], scaleFactor_name)
+        
+        sigScaleUp[v][scaleFactor] = {}
+        sigScaleDown[v][scaleFactor] = {}
 
-    # Scale factors
-    sfs = startVH.getSF(startVH.scaleFactors[v][l] + startVH.scaleFactors['g'][m])
-    #TODO import signals from config file, which doesn't exist yet
-    # Defining photon scale corrections
-    for ct in startVH.ctaus:
+        sigUp   = processChannels(f"sig_{lepton_lowerCase}{scaleFactor}Up_{v}_{l}_m{m}_ct{ct}",  sfUp,   ct, histogram_suffix = f"_{lepton_lowerCase}_{scaleFactor}Up")
+        sigDown = processChannels(f"sig_{lepton_lowerCase}{scaleFactor}Down_{v}_{l}_m{m}_ct{ct}",sfDown, ct, histogram_suffix = f"_{lepton_lowerCase}_{scaleFactor}Down")
+        
         for channel in channels:
-            # energy scale/smearing corrections
-            # First get the scaled/smeared energies
-            signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("Photon_ptSmearUp", "ptSmearUp(Photon_pt, Photon_eta, Photon_phi, Photon_dEsigmaUp)")
-            signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("Photon_ptSmearDown", "ptSmearDown(Photon_pt, Photon_eta, Photon_phi, Photon_dEsigmaDown)")
-            if 'tt' not in channel:
+            sigScaleUp[v][scaleFactor][channel] = fillZeroBins(sigUp[channel], 0)
+            sigScaleDown[v][scaleFactor][channel] = fillZeroBins(sigDown[channel], 0)
+
+    return sigScaleUp, sigScaleDown
+
+def processPhotonScaleFactors(factors_toProcess,ct):
+    # Energy scale/smearing corrections, scale factor corrections
+    sigScaleUp   = {}
+    sigScaleDown = {}
+
+    for scaleFactor in factors_toProcess:
+        scaleFactor_name = f"{scaleFactor}"
+
+        sfUp, sfDown = startVH.getSF(startVH.scaleFactors[v][l] + startVH.scaleFactors['g'][m], f"Photon_{scaleFactor}")
+        sigScaleUp[scaleFactor] = {}
+        sigScaleDown[scaleFactor] = {}
+
+        sigUp   = processChannels(f"sig_pho{scaleFactor}Up_{v}_{l}_m{m}_ct{ct}",  sfUp,   ct, histogram_suffix = f"_pho_{scaleFactor}Up")
+        sigDown = processChannels(f"sig_pho{scaleFactor}Down_{v}_{l}_m{m}_ct{ct}",sfDown, ct, histogram_suffix = f"_pho_{scaleFactor}Down")
+
+        for channel in channels:
+            sigScaleUp[scaleFactor][channel] = fillZeroBins(sigUp[channel], 0)
+            sigScaleDown[scaleFactor][channel] = fillZeroBins(sigDown[channel], 0)
+
+    return sigScaleUp, sigScaleDown
+
+def processPhotonCorrections(corrections:list[str], ct:int) -> tuple:
+    # Energy scale/smearing corrections, scale factor corrections
+    sigScaleUp   = {}
+    sigScaleDown = {}
+    for correction in corrections:
+        sigScaleUp[correction]  = {}    
+        sigScaleDown[correction] = {}
+
+        sigUp   = processChannels(f"sig_pho{correction}Up_{v}_{l}_m{m}_ct{ctau}",  sfs,  ct,  histogram_suffix = f"_pho_{correction}Up",correction=f"_{correction}Up")
+        sigDown = processChannels(f"sig_pho{correction}Down_{v}_{l}_m{m}_ct{ctau}",sfs, ct,  histogram_suffix = f"_pho_{correction}Down",correction=f"_{correction}Down")
+
+        for channel in channels:
+            sigScaleUp[correction][channel] = fillZeroBins(sigUp[channel], 0)
+            sigScaleDown[correction][channel] = fillZeroBins(sigDown[channel], 0)
+    
+    return sigScaleUp, sigScaleDown
+
+
+print(f"Making card for {era} {v}->{l}, m={m}")
+# Getting the required plotters
+dataEMU = startVH.getDataPlotters(era,prod,"/store/user/gfavila/DDP",startVH.ana[v][l],modelIndependent=modelIndependent)
+signal  = startVH.getSigPlotters(era,prod,"/store/user/gfavila/DDP",[m],startVH.ana[v][l],modelIndependent=modelIndependent)['signal']
+
+
+f = ROOT.TFile(f"datacardInputs_{v}H_{l}_m{m}_{era}{model_sfx}.root", "UPDATE")
+
+# negative lxy sidebands for loose (anti-ID) and tight (ID)
+loose_sb = dataEMU[startVH.ana[v][l]].hist1d("best_2g_dxy_m{}".format(m), cuts['cr'][v][l][m]+"&&best_2g_raw_mass_m{}>65".format(m), "1", (f"loose_sb_{v}_{l}_m{m}", "", 50, -1400, 0))
+tight_sb = dataEMU[startVH.ana[v][l]].hist1d("best_2g_dxy_m{}".format(m), cuts['sr'][v][l][m]+"&&best_2g_raw_mass_m{}>65".format(m), "1", (f"loose_sb_{v}_{l}_m{m}", "", 50, -1400, 0))
+closure_sb = dataEMU[startVH.ana[v][l]].hist1d("best_2g_dxy_m{}".format(m), cuts['cl'][v][l][m]+"&&best_2g_raw_mass_m{}>65".format(m), "1",(f"closure_sb_{v}_{l}_m{m}", "", 50, -1400, 0))
+
+#arrays to store historam integral errors
+loose_error = np.array([0.0],dtype=float)
+tight_error = np.array([0.0],dtype=float)
+closure_error = np.array([0.0],dtype=float)
+
+#integrals
+loose_integral = loose_sb.IntegralAndError(1,loose_sb.GetNbinsX(),loose_error)
+tight_integral = tight_sb.IntegralAndError(1,tight_sb.GetNbinsX(),tight_error)
+closure_integral = closure_sb.IntegralAndError(1,closure_sb.GetNbinsX(),closure_error)
+
+# normalization scale factor
+scale = tight_integral / loose_integral if loose_integral > 0 else 1.0
+closure_scale = loose_integral / closure_integral if closure_integral > 0 else 1.0
+
+
+#Error propagation, histograms are uncorrelated since there are no overlapping events
+scale_error = scale * np.sqrt((loose_error[0]/loose_integral)**2 + (tight_error[0]/tight_integral)**2)
+closure_scale_error = closure_scale * np.sqrt((loose_error[0]/loose_integral)**2 + (closure_error[0]/closure_integral)**2)
+
+loose_sb.Write("loose_sideband", ROOT.TObject.kOverwrite)
+tight_sb.Write("tight_sideband", ROOT.TObject.kOverwrite)
+closure_sb.Write("closure_sideband", ROOT.TObject.kOverwrite)
+
+
+make_data_histogram = data_histogram_setup()
+
+# Get predicted background from antiID region
+background = make_data_histogram("data_loose", cuts['cr'][v][l][m])
+background.Write("data_loose", ROOT.TObject.kOverwrite)
+background = unfoldRebin(background, "data_loose_rebinned")
+background.Scale(scale)
+background.Write("background", ROOT.TObject.kOverwrite)
+
+#closure
+closure_2bad = make_data_histogram("closure_2bad", cuts['cl'][v][l][m])
+closure_2bad.Write("closure_loose", ROOT.TObject.kOverwrite)
+closure_2bad = unfoldRebin(closure_2bad, "closure_loose_rebinned")
+#before scaling, get poisson errors then return scaled python arrays
+closure_loose_bin_centers, closure_loose_array, closure_loose_err_low, closure_loose_err_up, closure_loose_bin_widths = getPoisson_arrays(closure_2bad , closure_scale)
+closure_2bad.Scale(closure_scale)
+closure_2bad.Write("closure_loose_scaled", ROOT.TObject.kOverwrite)
+
+#this is the same as the background histogram. Keep for now, will do clean up later
+closure_1bad = make_data_histogram("closure_1bad", cuts['cr'][v][l][m])
+closure_1bad.Write("closure_tight_2d", ROOT.TObject.kOverwrite)
+closure_1bad = unfoldRebin(closure_1bad,"closure_tight_rebinned")
+closure_tight_bin_centers, closure_tight_array, closure_tight_err_low, closure_tight_err_up, closure_tight_bin_widths = getPoisson_arrays(closure_1bad)
+closure_1bad.Write("closure_tight", ROOT.TObject.kOverwrite)
+
+
+#sigmas 
+sigmas = []
+deltas_2bad = []
+deltas_1bad = []
+for i in range(len(binsX)-1):
+    N_2bad = closure_loose_array[i]
+    N_1bad = closure_tight_array[i]
+    
+    if N_2bad == 0 and N_1bad == 0:
+        sigma_x = 0
+    
+    if N_2bad > N_1bad:
+        delta_2bad = closure_loose_err_low[i]
+        delta_1bad = closure_tight_err_up[i]
+    else:
+        delta_2bad = closure_loose_err_up[i]
+        delta_1bad = closure_tight_err_low[i]
+    
+    deltas_1bad.append(delta_1bad)
+    deltas_2bad.append(delta_2bad)
+    
+    if (N_2bad - N_1bad)**2 - delta_2bad**2 - delta_1bad**2 < 0:
+        sigma_x = 0
+    else:
+        sigma_x = np.sqrt((N_2bad - N_1bad)**2 - delta_2bad**2 - delta_1bad**2)
+    
+    sigmas.append(sigma_x)
+
+uncertainties = []
+for i in range(len(closure_loose_array)):
+    if closure_loose_array[i] != 0 and sigmas[i] != 0.0:
+        uncertainties.append(1 + sigmas[i]/closure_loose_array[i])
+    else:
+        uncertainties.append("nan")
+
+
+# Get observed data
+data_obs = make_data_histogram("data_tight",cuts['sr'][v][l][m])
+data_obs = unfoldRebin(data_obs, "data_tight_rebinned")
+# Only write if not blind, else use expected background
+if not options.blind:
+    data_obs.Write("data_obs", ROOT.TObject.kOverwrite)
+else:
+    data_obs = ROOT.TH1D("data_obs", "", len(binsX) - 1, binsX)
+    for i in range(1, data_obs.GetNbinsX()+1):
+        data_obs.SetBinContent(i, int(round(background.GetBinContent(background.FindBin(background.GetBinCenter(i))))))
+    data_obs.Write("data_obs", ROOT.TObject.kOverwrite)
+
+#TODO import signals from config file, which doesn't exist yet
+# Defining photon scale corrections
+for ct in startVH.ctaus:
+    for channel in channels:
+        # energy scale/smearing corrections
+        # First get the scaled/smeared energies
+        signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("Photon_ptSmearUp", "ptSmearUp(Photon_pt, Photon_eta, Photon_phi, Photon_dEsigmaUp)")
+        signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("Photon_ptSmearDown", "ptSmearDown(Photon_pt, Photon_eta, Photon_phi, Photon_dEsigmaDown)")
+        if 'tt' not in channel:
+            try:
                 signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("Photon_energyScaleUp", "photonEnergyScale(Photon_eta, Photon_seedGain, PHO_scaledown_{era}_val, PHO_scaledown_{era}_bins, sample_isMC)".format(era = "2016preVFP" if options.era=="2016" else options.era))
+            except:
+                signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].redefine("Photon_energyScaleUp", "photonEnergyScale(Photon_eta, Photon_seedGain, PHO_scaledown_{era}_val, PHO_scaledown_{era}_bins, sample_isMC)".format(era = "2016preVFP" if options.era=="2016" else options.era))
+            try:
                 signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("Photon_energyScaleDown", "photonEnergyScale(Photon_eta, Photon_seedGain, PHO_scaleup_{era}_val, PHO_scaledown_{era}_bins, sample_isMC)".format(era = "2016preVFP" if options.era=="2016" else options.era))
-            signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("Photon_ptScaleUp", "Photon_pt*Photon_energyScaleUp")
-            signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("Photon_ptScaleDown", "Photon_pt*Photon_energyScaleDown")
+            except:
+                signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].redefine("Photon_energyScaleDown", "photonEnergyScale(Photon_eta, Photon_seedGain, PHO_scaleup_{era}_val, PHO_scaledown_{era}_bins, sample_isMC)".format(era = "2016preVFP" if options.era=="2016" else options.era))
+        signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("Photon_ptScaleUp", "Photon_pt*Photon_energyScaleUp")
+        signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("Photon_ptScaleDown", "Photon_pt*Photon_energyScaleDown")
 
-            # Then calculate the vertex/raw mass with scaled/smeared values
-            for corr in ['Scale', 'Smear']:
-                for d in ['Up', 'Down']:
-                    signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("best_2g_{}{}_m{}_info".format(corr,d,m), "getDxy(Photon_pt{}{}, Photon_eta, Photon_phi, Photon_isScEtaEB, Photon_isScEtaEE, best_2g_idx1_m{}, best_2g_idx2_m{}, {})".format(corr, d, m, m, m))
-                    signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("best_2g_dxy_{}{}_m{}".format(corr,d,m), "best_2g_{}{}_m{}_info[0]".format(corr,d,m))
-                    signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("best_2g_raw_mass_{}{}_m{}".format(corr,d,m), "best_2g_{}{}_m{}_info[1]".format(corr,d,m))
-
-    # Now get expected signal for each lifetime
-    for ctau in lifetimes:
-        # Category name
-        cat = "{}H_{}_m{}_ctau{}_{}{}".format(v,l,m,ctau,era,model_sfx)
-        
-        # Lifetime reweighting
-        ct = ctau
-        reweight = "(1)"
-        if ct not in [0, 10, 20, 50, 100, 1000]:
-            ct = min([x for x in [0,10,20,50,100,1000] if x >= ctau], key = lambda x: abs(x-ctau))
-            reweight = "(reweight_{}to{})".format(ct, ctau)
-            for channel in channels:
-                signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("reweight_{}to{}".format(ct,ctau), "reweightCT(GenPart_ctau[abs(GenPart_pdgId)==9000006], {}/10., {}/10.)".format(ct, ctau))
-
-        # Nominal signal
-        sig ={}
-        remove = []
-        for channel in channels:
-            sig[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfs+")*("+reweight+")", startVH.lumi[era], ("sig_{}_{}_m{}_ct{}".format(v,l,m,ct), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-            if sig[channel] == None:
-                print(f'\nRemoving channel {channel}\n')
-                remove.append(channel)
-            else:
-                sig[channel] = startVH.unfoldTH2(sig[channel])
-                sig[channel].Rebin(len(binsX) - 1, f"{channel}_HToPhiPhi_ctau{ctau}", binsX)
-                sig[channel] = ROOT.gDirectory.Get(f"{channel}_HToPhiPhi_ctau{ctau}")
-                sig[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}", ROOT.TObject.kOverwrite)
-        
-        for channel in remove:
-            channels.remove(channel)
-
-        # Energy scale/smearing corrections, scale factor corrections
-        sigScaleUp = {}
-        sigScaleDown = {}
-
-        sigScaleUp[v] = {}
-        sigScaleDown[v] = {}
-        if l == 'ELE':
-            for sf in ['reco', 'id', 'trig']:
-                sfUp, sfDown = startVH.getSF(startVH.scaleFactors[v][l] + startVH.scaleFactors['g'][m], 'Electron_{}'.format(sf))
-                sigUp = {}
-                sigDown = {}
-                sigScaleUp[v][sf] = {}
-                sigScaleDown[v][sf] = {}
-                for channel in channels:
-                    sigUp[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfUp+")*("+reweight+")", startVH.lumi[era], ("sig_ele{}Up_{}_{}_m{}_ct{}".format(sf,v,l,m,ct), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-                    sigUp[channel] = startVH.unfoldTH2(sigUp[channel])
-                    sigUp[channel].Rebin(len(binsX) - 1, f"sig_ele{sf}Up_{v}_{l}_m{m}_ct{ctau}", binsX)
-                    sigUp[channel] = ROOT.gDirectory.Get(f"sig_ele{sf}Up_{v}_{l}_m{m}_ct{ctau}")
-                    sigUp[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}_ele_{sf}Up", ROOT.TObject.kOverwrite)
-                    sigScaleUp[v][sf][channel] = fillZeroBins(sigUp[channel], 0)
-
-                    sigDown[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfDown+")*("+reweight+")", startVH.lumi[era], ("sig_ele{}Down_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-                    sigDown[channel] = startVH.unfoldTH2(sigDown[channel])
-                    sigDown[channel].Rebin(len(binsX) - 1, f"sig_ele{sf}Down_{v}_{l}_m{m}_ct{ctau}", binsX)
-                    sigDown[channel] = ROOT.gDirectory.Get(f"sig_ele{sf}Down_{v}_{l}_m{m}_ct{ctau}")
-                    sigDown[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}_ele_{sf}Down", ROOT.TObject.kOverwrite)
-
-                    sigScaleDown[v][sf][channel] = fillZeroBins(sigDown[channel], 0)
-
-        if l == 'MU':
-            for sf in ['reco', 'id', 'trig', 'iso']:
-                sfUp, sfDown = startVH.getSF(startVH.scaleFactors[v][l] + startVH.scaleFactors['g'][m], 'Muon_{}'.format(sf))
-                sigUp={}
-                sigDown={}
-                sigScaleUp[v][sf] = {}
-                sigScaleDown[v][sf] = {}
-                for channel in channels:
-                    sigUp[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfUp+")*("+reweight+")", startVH.lumi[era], ("sig_mu{}Up_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-                    sigUp[channel] = startVH.unfoldTH2(sigUp[channel])
-                    sigUp[channel].Rebin(len(binsX) - 1, f"sig_mu{sf}Up_{v}_{l}_m{m}_ct{ctau}", binsX)
-                    sigUp[channel] = ROOT.gDirectory.Get(f"sig_mu{sf}Up_{v}_{l}_m{m}_ct{ctau}")
-                    sigUp[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}_mu_{sf}Up", ROOT.TObject.kOverwrite)
-
-                    sigScaleUp[v][sf][channel] = fillZeroBins(sigUp[channel], 0)
-
-                    sigDown[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfDown+")*("+reweight+")", startVH.lumi[era], ("sig_mu{}Down_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-                    sigDown[channel] = startVH.unfoldTH2(sigDown[channel])
-                    sigDown[channel].Rebin(len(binsX) - 1, f"sig_mu{sf}Down_{v}_{l}_m{m}_ct{ctau}", binsX)
-                    sigDown[channel] = ROOT.gDirectory.Get(f"sig_mu{sf}Down_{v}_{l}_m{m}_ct{ctau}")
-                    sigDown[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}_mu_{sf}Down", ROOT.TObject.kOverwrite)
-
-                    sigScaleDown[v][sf][channel] = fillZeroBins(sigDown[channel], 0)
-
-        sigScaleUp['g'] = {}
-        sigScaleDown['g'] = {}
-        for sf in ['id', 'pix']:
-            sfUp, sfDown = startVH.getSF(startVH.scaleFactors[v][l] + startVH.scaleFactors['g'][m], "Photon_{}".format(sf))
-            sigScaleUp['g'][sf] = {}
-            sigScaleDown['g'][sf] = {}
-            for channel in channels:
-                sigUp[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfUp+")*("+reweight+")", startVH.lumi[era], ("sig_pho{}Up_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-                sigUp[channel] = startVH.unfoldTH2(sigUp[channel])
-                sigUp[channel].Rebin(len(binsX) - 1, f"sig_pho{sf}Up_{v}_{l}_m{m}_ct{ctau}", binsX)
-                sigUp[channel] = ROOT.gDirectory.Get(f"sig_pho{sf}Up_{v}_{l}_m{m}_ct{ctau}")
-                sigUp[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}_pho_{sf}Up", ROOT.TObject.kOverwrite)
-
-                sigScaleUp['g'][sf][channel] = fillZeroBins(sigUp[channel], 0)
-
-                sigDown[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_m{}".format(m), "best_2g_dxy_m{}".format(m), "("+cuts['sr'][v][l][m]+")*("+sfDown+")*("+reweight+")", startVH.lumi[era], ("sig_pho{}Down_{}_{}_m{}_ct{}".format(sf,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-                sigDown[channel] = startVH.unfoldTH2(sigDown[channel])
-                sigDown[channel].Rebin(len(binsX) - 1, f"sig_pho{sf}Down_{v}_{l}_m{m}_ct{ctau}", binsX)
-                sigDown[channel] = ROOT.gDirectory.Get(f"sig_pho{sf}Down_{v}_{l}_m{m}_ct{ctau}")
-                sigDown[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}_pho_{sf}Down", ROOT.TObject.kOverwrite)
-
-                sigScaleDown['g'][sf][channel] = fillZeroBins(sigDown[channel], 0)
-        
+        # Then calculate the vertex/raw mass with scaled/smeared values
         for corr in ['Scale', 'Smear']:
-            sigUp = {}
-            sigDown = {}
-            sigScaleUp['g'][corr] = {}
-            sigScaleDown['g'][corr]={}
-            for channel in channels:
-                sigUp[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_{}Up_m{}".format(corr,m), "best_2g_dxy_{}Up_m{}".format(corr,m), "("+cuts['sr'][v][l][m]+")*("+sfs+")*("+reweight+")", startVH.lumi[era], ("sig_pho{}Up_{}_{}_m{}_ct{}".format(corr,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-                sigUp[channel] = startVH.unfoldTH2(sigUp[channel])
-                sigUp[channel].Rebin(len(binsX) - 1, f"sig_pho{corr}Up_{v}_{l}_m{m}_ct{ctau}", binsX)
-                sigUp[channel] = ROOT.gDirectory.Get(f"sig_pho{corr}Up_{v}_{l}_m{m}_ct{ctau}")
-                sigUp[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}_pho_{corr}Up", ROOT.TObject.kOverwrite)
+            for d in ['Up', 'Down']:
+                signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("best_2g_{}{}_m{}_info".format(corr,d,m), "getDxy(Photon_pt{}{}, Photon_eta, Photon_phi, Photon_isScEtaEB, Photon_isScEtaEE, best_2g_idx1_m{}, best_2g_idx2_m{}, {})".format(corr, d, m, m, m))
+                signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("best_2g_dxy_{}{}_m{}".format(corr,d,m), "best_2g_{}{}_m{}_info[0]".format(corr,d,m))
+                signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].define("best_2g_raw_mass_{}{}_m{}".format(corr,d,m), "best_2g_{}{}_m{}_info[1]".format(corr,d,m))
 
-                sigScaleUp['g'][corr][channel] = fillZeroBins(sigUp[channel], 0)
+make_histogram = monteCarlo_histogram_setup()
 
-                sigDown[channel] = signal[channel][startVH.ana[v][l]][m][ct]['2G2Q'].hist2d("best_2g_raw_mass_{}Down_m{}".format(corr,m), "best_2g_dxy_{}Down_m{}".format(corr,m), "("+cuts['sr'][v][l][m]+")*("+sfs+")*("+reweight+")", startVH.lumi[era], ("sig_pho{}Down_{}_{}_m{}_ct{}".format(corr,v,l,m,ctau), "", binsM, 4, m+5, binsLxy, lxyMin, lxyMax))
-                sigDown[channel] = startVH.unfoldTH2(sigDown[channel])
-                sigDown[channel].Rebin(len(binsX) - 1, f"sig_pho{corr}Down_{v}_{l}_m{m}_ct{ctau}", binsX)
-                sigDown[channel] = ROOT.gDirectory.Get(f"sig_pho{corr}Down_{v}_{l}_m{m}_ct{ctau}")
-                sigDown[channel].Write(f"{channel}_HToPhiPhi_ctau{ctau}_pho_{corr}Down", ROOT.TObject.kOverwrite)
+# Now get expected signal for each lifetime
+for ctau in lifetimes:
+    # Category name
+    cat = "{}H_{}_m{}_ctau{}_{}{}".format(v,l,m,ctau,era,model_sfx)
+    
+    # Nominal signal
+    sig = processChannels(f"sig_{v}_{l}_m{m}_ct{ct}",sfs,ctau)
+    
+    sigScaleUp = {}
+    sigScaleDown = {}
 
-                sigScaleDown['g'][corr][channel] = fillZeroBins(sigDown[channel], 0)
+    Lepton_sigScaleUp, Lepton_sigScaleDown = processLeptonScaleFactors(l,ctau)
+    print(Lepton_sigScaleUp)
+    sigScaleUp.update(Lepton_sigScaleUp)
+    sigScaleDown.update(Lepton_sigScaleDown)
 
-        sig_list = []
-        # Now make the cards
-        for i in range(data_obs.GetNbinsX()):
-            skip_channel = {channel: False for channel in channels}
-            for channel in channels:        
-                # Check bin content for the current channel
-                if sig[channel].GetBinContent(i + 1) <= 0:
-                    skip_channel[channel] = True  # Mark channel to be skipped
-            kept_channels = []
-            for channel in channels:
-                if not skip_channel[channel]:
-                    kept_channels.append(channel)
+    Photon_corrScaleUp, Photon_corrScaleDown = processPhotonCorrections(['Scale', 'Smear'],ctau)
+    Photon_sigScaleUp, Photon_sigScaleDown  = processPhotonScaleFactors(['id', 'pix'],ctau)
 
-            # Process channels that are not marked to skip
-            for channel in channels:
+    
+    Photon_corrScaleUp.update(Photon_sigScaleUp)
+    Photon_corrScaleDown.update(Photon_sigScaleDown)
 
-                if skip_channel[channel]:
-                    continue  # Skip processing for this channel
-            
-                # Process the channel here if it's not skipped
-                print(f"Processing {channel} at bin {i} for lifetime {ctau}")
+    
+    sigScaleUp['g'] = Photon_corrScaleUp
+    sigScaleDown['g'] = Photon_corrScaleDown
 
-                card = open("datacard_{}_bin{}.txt".format(cat, i), "w")
-                card.write("imax 1\n")
-                card.write("jmax *\n")
-                card.write("kmax *\n")
-                card.write('--------------------------------------------------\n')
-                card.write("bin {}_bin{}\n".format(cat, i))
-                card.write("observation {}\n".format(data_obs.GetBinContent(i+1)))
-                card.write('--------------------------------------------------\n')
-                bin = "bin\t"
-                process = "process\t"
-                iprocess= "process\t"
-                rate="rate\t"
-                for ichannel,channel in enumerate(kept_channels):
-                    bin+=f"{cat}_bin{i}\t"
-                    process+=f"{channel}_HToPhiPhi_ctau{ctau}\t"
-                    iprocess+=f"{-ichannel}\t"
-                    rate+=f"{0.1*sig[channel].GetBinContent(i+1)}\t"
-                bin+=f"{cat}_bin{i}\n"
-                process+="\tbackground\n"
-                iprocess+="1\n"
-                rate+=f"{background.GetBinContent(i+1)}\n"
-                card.write(bin)
-                card.write(process)
-                card.write(iprocess)
-                card.write(rate)
-                card.write('--------------------------------------------------\n')
-                card.write(f"CMS.lumi_{era}\tlnN\t"+f"{startVH.lumiUnc[era]}\t"*len(kept_channels)+"-\n")
-                card.write(f"CMS_pileup_{era}\tlnN\t"+"1.05\t"*len(kept_channels)+"-\n")
-                if options.model == "SM":
-                        for ichannel,channel in enumerate(kept_channels):
-                            card.write(f"CMS_xsec_{channel}\tlnN\t" + 
-                                    "-\t"*ichannel +
-                                    f"{(1.0+xsecUnc[channel][0])/1.0}/{(1.0+xsecUnc[channel][1])/1.0}\t" +
-                                    "-\t"*(len(kept_channels) - ichannel - 1) +
-                                    "-\n")
-                            card.write(f"CMS_pdf_{channel}\tlnN\t"+
-                                    "-\t"*ichannel +
-                                    f"{pdfUnc[channel]}\t" +
-                                    "-\t"*(len(kept_channels) - ichannel - 1) +
-                                    "-\n")
-                        #card.write(f"CMS_xsec_{v}\tlnN\t"+f"{(1.0+xsecUnc[v][0])/1.0}/{(1.0+xsecUnc[v][1])/1.0}\t"*len(channels)+"-\n")
-                        #card.write(f"CMS_pdf_{v}\tlnN\t"+f"{pdfUnc[v]}\t"*len(channels)+"-\n")
-                card.write(f"CMS_bkg_{cat}_norm\tgmN\t{int(tight_sb.Integral())}\t"+f"-\t"*len(kept_channels)+f"{background.GetBinContent(i+1)/tight_sb.Integral()}\n")
-                card.write(f"CMS_bkg_{cat}_bin{i}_shape\tlnN\t"+f"-\t"*len(kept_channels)+"1.4\n")
-                
-                for sf in sigScaleUp[v]:
-                    s = f"CMS_{l}_{sf}\tlnN\t"
-                    for ichannel,channel in enumerate(kept_channels):
-                        errUp = sigScaleUp[v][sf][channel].GetBinContent(i+1) / sig[channel].GetBinContent(i+1)
-                        errDown = sigScaleDown[v][sf][channel].GetBinContent(i+1) / sig[channel].GetBinContent(i+1)
-                        if errUp == 0:
-                            errUp = 1.0
-                        if errDown == 0:
-                            errDown = 1.0
-                        s+=f"{errDown}/{errUp}\t"
-                    s+="-\n"
-                    card.write(s)
-                for sf in sigScaleUp['g']:
-                    s = f"CMS_gamma_{sf}\tlnN\t"
-                    for ichannel, channel in enumerate(kept_channels):
-                        errUp = sigScaleUp['g'][sf][channel].GetBinContent(i+1) / sig[channel].GetBinContent(i+1)
-                        errDown = sigScaleDown['g'][sf][channel].GetBinContent(i+1) / sig[channel].GetBinContent(i+1)
-                        if errUp == 0:
-                            errUp = 1.0
-                        if errDown == 0:
-                            errDown = 1.0
-                        s+=f"{errDown}/{errUp}\t"
-                    s+="-\n"
-                    card.write(s)
-                card.close()
-            print(f'done with lifetime {ctau}')
-            for channel in kept_channels:
-                sig_list.append({"bin":i,"channel":channel,"rate":0.1*sig[channel].GetBinContent(i+1)})
-            sig_list.append({"bin":i,"channel":"background","rate":background.GetBinContent(i+1)})
-            
-        print(sig_list)
+    # Now make the cards
+    print(channels)
+    for ibin in range(data_obs.GetNbinsX()):
+        skip_channel  = {channel:True if sig[channel].GetBinContent(ibin+1) <= 0 else False for channel in channels}
+        kept_channels = [channel for channel in channels if not skip_channel[channel]]
         
-        import csv        
-        with open(f"{v}_{l}_m{m}_ctau{ctau}_{era}.csv",'w',newline='') as csvfile:
-            fieldnames = ["bin","channel","rate"]
-            writer = csv.DictWriter(csvfile, fieldnames = fieldnames)
-            writer.writeheader()
-            writer.writerows(sig_list)
+        for channel in channels:
+            if skip_channel[channel]:
+                continue
+    
+            print(f"Processing {channel} at bin {ibin} for lifetime {ctau}, era {era}")
+            card = open(f"datacard_{cat}_bin{ibin}.txt", "w")
+            card.write("#MC BR(Higgs->Phi Phi)(Phi->gamma gamma) = 0.5\n")
+            card.write("#Signal processes scaled by 0.1\n")
+            card.write('#BR_limit = r_limit * 0.05\n')
+            card.write('\n')
+            card.write("imax 1\n")
+            card.write("jmax *\n")
+            card.write("kmax *\n")
+            card.write('--------------------------------------------------\n')
+            card.write("bin {}_bin{}\n".format(cat, ibin))
+            card.write("observation {}\n".format(data_obs.GetBinContent(ibin+1)))
+            card.write('--------------------------------------------------\n')
+            bin = "bin\t"
+            process = "process\t"
+            iprocess= "process\t"
+            rate="rate\t"
+            for ichannel,channel in enumerate(kept_channels):
+                bin+=f"{cat}_bin{ibin}\t"
+                process+=f"{channel}_HToPhiPhi_ctau{ctau}\t"
+                iprocess+=f"{-ichannel}\t"
+                rate+=f"{0.1*sig[channel].GetBinContent(ibin+1)}\t"
+            bin+=f"{cat}_bin{ibin}\n"
+            process+="\tbackground\n"
+            iprocess+="1\n"
+            rate+=f"{background.GetBinContent(ibin+1)}\n" 
+            card.write(bin)
+            card.write(process)
+            card.write(iprocess)
+            card.write(rate)
+            card.write('--------------------------------------------------\n')
+            card.write(f"CMS.lumi_{era}\tlnN\t"+f"{startVH.lumiUnc[era]}\t"*len(kept_channels)+"-\n")
+            card.write(f"CMS_pileup_{era}\tlnN\t"+"1.05\t"*len(kept_channels)+"-\n")
+            if options.model == "SM":
+                for ichannel,channel in enumerate(kept_channels):
+                    card.write(f"CMS_xsec_{channel}\tlnN\t" + 
+                            "-\t"*ichannel +
+                            f"{(1.0+xsecUnc[channel][0])/1.0}/{(1.0+xsecUnc[channel][1])/1.0}\t" + #uncertainties are in percentages
+                            "-\t"*(len(kept_channels) - ichannel - 1) +
+                            "-\n")
+                    card.write(f"CMS_pdf_{channel}\tlnN\t"+
+                            "-\t"*ichannel +
+                            f"{pdfUnc[channel]}\t" +
+                            "-\t"*(len(kept_channels) - ichannel - 1) +
+                            "-\n")
+            card.write(f"CMS_bkg_{cat}_bin{ibin}_norm\tgmN\t{round(background.GetBinContent(ibin+1)/scale)}\t"+f"-\t"*len(kept_channels)+f"{scale}\n")
+            card.write(f"CMS_bkg_{cat}_shape\tlnN\t"+f"-\t"*len(kept_channels)+f"{1 + scale_error/scale}"+"\n")
+
+            if uncertainties[ibin] == 'nan':
+                continue
+            else:
+                card.write(f"CMS_bkg_{cat}_bin{ibin}_closure\tlnN\t"+f"-\t"*len(kept_channels)+f"{uncertainties[ibin]}"+"\n")
+
+
+            for sf in sigScaleUp[v]:
+                s = f"CMS_{l}_{sf}\tlnN\t"
+                for ichannel,channel in enumerate(kept_channels):
+                    errUp = sigScaleUp[v][sf][channel].GetBinContent(ibin+1) / sig[channel].GetBinContent(ibin+1)
+                    errDown = sigScaleDown[v][sf][channel].GetBinContent(ibin+1) / sig[channel].GetBinContent(ibin+1)
+                    if errUp == 0:
+                        errUp = 1.0
+                    if errDown == 0:
+                        errDown = 1.0
+                    if errDown == 1.0 and errUp == 1.0:
+                        s+= "-\t"
+                    else:
+                        s+=f"{errDown}/{errUp}\t"
+                s+="-\n"
+                card.write(s)
+            for sf in sigScaleUp['g']:
+                s = f"CMS_gamma_{sf}\tlnN\t"
+                for ichannel, channel in enumerate(kept_channels):
+                    errUp = sigScaleUp['g'][sf][channel].GetBinContent(ibin+1) / sig[channel].GetBinContent(ibin+1)
+                    errDown = sigScaleDown['g'][sf][channel].GetBinContent(ibin+1) / sig[channel].GetBinContent(ibin+1)
+                    if errUp == 0:
+                        errUp = 1.0
+                    if errDown == 0:
+                        errDown = 1.0
+                    if errDown == 1.0 and errUp == 1.0:
+                        s+= "-\t"
+                    else:
+                        s+=f"{errDown}/{errUp}\t"
+                s+="-\n"
+                card.write(s)
+            card.close()
+    print(f'done with lifetime {ctau} {era} {v} {l} category')
+    ROOT.gSystem.Exit(0)
