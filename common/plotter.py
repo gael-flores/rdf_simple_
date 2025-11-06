@@ -6,11 +6,51 @@ import ctypes
 import math
 import common.tdrstyle as tdrstyle
 import common.CMS_lumi as CMS_lumi
+from python.VHTools.py_helpers import *
 sty = tdrstyle.setTDRStyle()
 
 ### = commented out to test tdrStyle, uncomment if not using
 
 drawprelim = True
+
+@contextmanager
+def open_root_file(filename, mode="READ"):
+    """
+    Context manager for safely opening and closing a ROOT TFile.
+
+    This ensures that the ROOT file is automatically closed when the
+    context exits, even in the event of an exception.
+
+    Parameters:
+    ----------
+    filename : str
+        Path to the ROOT file to open.
+
+    mode : str, optional
+        Mode in which to open the file (default is "READ").
+        Typical options include:
+        - "READ"   : Open existing file for reading
+        - "UPDATE" : Open existing file for reading/writing
+        - "RECREATE": Create new file, overwriting if exists
+        - "NEW"    : Create new file, fail if exists
+
+    Yields:
+    ------
+    ROOT.TFile
+        The opened ROOT file object.
+
+    Example:
+    --------
+    >>> with open_root_file("data.root") as f:
+    ...     h = f.Get("myHistogram")
+    ...     h.Draw()
+    """
+    file = ROOT.TFile.Open(filename, mode)
+    try:
+        yield file
+    finally:
+        if file and file.IsOpen():
+            file.Close()
 
 class plotter_base(object):
 
@@ -54,25 +94,28 @@ class rdf_plotter(plotter_base):
         super(rdf_plotter,self).__init__()
         #if MC read the sum of weights and weigh the event
         if isMC:
-            f=ROOT.TFile(file)
-            t=f.Get('Runs')
-            sumw = 0.0
-            for event in t:
-                sumw += event.genEventSumw
-            self.weight = self.weight+'*(genWeight/{})*(sample_sigma)*(Pileup_weight)'.format(sumw if sumw>0 else 1.0)
-            f.Close()
+            with open_root_file(file) as f:
+                t = f.Get('Runs')
+                sumw = 0.0
+                for event in t:
+                    sumw += event.genEventSumw
+                self.weight = self.weight+'*(genWeight/{})*(sample_sigma)*(Pileup_weight)'.format(sumw if sumw>0 else 1.0)
 
-    def readReport(self):
+    def readReport(self) -> dict[str]:
         out = {}
-        report = ROOT.TFile(self.file).Get(self.report)
-        cuts = report.GetListOfBranches()
-        for c in cuts:
-            out[c] = 0
-        for event in report:
-            for c in cuts:
-                out[c] += getattr(event, c)
-        report.Close()
-        return out
+        with open_root_file(self.file) as f:
+            report = f.Get(self.report)
+            if not report:
+                raise RuntimeError(f"Report {self.report} not found in {self.file}")
+            
+            cuts = [b.GetName() for b in report.GetListOfBranches()]
+            out = {c: 0 for c in cuts}
+            for event in report:
+                for c in cuts:
+                    out[c] += getattr(event, c, 0)
+
+            return out
+        
 
     def define(self, var, definition):
         self.rdf = self.rdf.Define(var, definition)
@@ -105,6 +148,8 @@ class rdf_plotter(plotter_base):
         rdf=self.rdf.Define('plot_weight',c)
         h=rdf.Histo1D(model,var,'plot_weight')
         h.Sumw2()
+        #h.Sumw2(0)
+        #h.SetBinErrorOption(ROOT.TH1D.kPoisson)
         h.SetLineStyle(self.linestyle)
         h.SetLineColor(self.linecolor)
         h.SetLineWidth(self.linewidth)
@@ -153,6 +198,8 @@ class rdf_plotter(plotter_base):
         rdf=self.rdf.Define('plot_weight',c)
         h=rdf.Histo2D(model,var1,var2,'plot_weight')
         h.Sumw2()
+        #h.Sumw2(0)
+        #h.SetBinErrorOption(ROOT.TH1D.kPoisson)
         h.SetLineStyle(self.linestyle)
         h.SetLineColor(self.linecolor)
         h.SetLineWidth(self.linewidth)
@@ -168,38 +215,6 @@ class rdf_plotter(plotter_base):
         else:
             h.GetYaxis().SetTitle(titley+ " ["+unitsy+"]")
         return h
-
-
-
-
-def convertToPoisson(h):
-    graph = ROOT.TGraphAsymmErrors()
-    q = (1-0.6827)/2.
-
-    for i in range(1,h.GetNbinsX()+1):
-        x=h.GetXaxis().GetBinCenter(i)
-        xLow =h.GetXaxis().GetBinLowEdge(i) 
-        xHigh =h.GetXaxis().GetBinUpEdge(i) 
-        y=h.GetBinContent(i)
-        yLow=0
-        yHigh=0
-        if y !=0.0:
-            yLow = y-ROOT.Math.chisquared_quantile_c(1-q,2*y)/2.
-            yHigh = ROOT.Math.chisquared_quantile_c(q,2*(y+1))/2.-y
-            graph.SetPoint(i-1,x,y)
-            graph.SetPointEYlow(i-1,yLow)
-            graph.SetPointEYhigh(i-1,yHigh)
-            graph.SetPointEXlow(i-1,0.0)
-            graph.SetPointEXhigh(i-1,0.0)
-
-
-    graph.SetMarkerStyle(20)
-    graph.SetLineWidth(2)
-    graph.SetMarkerSize(1.)
-    graph.SetMarkerColor(ROOT.kBlack)
-    
-
-    return graph    
 
 
 
@@ -219,6 +234,10 @@ class merged_plotter(plotter_base):
         for plotter in self.plotters:
             plotter.define(var, definition)
 
+    def filter(self, condition):
+        for plotter in self.plotters:
+            plotter.filter(condition)
+
     def redefine(self, var, definition):
         for plotter in self.plotters:
             plotter.redefine(var, definition)
@@ -235,6 +254,8 @@ class merged_plotter(plotter_base):
             tmprdf = tmprdf.Define("x", "0")
             h = tmprdf.Define("goodX", "x!=0").Histo1D(model, "goodX")
         h.Sumw2()
+        #h.Sumw2(0)
+        #h.SetBinErrorOption(ROOT.TH1D.kPoisson)
         h.SetLineStyle(self.linestyle)
         h.SetLineColor(self.linecolor)
         h.SetLineWidth(self.linewidth)
@@ -259,6 +280,8 @@ class merged_plotter(plotter_base):
             return h
         else:
             h.Sumw2()
+            #h.Sumw2(0)
+            #h.SetBinErrorOption(ROOT.TH1D.kPoisson)
             h.SetLineStyle(self.linestyle)
             h.SetLineColor(self.linecolor)
             h.SetLineWidth(self.linewidth)
@@ -274,6 +297,47 @@ class merged_plotter(plotter_base):
             else:
                 h.GetYaxis().SetTitle(titley+ " ["+unitsy+"]")
             return h
+    def getArray(self, var, cuts, lumi):
+        """
+        Applies cuts to RDF and extracts numpy array of values for a specific variable.
+
+        Parameters:
+            vars (str): variable
+            cuts (str): Selection cuts
+            lumi (str): Luminosity weight
+            range (tuple) : range over
+
+        Returns:
+            list of values corresponding to cuts
+        """        
+        # Initialize empty lists to store the data
+        combined_var = []
+
+        # Iterate over the plotters and collect data
+        for plotter in self.plotters:
+            # Define weight expression
+            corrString = "1.0"
+            for corr in plotter.corrFactors:
+                corrString += f"*({corr['value']})"
+
+            # Apply cuts and filters based on the provided cuts and lumi
+            weight_expr = f"({plotter.defaultCuts})*({cuts})*{lumi}*{plotter.weight}*({corrString})"
+            rdf = plotter.rdf.Define("plot_weight", weight_expr)
+            rdf = rdf.Filter("plot_weight")
+
+            # Get data from the current plotter
+            numpy_var = rdf.AsNumpy([var])[var]
+
+            # Collect the data
+            combined_var.extend(numpy_var)
+
+        # If no data points were collected, return None
+        if len(combined_var) == 0:
+            return None
+
+        
+
+        return combined_var
     
     def display(self,var):
         for plotter in self.plotters:

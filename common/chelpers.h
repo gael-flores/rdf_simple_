@@ -306,6 +306,100 @@ float ll_mass(const RVec<size_t>& idx,RVecF mpt, RVecF meta, RVecF mphi, RVecF m
   return m;
 }
 
+// Calculate invariant mass of lepton + closest photon
+float calculate_lgamma_mass(const float lpt, float leta, float lphi, float lmass,
+                            const RVecF& gpt, const RVecF& geta, const RVecF& gphi) {
+    if (gpt.empty()) return -1.0; // return -1 if no photons
+
+    ROOT::Math::PtEtaPhiMVector lep(lpt, leta, lphi, lmass);
+    float minDR = std::numeric_limits<float>::max();
+    int bestIdx = -1;
+    for (size_t i = 0; i < gpt.size(); i++) {
+        float dR = DeltaR(leta, geta[i], lphi, gphi[i]);
+        if (dR < minDR) {
+            minDR = dR;
+            bestIdx = i;
+        }
+    }
+    if (bestIdx == -1) return -1.0; // no valid photon found
+
+    ROOT::Math::PtEtaPhiMVector gamma(gpt[bestIdx], geta[bestIdx], gphi[bestIdx], 0.0);
+    return (lep + gamma).M();
+}
+
+// Return dR to the closest photon (loop over all photons)
+RVecF deltaR_lgamma(const float leta, const float lphi,const RVecF& geta, const RVecF& gphi) {
+    RVecF result;
+    float min_dR = std::numeric_limits<float>::max();
+    int closest_idx = -1;
+
+    for (int i = 0; i < static_cast<int>(geta.size()); i++) {
+        float dR = DeltaR(geta[i], leta, gphi[i], lphi);
+        if (dR < min_dR) {
+            min_dR = dR;
+            closest_idx = i;
+        }
+    }
+    if (closest_idx != -1) {
+        result.emplace_back(min_dR);
+    }
+
+    return result; // Empty if no photons exist
+}
+
+float calculate_lgamma_mass_idx(const float lpt, float leta, float lphi, float lmass,
+                            const RVecF& gpt, const RVecF& geta, const RVecF& gphi,
+                            const int idx1, const int idx2) {
+    if (gpt.empty()) return -1.0; // return -1 if no photons
+
+    ROOT::Math::PtEtaPhiMVector lep(lpt, leta, lphi, lmass);
+    float minDR = std::numeric_limits<float>::max();
+    int bestIdx = -1;
+
+    for (int i : {idx1, idx2}) {
+      if (i < 0 || i >= static_cast<int>(geta.size()))  // Check index bounds
+          continue;
+      
+      float dR = DeltaR(leta, geta[i], lphi, gphi[i]);
+      if (dR < minDR) {
+          minDR = dR;
+          bestIdx = i;
+      }
+    }
+    if (bestIdx == -1) return -1.0; // no valid photon found
+
+    ROOT::Math::PtEtaPhiMVector gamma(gpt[bestIdx], geta[bestIdx], gphi[bestIdx], 0.0);
+    return (lep + gamma).M();
+}
+
+RVecF deltaR_lgamma_idx(const float leta, const float lphi,
+                        const RVecF& geta, const RVecF& gphi,
+                            const int idx1, const int idx2) {
+  RVecF result;  // Store phi difference of the closest photon
+  float min_dR = std::numeric_limits<float>::max();
+  int closest_idx = -1;
+
+  for (int i : {idx1, idx2}) {  // Only consider idx1 and idx2
+      if (i < 0 || i >= static_cast<int>(geta.size()))  // Check index bounds
+          continue;
+
+      float dR = DeltaR(geta[i], leta, gphi[i], lphi);
+      if (dR < min_dR) {
+          min_dR = dR;
+          closest_idx = i;
+      }
+  }
+
+  if (closest_idx != -1) {
+      result.emplace_back(min_dR);
+  }
+
+  return result; // Returns empty vector if no valid photons are found
+}
+
+
+
+
 float calculate_llgamma_mass(const RVec<size_t>& idx,RVecF mpt, RVecF meta, RVecF mphi, RVecF mmass,RVecF gpt, RVecF geta, RVecF gphi, RVecF gFSR) {
   ROOT::Math::PtEtaPhiMVector p1(mpt[idx[0]], meta[idx[0]], mphi[idx[0]], mmass[idx[0]]);
   ROOT::Math::PtEtaPhiMVector p2(mpt[idx[1]], meta[idx[1]], mphi[idx[1]], mmass[idx[1]]);
@@ -326,6 +420,39 @@ int getBin(const float val, const std::vector<float> bins){
   auto lower = std::lower_bound(bins.begin(), bins.end(), val); // Finds iterator of bin upper edge
   return (int) (std::distance(bins.begin(), lower) - 1);
 }
+
+// Get scale factors as a function of 1 variable
+RVec<RVecF> scaleFactors_1d(RVecF x, std::vector<std::vector<float>> SFs, std::vector<float> binsX, const bool CR, RVecB selection){
+  RVec<RVecF> out;
+  RVecF vals;
+  RVecF uncs;
+  out.reserve(2);
+  vals.reserve(x.size());
+  uncs.reserve(x.size());
+
+  for (size_t i = 0; i < x.size(); i++){
+    if (!(selection[i] && CR)) {
+      vals.emplace_back(1.0);
+      uncs.emplace_back(0.0);
+    }
+    else {
+      int binX = getBin(x[i], binsX);
+      if (binX < 0 || binX >= static_cast<int>(SFs.size())) {
+        vals.emplace_back(1.0f);
+        uncs.emplace_back(0.0f);
+      } else { 
+        vals.emplace_back(SFs[binX][0]);
+        uncs.emplace_back(SFs[binX][1]);
+      }
+    }
+  }
+
+  out.emplace_back(vals);
+  out.emplace_back(uncs);
+  return out;
+}
+
+
 
 // Get scale factors as a function of 2 variables
 RVec<RVecF> scaleFactors_2d(RVecF x, RVecF y, std::vector <std::vector<std::vector<float>>> SFs, std::vector<float> binsX, std::vector<float> binsY, const bool isMC, RVecB selection){

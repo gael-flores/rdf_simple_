@@ -24,11 +24,16 @@ parser.add_option("-p", "--processPart", dest="processPart",
 
 an = importlib.import_module('analysis.{}'.format(options.analysis))
 samp = importlib.import_module('analysis.{}samples'.format(options.analysis))
-#root://xrootd-cms.infn.it//
-#root://cmsxrootd.fnal.gov//
+
+Data_redirectors={
+"Europe": "root://xrootd-cms.infn.it//",
+"US":     "root://cmsxrootd.fnal.gov//",
+"Global": "root://cms-xrd-global.cern.ch// ",
+"Asia":   "root://xrootd-cms-kr.kisti.re.kr//"
+}
 actions=[]
 for sample in args:
-    data=createDataSet(samp.samples[sample],options.splitFactor,options.processPart,'root://cmsxrootd.fnal.gov//')
+    data=createDataSet(samp.samples[sample],options.splitFactor,options.processPart,Data_redirectors["Europe"])
     actions.extend(an.analysis(data,sample))
 ROOT.RDF.RunGraphs(actions)
 

@@ -22,6 +22,11 @@ samp = importlib.import_module('analysis.{}samples'.format(options.analysis))
 
 datasets= args
 
+# Only keep selected datasets if args provided
+if datasets:
+    samp.samples = {k: v for k, v in samp.samples.items() if k in datasets}
+
+
 def check_file(filename):
     f=0
     try:
@@ -38,7 +43,7 @@ def check_file(filename):
 
     
     
-os.system('tar --overwrite --exclude=".git" --exclude="common/__pycache__" --exclude="analysis/__pycache__"  -czvf /tmp/sandbox.tar.gz .')
+os.system('tar --overwrite --exclude=".git" --exclude="common/__pycache__" --exclude="toys/*" --exclude="local_samples/*" --exclude="pandas_dataframes/*" --exclude="*.ipynb" --exclude="datacard*" --exclude="*.pdf" --exclude="condor_output_files/*" --exclude="DDP/*" --exclude="*.png" --exclude="plots/*" --exclude="higgsCombine*" --exclude="analysis/__pycache__"  -czvf /tmp/sandbox.tar.gz .')
 os.system('mv /tmp/sandbox.tar.gz .')
 
 

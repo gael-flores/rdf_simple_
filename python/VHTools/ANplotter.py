@@ -2,6 +2,8 @@ import ROOT, math, os, itertools, glob, sys, ast
 sys.path.append("/uscms/home/gfavila/nobackup/rdf_simple_/")
 ROOT.gInterpreter.Declare('#include "common/chelpers.h"')
 import common.CMS_lumi as CMS_lumi
+from python.VHTools.config import *
+import datetime
 #from startVH import *
 import startVH
 from python.VHTools.VHcuts import *
@@ -13,18 +15,20 @@ ROOT.gROOT.SetBatch(True)
 import optparse
 parser = optparse.OptionParser()
 parser.add_option("-y","--year",dest="year",default="2018",help="2016 or 2017 or 2018")
-parser.add_option("-d", "--date", dest="date", default="04_05_24",help="current date (used to name output directory)")
 parser.add_option("-p", "--prod", dest="prod", default = "03_26_24", help="Date of production")
 parser.add_option("-c", "--datacard", dest="datacard", default = "08_16_23", help="date for datacard directory")
 parser.add_option("-m", "--mass", dest="mass" , type=int)
 (options,args) = parser.parse_args()
+
 year = options.year
-date = options.date
 prod = options.prod
 mass = options.mass
 
+date = datetime.date.today() #year-month-day)
+date = f"0{date.month}0{date.day}{str(date.year)[2:]}" if date.month < 10 else f"{date.month}0{date.day}{str(date.year)[2:]}"
+
 # Defining output directories
-path = "AN_{}".format(date)
+path = "plots_{}".format(date)
 if not os.path.isdir(path):
     os.mkdir(path)
 os.chdir(path)
@@ -33,6 +37,7 @@ if not os.path.isdir("figs"):
 os.chdir("/uscms/home/gfavila/nobackup/rdf_simple_/")
 
 masses = [options.mass]
+
 
 plotters = startVH.getPlotters(year, prod, "/uscms/home/gfavila/nobackup/rdf_simple_/DDP/",masses) #prod 03_26_24
 dataEMU  = plotters['dataEMU']
@@ -85,6 +90,7 @@ for v in ['W', 'Z']:
         for m in [mass]:
             sfs[v][l][m] = startVH.getSF(startVH.scaleFactors[v][l] + startVH.scaleFactors['g'][m])
 
+
 # Make vertex related plots for section 3 of the AN
 def plotSec3(year = "2018"):
     if not os.path.isdir("AN_{}/figs/vertex".format(date)):
@@ -128,7 +134,7 @@ def plotSec3(year = "2018"):
 
     leg.Draw("same")
 
-    CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Simulation Work in progress")
+    CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Simulation Preliminary")
     c.SaveAs(dir_out+"{}_signalLxy_comparison.pdf".format(year))
 
     ROOT.gInterpreter.Declare(
@@ -165,7 +171,7 @@ def plotSec3(year = "2018"):
             h.GetXaxis().SetTitleSize(0.05)  # Set the title size for the X-axis
             h.GetYaxis().SetLabelSize(0.04)  # Set the label size for the Y-axis
             h.GetYaxis().SetTitleSize(0.05)  # Set the title size for the Y-axis
-            CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Simulation Work in progress")
+            CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Simulation Preliminary")
             c.SaveAs(dir_out+"{}_deltaLxyVsLxy_{}_m{}.pdf".format(year,v,m))
             h.FitSlicesY()
             mean = ROOT.gDirectory.Get("h{}_1".format(m))
@@ -178,7 +184,7 @@ def plotSec3(year = "2018"):
             mean.GetXaxis().SetTitle("L_{xy}^{Gen} [cm]")
             mean.GetYaxis().SetTitle("Mean #Delta L_{xy} [cm]")
             mean.GetYaxis().SetRangeUser(-10, 10)
-            CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Simulation Work in progress")
+            CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Simulation Preliminary")
             c.SaveAs(dir_out+"{}_meanLxyVsLxy_{}_m{}.pdf".format(year,v,m))
             res = ROOT.gDirectory.Get("h{}_2".format(m))
             res.SetMarkerStyle(22)
@@ -191,7 +197,7 @@ def plotSec3(year = "2018"):
             res.GetXaxis().SetTitle("L_{xy}^{Gen} [cm]")
             res.GetYaxis().SetTitle("#sigma_{Lxy} [cm]")
             res.GetYaxis().SetRangeUser(0, 14)
-            CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Simulation Work in progress")
+            CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Simulation Preliminary")
             ###plotEditor.drawPrelim(c)
             ###plotEditor.drawCOM(c, intLumi[year])
             c.SaveAs(dir_out+"{}_sigmaLxyVsLxy_{}_m{}.pdf".format(year,v,m))
@@ -218,7 +224,7 @@ def plotSec3(year = "2018"):
             else:
                 means[m].Draw("same,p")
         leg.Draw("same")
-        CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Simulation Work in progress")
+        CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Simulation Preliminary")
         c.SaveAs(dir_out+"{}_meanLxyVsLxy_{}_all.pdf".format(year,v))
         c.SaveAs(dir_out+"{}_meanLxyVsLxy_{}_all.root".format(year,v))
         c.SaveAs(dir_out+"{}_meanLxyVsLxy_{}_all.png".format(year,v))
@@ -237,7 +243,7 @@ def plotSec3(year = "2018"):
                 first = False
             else:
                 sigmas[m].Draw("same,p")
-        CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Simulation Work in progress")
+        CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Simulation Preliminary")
 
         leg.Draw("same")
         c.SaveAs(dir_out+"{}_sigmaLxyVsLxy_{}_all.pdf".format(year,v))
@@ -275,7 +281,7 @@ def plotSec3(year = "2018"):
                 h.SetStats(0)
                 ###plotEditor.drawPrelim(c)
                 ###plotEditor.drawCOM(c, intLumi[year])
-                CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Work in progress")
+                CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Preliminary")
                 h.SetMarkerStyle(22)
                 h.SetLineColor(colors[m2])
                 h.SetMarkerColor(colors[m2])
@@ -290,7 +296,7 @@ def plotSec3(year = "2018"):
             stk.GetYaxis().SetTitle("a.u.")
             ###plotEditor.drawPrelim(c)
             ###plotEditor.drawCOM(c, intLumi[year])
-            CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Work in progress")
+            CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Preliminary")
     
             c.SaveAs(dir_out+"{}_deltaLxy_{}_m{}.pdf".format(year, v, m1))
 
@@ -303,7 +309,7 @@ def plotSec4(year = "2018"):
     
     # Preselection data/MC agreement
     #for i in [1, 2]:
-    """
+    
     for i in [1]:
         sfx = "_med" if i==1 else "_tight"
         for l in ['ELE', 'MU']:
@@ -345,7 +351,7 @@ def plotSec4(year = "2018"):
         for m in [mass]:
             
             # Z mass
-            z = mcStack[startVH.ana['Z'][l]][0].draw_comp("Z_mass", cuts['Z'][l]+"&&"+cuts['photons'][m]+"&&best_2g_sumID_m{}==1".format(m), ("z_mass_{}_preFSR_comp".format(m), "", 20, 70, 110), SFs=sfs['Z'][l][m], titlex="m({}{}) [GeV]".format(lep,lep), prelim="Simulation Work in progress")
+            z = mcStack[startVH.ana['Z'][l]][0].draw_comp("Z_mass", cuts['Z'][l]+"&&"+cuts['photons'][m]+"&&best_2g_sumID_m{}==1".format(m), ("z_mass_{}_preFSR_comp".format(m), "", 20, 70, 110), SFs=sfs['Z'][l][m], titlex="m({}{}) [GeV]".format(lep,lep), prelim="Simulation Preliminary")
             
             sig_ggZH = signal['ggZH'][startVH.ana['Z'][l]][m][0]['2G2Q'].hist1d("Z_mass", "("+cuts['Z'][l]+"&&"+cuts['photons'][m]+"&&best_2g_sumID_m{}==2".format(m)+")*("+sfs['Z'][l][m]+")", "1", ("sig_z_mass_{}_preFSR_comp".format(m), "", 20, 70, 110))
             
@@ -379,7 +385,7 @@ def plotSec4(year = "2018"):
             
             
             # Z+g1 mass
-            z = mcStack[startVH.ana['Z'][l]][0].draw_comp("best_2g_fsr1_m{}".format(m), cuts['Z'][l]+"&&"+cuts['photons'][m]+"&&best_2g_sumID_m{}==1".format(m), ("zg1_mass_{}_preFSR_comp".format(l), "", 20, 70, 110), SFs=sfs['Z'][l][m], titlex="m({}{}".format(lep,lep)+"#gamma_{1}) [GeV]", prelim="Simulation Work in progress")
+            z = mcStack[startVH.ana['Z'][l]][0].draw_comp("best_2g_fsr1_m{}".format(m), cuts['Z'][l]+"&&"+cuts['photons'][m]+"&&best_2g_sumID_m{}==1".format(m), ("zg1_mass_{}_preFSR_comp".format(l), "", 20, 70, 110), SFs=sfs['Z'][l][m], titlex="m({}{}".format(lep,lep)+"#gamma_{1}) [GeV]", prelim="Simulation Preliminary")
             sig = signal['total'][startVH.ana['Z'][l]][m][0]['2G2Q'].hist1d("best_2g_fsr1_m{}".format(m), "("+cuts['Z'][l]+"&&"+cuts['photons'][m]+"&&best_2g_sumID_m{}==2".format(m)+")*("+sfs['Z'][l][m]+")", "1", ("sig_zg1_mass_{}_preFSR_comp".format(m), "", 20, 70, 110)) 
             sig = signal['total'][startVH.ana['Z'][l]][m][0]['2G2Q'].hist1d("best_2g_fsr1_m{}".format(m), "("+cuts['Z'][l]+"&&"+cuts['photons'][m]+"&&best_2g_sumID_m{}==2".format(m)+")*("+sfs['Z'][l][m]+")", "1", ("sig_zg1_mass_{}_preFSR_comp".format(m), "", 20, 70, 110)) 
             sig = signal['total'][startVH.ana['Z'][l]][m][0]['2G2Q'].hist1d("best_2g_fsr1_m{}".format(m), "("+cuts['Z'][l]+"&&"+cuts['photons'][m]+"&&best_2g_sumID_m{}==2".format(m)+")*("+sfs['Z'][l][m]+")", "1", ("sig_zg1_mass_{}_preFSR_comp".format(m), "", 20, 70, 110)) 
@@ -400,7 +406,7 @@ def plotSec4(year = "2018"):
             
             
             # Z+g2 mass
-            z = mcStack[startVH.ana['Z'][l]][0].draw_comp("best_2g_fsr2_m{}".format(m), cuts['Z'][l]+"&&"+cuts['photons'][m]+"&&best_2g_sumID_m{}==1".format(m), ("zg2_mass_{}_preFSR_comp".format(l), "", 20, 70, 110), SFs=sfs['Z'][l][m], titlex="m({}{}".format(lep,lep)+"#gamma_{2}) [GeV]", prelim="Simulation Work in progress")
+            z = mcStack[startVH.ana['Z'][l]][0].draw_comp("best_2g_fsr2_m{}".format(m), cuts['Z'][l]+"&&"+cuts['photons'][m]+"&&best_2g_sumID_m{}==1".format(m), ("zg2_mass_{}_preFSR_comp".format(l), "", 20, 70, 110), SFs=sfs['Z'][l][m], titlex="m({}{}".format(lep,lep)+"#gamma_{2}) [GeV]", prelim="Simulation Preliminary")
             
             sig = signal['total'][startVH.ana['Z'][l]][m][0]['2G2Q'].hist1d("best_2g_fsr2_m{}".format(m), "("+cuts['Z'][l]+"&&"+cuts['photons'][m]+"&&best_2g_sumID_m{}==2".format(m)+")*("+sfs['Z'][l][m]+")", "1", ("sig_zg2_mass_{}_preFSR_comp".format(m), "", 20, 70, 110))
             
@@ -411,7 +417,7 @@ def plotSec4(year = "2018"):
             z['canvas'].SaveAs(dir_out+year+"_ZX_Zg2_mass_{}_preFSR_mx{}_comp.pdf".format(l,m))
             z['canvas'].SaveAs(dir_out+year+"_ZX_Zg2_mass_{}_preFSR_mx{}_comp.png".format(l,m))
             # Z+g1+g2 mass
-            z = mcStack[startVH.ana['Z'][l]][0].draw_comp("best_2g_fsr3_m{}".format(m), cuts['Z'][l]+"&&"+cuts['photons'][m]+"&&best_2g_sumID_m{}==1".format(m), ("zg3_mass_{}_preFSR_comp".format(l), "", 20, 70, 110), SFs=sfs['Z'][l][m], titlex="m({}{}".format(lep,lep)+"#gamma_{1}#gamma_{2}) [GeV]", prelim="Simulation Work in progress")
+            z = mcStack[startVH.ana['Z'][l]][0].draw_comp("best_2g_fsr3_m{}".format(m), cuts['Z'][l]+"&&"+cuts['photons'][m]+"&&best_2g_sumID_m{}==1".format(m), ("zg3_mass_{}_preFSR_comp".format(l), "", 20, 70, 110), SFs=sfs['Z'][l][m], titlex="m({}{}".format(lep,lep)+"#gamma_{1}#gamma_{2}) [GeV]", prelim="Simulation Preliminary")
             sig = signal['total'][startVH.ana['Z'][l]][m][0]['2G2Q'].hist1d("best_2g_fsr3_m{}".format(m), "("+cuts['Z'][l]+"&&"+cuts['photons'][m]+"&&best_2g_sumID_m{}==2".format(m)+")*("+sfs['Z'][l][m]+")", "1", ("sig_zg3_mass_{}_preFSR_comp".format(m), "", 20, 70, 110))
             sig.Scale(1.0/sig.Integral() if sig.Integral() > 0 else 1)
             sig.Draw("hist,same")
@@ -490,22 +496,22 @@ def plotSec4(year = "2018"):
         sig_fsr = signal['total']['wen2g'][m][0]['2G2Q'].hist1d("W_mt", "(" + cuts['W']['ELE'] + ")*(" + cuts['photons'][options.mass] + ")*(" + sfs['W']['ELE'][options.mass]+")*(" + cuts['misID']['W']['ELE'][options.mass]+")*(best_2g_sumID_m{}==2)".format(options.mass), startVH.lumi[year], ("sig_misID_cut", "", 20, 0, 300))
         print("   signal m={}: {}->{} %rejection={}".format(m, sig.Integral(), sig_fsr.Integral(), (sig.Integral()-sig_fsr.Integral())/sig.Integral()))
 
-    """
+    
     # W misID signal/MC comparison
     for m in [mass]:
-        mc_misid1 = mcStack['wen2g'][m][0].draw_comp("best_2g_misID1_m{}".format(m), "("+cuts['W']['ELE']+")*("+cuts['photons'][m]+")*("+sfs['W']['ELE'][m]+")*(best_2g_sumID_m{}==2)".format(m), ("wenu_mass_l1x", "", 50, 0, 200), prelim="Simulation Work in progress", titlex="m(e#gamma_{1}) [GeV]")
+        mc_misid1 = mcStack['wen2g'][m][0].draw_comp("best_2g_misID1_m{}".format(m), "("+cuts['W']['ELE']+")*("+cuts['photons'][m]+")*("+sfs['W']['ELE'][m]+")*(best_2g_sumID_m{}==2)".format(m), ("wenu_mass_l1x", "", 50, 0, 200), prelim="Simulation Preliminary", titlex="m(e#gamma_{1}) [GeV]")
         mc_misid1['canvas'].SaveAs(dir_out+year+"_WX_mass_l1g1_mx{}_comp.pdf".format(m))
         mc_misid1['canvas'].SaveAs(dir_out+year+"_WX_mass_l1g1_mx{}_comp.png".format(m))
 
-        mc_misid2 = mcStack['wen2g'][m][0].draw_comp("best_2g_misID2_m{}".format(m), "("+cuts['W']['ELE']+")*("+cuts['photons'][m]+")*("+sfs['W']['ELE'][m]+")*(best_2g_sumID_m{}==2)".format(m), ("wenu_mass_l1x", "", 50, 0, 200), prelim="Simulation Work in progress", titlex="m(e#gamma_{2}) [GeV]")
+        mc_misid2 = mcStack['wen2g'][m][0].draw_comp("best_2g_misID2_m{}".format(m), "("+cuts['W']['ELE']+")*("+cuts['photons'][m]+")*("+sfs['W']['ELE'][m]+")*(best_2g_sumID_m{}==2)".format(m), ("wenu_mass_l1x", "", 50, 0, 200), prelim="Simulation Preliminary", titlex="m(e#gamma_{2}) [GeV]")
         mc_misid2['canvas'].SaveAs(dir_out+year+"_WX_mass_l1g2_mx{}_comp.pdf".format(m))
         mc_misid2['canvas'].SaveAs(dir_out+year+"_WX_mass_l1g2_mx{}_comp.png".format(m))
 
-        mc_misid3 = mcStack['wen2g'][m][0].draw_comp("best_2g_misID3_m{}".format(m), "("+cuts['W']['ELE']+")*("+cuts['photons'][m]+")*("+sfs['W']['ELE'][m]+")*(best_2g_sumID_m{}==2)".format(m), ("wenu_mass_l1x", "", 50, 0, 200), prelim="Simulation Work in progress", titlex="m(e#gamma_{1}#gamma_{2}) [GeV]")
+        mc_misid3 = mcStack['wen2g'][m][0].draw_comp("best_2g_misID3_m{}".format(m), "("+cuts['W']['ELE']+")*("+cuts['photons'][m]+")*("+sfs['W']['ELE'][m]+")*(best_2g_sumID_m{}==2)".format(m), ("wenu_mass_l1x", "", 50, 0, 200), prelim="Simulation Preliminary", titlex="m(e#gamma_{1}#gamma_{2}) [GeV]")
         mc_misid3['canvas'].SaveAs(dir_out+year+"_WX_mass_l1X_mx{}_comp.pdf".format(m))
         mc_misid3['canvas'].SaveAs(dir_out+year+"_WX_mass_l1X_mx{}_comp.png".format(m))
     return
-    """
+    
     # W misID data/MC comparison
     canv = VHStack['wen2g'].draw_stack("best_2g_misID3_m30", "("+cuts['W']['ELE']+")*("+cuts['photons'][options.mass]+")*(best_2g_sumID_m{}==2)".format(options.mass), startVH.lumi[year], ("WX_mass_l1X", "", 50, 0, 200), titlex="m(e#gamma_{1}#gamma_{2}) [GeV]", SFs = sfs['W']['ELE'][options.mass], verbose= False)
     canv['canvas'].SaveAs(dir_out+year+"_WX_mass_l1X.pdf")
@@ -540,7 +546,7 @@ def plotSec4(year = "2018"):
                     bkg.GetYaxis().SetRangeUser(0, 1.05 * max(bkg.GetMaximum(), sig.GetMaximum()))
                     bkg.GetXaxis().SetTitle("#gamma_{{{}}}".format(i)+" p_{T} [GeV]")
                     bkg.GetYaxis().SetTitle("a.u.")
-                    CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Work in progress")
+                    CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(startVH.lumi[year])/1000.), extraText = "Preliminary")
                     leg = ROOT.TLegend(0.5, 0.6, 0.92, 0.9)
                     leg.SetBorderSize(0)
                     leg.SetFillStyle(0)
@@ -603,8 +609,8 @@ def plotSec4(year = "2018"):
         #w['canvas'].SaveAs(dir_out+year+"_WX_W_mt_{}_final_loose.pdf".format(l))
         w['canvas'].SaveAs(dir_out+year+"_WX_W_mt_{}_final_loose.png".format(l))
     
-    """
-    """
+    
+    
     print("MC Background expected yields")
     # Final mc background cutflow:
     for v in ['W', 'Z']:
@@ -646,16 +652,21 @@ def plotSec4(year = "2018"):
     hlt['2016'] = {'MU': 'HLT_IsoMu24||HLT_IsoTkMu24',
                    'ELE': 'HLT_Ele27_WPTight_Gsf'}
     # Get efficiencies for each cut, save output so this doesn't have to be rerun to remake plots (unless changes are made to efficiencies)
-    '''
+
+
+
+    ctaus  = [0,10,20,50,100,1000]
+    masses = [15,20,30,40,50,55]
+    
     yields = {}
     denoms = {}
-    for nsig in [2, 4]:
+    for nsig in [4]:
         yields[nsig] = {}
         denoms[nsig] = {}
-        for v in ['W', 'Z']:
+        for v in ['W','Z']:
             yields[nsig][v] = {}
             denoms[nsig][v] = {}
-            for l in ['ELE', 'MU']:
+            for l in ['ELE','MU']:
                 yields[nsig][v][l] = {}
                 denoms[nsig][v][l] = {}
                 for m in masses:
@@ -665,7 +676,11 @@ def plotSec4(year = "2018"):
                         print ("Doing signal cutflow for {}->{}, m={} ct={}".format(v,l,m,ct))
                         yields[nsig][v][l][m][ct] = {}
                         denoms[nsig][v][l][m][ct] = 0
-                        raw_samples = glob.glob("/home/tyler/samples/DDP/rdf_samples/signalSamples/{year}/*{v}*H_HTo2LongLivedTo*MFF-{m}_ctau-{ct}cm*.root".format(year=year, prod=prod, v=v, m=m, ct=ct))
+                        raw_samples = glob.glob(f"/uscms/home/gfavila/nobackup/rdf_simple_/DDP/signalSamples/*{v}*H*_HTo2LongLivedTo*MFF-{m}_ctau-{ct}cm*.root")
+                        if v == 'W':
+                            ttH_samples = glob.glob(f"/uscms/home/gfavila/nobackup/rdf_simple_/DDP/signalSamples/ttH*_HTo2LongLivedTo*MFF-{m}_ctau-{ct}mm*.root")
+                            raw_samples+= ttH_samples
+
                         rdf_raw = ROOT.RDataFrame("Events", raw_samples)
                         rdf_raw = rdf_raw.Define("sample_isMC", "1")
                         rdf_raw = genAna(rdf_raw)
@@ -733,42 +748,45 @@ def plotSec4(year = "2018"):
                             ptThresh = 28 if year=='2017' else 25
                             cutflow = cutflow.Filter("Sum(Muon_pt[tight_muon]>{})>0".format(ptThresh), "muon_pt_over{}".format(ptThresh))
                             cutflow = makeW(cutflow, "Muon")
-
                             cutflow = cutflow.Filter("nPhoton>0", "at_least_1_photon")
-
                             cutflow = photonAna(cutflow, year)
-
                             cutflow = cutflow.Filter('Sum(Photon_preselection==1)>1', "at_least_2_preselection_photons")
+                            
 
                         elif v=='W' and l=='ELE':
                             cutflow = cutflow.Filter("Electron_ntight==1", "exactly_1_tight_electron")
                             ptThresh = 35
                             cutflow = cutflow.Filter("Sum(Electron_pt[tight_electron]>{})>0".format(ptThresh), "electron_pt_over{}".format(ptThresh))
                             cutflow = makeW(cutflow, "Electron")
-
                             cutflow = cutflow.Filter("nPhoton>0", "at_least_1_photon")
-
                             cutflow = photonAna(cutflow, year)
-
                             cutflow = cutflow.Filter('Sum(Photon_preselection==1)>1', "at_least_2_preselection_photons")
 
                         r = cutflow.Report()
-                        for i in report_steps[ana[v][l]]:
+                        for i in report_steps[startVH.ana[v][l]]:
                             for cut in r:
-                                if cut.GetName() == report_steps[ana[v][l]][i]:
+                                if cut.GetName() == report_steps[startVH.ana[v][l]][i]:
                                     yields[nsig][v][l][m][ct][i] = cut.GetPass()
                                     if i == 0:
                                         denoms[nsig][v][l][m][ct] = cut.GetAll()
+                        print(prod)
+                        samples = glob.glob(f"/uscms/home/gfavila/nobackup/rdf_simple_/DDP/MC{year}_{prod}/*{v}*H{nsig}*_M{m}_ctau{ct}_*.root")
+                        if v == 'W':
+                            ttH_samples = glob.glob(f"/uscms/home/gfavila/nobackup/rdf_simple_/DDP/MC{year}_{prod}/ttH{nsig}*_M{m}_ctau{ct}_*.root")
+                            samples+=ttH_samples
 
-                        samples = glob.glob("/home/tyler/samples/DDP/rdf_samples/MC{}_{}/*{}*H*_M{}_ctau{}_*.root".format(year, prod, v, m, ct))
-                        rdf = ROOT.RDataFrame(ana[v][l], samples)
+                        rdf = ROOT.RDataFrame(startVH.ana[v][l], samples)
+
+                        rdf = startVH.redoPhotonID_rdf(rdf,m)
                         rdf = rdf.Filter("GenPart_nSignal=={}".format(nsig))
-
                         rdf = rdf.Filter(cuts['photons'][m], "photon_kinematics")
+                        rdf = rdf.Filter(f"PassPhIso[best_2g_idx1_m{m}]==1 && PassPhIso[best_2g_idx2_m{m}]==1 && best_2g_sumID_m{m}==2", "photon_id")
+                        #rdf = rdf.Filter(f"best_2g_sumID_m{m}==2", "photon_id")
 
-                        rdf = rdf.Filter("best_2g_sumID_m{}==2".format(m), "photon_id")
-
-                        rdf = rdf.Filter(cuts['misID'][v][l][m]+"&&"+cuts['fsr'][v][m], "fsr")
+                        if v == 'W': 
+                            rdf = rdf.Filter(cuts['misID'][v][l][m], "fsr")
+                        elif v =='Z':
+                            rdf = rdf.Filter(cuts['fsr'][v][m], "fsr")
 
                         rdf = rdf.Filter(cuts['pt'][m], "photon_pt")
 
@@ -777,13 +795,14 @@ def plotSec4(year = "2018"):
                         report = rdf.Report()
 
                         for i, cut in enumerate(report):
-                            yields[nsig][v][l][m][ct][i+3] = cut.GetPass()
-   
+                            yields[nsig][v][l][m][ct][max(list(report_steps[startVH.ana[v][l]].keys())) + i + 1] = cut.GetPass()
+    
     with open('yields.txt', 'w') as data:
         data.write(str(yields))
     with open('denoms.txt', 'w') as data:
         data.write(str(denoms))
-    '''
+    
+    
     # get data and yields from txt output files instead of redoing them
     with open('yields.txt') as f:
         data = f.read()
@@ -801,22 +820,38 @@ def plotSec4(year = "2018"):
     lines.SetMinimum(1)
     lines.SetLineStyle(2)
     lines.SetLineColor(ROOT.kBlack)
-    colors = {0: ROOT.kBlack,
+    colors = {"W":{0: ROOT.kBlack,
               1: ROOT.kViolet-8,
               2: ROOT.kMagenta-7,
               3: ROOT.kBlue,
               4: ROOT.kAzure+8,
               5: ROOT.kGreen+2,
               6: ROOT.kOrange-3,
-              7: ROOT.kRed}
-
-    for nsig in [2, 4]:
-        for v in ['W', 'Z']:
-            for l in ['ELE', 'MU']:
+              7: ROOT.kRed},
+              "Z":{0: ROOT.kBlack,
+              1: ROOT.kViolet-8,
+              2: ROOT.kMagenta-7,
+              3: ROOT.kBlue,
+              4: ROOT.kAzure+8,
+              5: ROOT.kGreen+2,
+              6: ROOT.kOrange-3,
+              7: ROOT.kRed}}
+    
+    #markers = [4,5]*5
+    lw = [1,1]*5
+    
+    
+    for nsig in [4]:
+        for v in ['W','Z']:
+            for l in ['ELE','MU']:
                 stack = ROOT.THStack()
                 graphs = {}
                 axis = ROOT.TH1D("h", "", 6*6, 0, 6*6)
-                for i in range(8):
+                if v =='W':
+                    nplots = 8
+                else:
+                    nplots = 8
+                for i in range(nplots):
                     num = ROOT.TH1D("num_{}_{}_step{}_yields".format(v,l,i), "", 6*6, 0, 6*6)
                     denom = ROOT.TH1D("denom_{}_{}_step{}_yields".format(v,l,i), "", 6*6, 0, 6*6)
                     for j, ct in enumerate(ctaus):
@@ -825,12 +860,17 @@ def plotSec4(year = "2018"):
                             num.SetBinContent(num.GetXaxis().FindBin(nBin), yields[nsig][v][l][m][ct][i])
                             denom.SetBinContent(denom.GetXaxis().FindBin(nBin), denoms[nsig][v][l][m][ct])
                     graph = ROOT.TGraphAsymmErrors(num, denom)
-                    graph.SetLineColor(colors[i])
-                    graph.SetMarkerColor(colors[i])
+                    graph.SetLineColor(colors[v][i])
+                    #graph.SetLineColorAlpha(colors[v][i],0.7)
+                    graph.SetMarkerColor(colors[v][i])
+                    #graph.SetMarkerColorAlpha(colors[v][i],0.8)
+                    #graph.SetMarkerStyle(markers[i])
                     graph.SetLineWidth(3)
+                    graph.SetMarkerSize(lw[i])
                     for n in range(1, axis.GetNbinsX()+1):
                         axis.GetXaxis().SetBinLabel(n, "{}".format(masses[(n-1)%6]))
                     graphs[i] = graph
+
                 c = ROOT.TCanvas("c", "", 850, 600)
                 axis.Draw()
                 axis.SetStats(0)
@@ -858,18 +898,28 @@ def plotSec4(year = "2018"):
                 legend.SetHeader(headers[v][l])
                 legend.SetBorderSize(0)
                 legend.SetFillStyle(0)
-                legend.AddEntry(graphs[0], "HLT", "l")
-                legend.AddEntry(graphs[1], "+Lepton preselection", "l")
-                legend.AddEntry(graphs[2], "+Photon preselection", "l")
-                legend.AddEntry(graphs[3], "+Kinematic cuts", "l")
-                legend.AddEntry(graphs[4], "+Photon ID", "l")
-                legend.AddEntry(graphs[5], "+FSR/misID", "l")
-                legend.AddEntry(graphs[6], "+Tight p_{T}(#gamma) cuts", "l")
-                legend.AddEntry(graphs[7], "+m_{#gamma#gamma} < m_{#Phi} + 5 GeV", "l")
+                if v == 'Z':
+                    legend.AddEntry(graphs[0], "HLT", "l")
+                    legend.AddEntry(graphs[1], "+Lepton preselection", "l")
+                    legend.AddEntry(graphs[2], "+Photon preselection", "l")
+                    legend.AddEntry(graphs[3], "+Kinematic cuts", "l")
+                    legend.AddEntry(graphs[4], "+Photon ID", "l")
+                    legend.AddEntry(graphs[5], "+FSR", "l")
+                    legend.AddEntry(graphs[6], "+Tight p_{T}(#gamma) cuts", "l")
+                    legend.AddEntry(graphs[7], "+m_{#gamma#gamma} < m_{#Phi} + 5 GeV", "l")
+                else:
+                    legend.AddEntry(graphs[0], "HLT", "l")
+                    legend.AddEntry(graphs[1], "+Lepton preselection", "l")
+                    legend.AddEntry(graphs[2], "+Photon preselection", "l")
+                    legend.AddEntry(graphs[3], "+Kinematic cuts", "l")
+                    legend.AddEntry(graphs[4], "+Photon ID", "l")
+                    legend.AddEntry(graphs[5], "+Electron misID", "l")
+                    legend.AddEntry(graphs[6], "+Tight p_{T}(#gamma) cuts", "l")
+                    legend.AddEntry(graphs[7], "+m_{#gamma#gamma} < m_{#Phi} + 5 GeV", "l")
                 legend.Draw("same")
                 c.SetLogy()
                 c.SetGridy()
-                CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(lumi[year])/1000.), extraText = "Simulation Work in progress")
+                CMS_lumi.CMS_lumi(c, 0, 0, relPosX=0.077, extraText = "Simulation")
                 if nsig == 2:
                     c.SaveAs(dir_out+year+"_signal_2G2Q_{}_{}_efficiency_raw.pdf".format(v,l))
                     c.SaveAs(dir_out+year+"_signal_2G2Q_{}_{}_efficiency_raw.png".format(v,l))
@@ -877,7 +927,7 @@ def plotSec4(year = "2018"):
                     c.SaveAs(dir_out+year+"_signal_4G_{}_{}_efficiency_raw.pdf".format(v,l))
                     c.SaveAs(dir_out+year+"_signal_4G_{}_{}_efficiency_raw.png".format(v,l))
 
-                    
+
     # Branching ratio limit scale factors
     if not os.path.isdir("AN_{}/figs/signal".format(date)):
         os.mkdir("AN_{}/figs/signal".format(date))
@@ -1033,7 +1083,7 @@ def plotSec4(year = "2018"):
             leg.Draw("same")
             #plotEditor.drawCOM(c, 59830)
             #plotEditor.drawPrelim(c)
-            CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(lumi[year])/1000.), extraText = "Simulation Work in progress")
+            CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(lumi[year])/1000.), extraText = "Simulation Preliminary")
             c.SaveAs(dir_out+"cutBasedID_effVsLxy_{}_m{}_{}.pdf".format(v,m,options.year))
             c.SaveAs(dir_out+"cutBasedID_effVsLxy_{}_m{}_{}.png".format(v,m,options.year))
             #c.SaveAs("cutBasedID_effVsLxy_{}_m{}_{}.root".format(v,m,options.year))
@@ -1057,12 +1107,12 @@ def plotSec4(year = "2018"):
                 leg.AddEntry(effs[var], "Preselection + "+legend[var], 'l')
                 effs[var].Draw("same")
             leg.Draw("same")
-            CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(lumi[year])/1000.), extraText = "Simulation Work in progress")
+            CMS_lumi.CMS_lumi(c, 4, 0, relPosX=0.077, lumi_13TeV = str(float(lumi[year])/1000.), extraText = "Simulation Preliminary")
             c.SaveAs(dir_out+"cutBasedID_effVsLxy_{}_m{}_cats_{}.pdf".format(v,m,options.year))
             c.SaveAs(dir_out+"cutBasedID_effVsLxy_{}_m{}_cats_{}.png".format(v,m,options.year))
 
     fCuts.Close()
-    """             
+      
     
 # This one is just copying files made from the python/VHTools/drawClosurePlots.py script
 def plotSec5(year, datacard_date = "04_05_24"):
@@ -1088,15 +1138,17 @@ def plotSec6(year, datacard_date = "04_05_24"):
     os.chdir("/uscms/home/gfavila/nobackup/rdf_simple_/DDP/")
     dir_out = "../AN_{}/figs/signal/".format(date)
 
+
+    """
     # 2d model dependent limits
     g = ROOT.TGraph2D()
     n = 0
-    masses = [15,20,30,40,50,55]
-    ctaus = [0,10,20,50,100,1000]
+    #masses = [15,20,30,40,50,55]
+    #ctaus = [0,10,20,50,100,1000]
     for ct in ctaus:
         for m in masses:
 
-            f = ROOT.TFile("/uscms/home/gfavila/nobackup/rdf_simple_/datacards_12_20_24/higgsCombine.VH_m{}_ctau{}_{}.AsymptoticLimits.mH125.root".format(m,ct,year))
+            f = ROOT.TFile("/uscms/home/gfavila/nobackup/rdf_simple_/datacards_040425_GmN/higgsCombine.VH_m{}_ctau{}_{}.AsymptoticLimits.mH125.root".format(m,ct,year))
             limit = f.Get("limit")
             limit.GetEntry(2)
             #if limit.limit > 1.0:
@@ -1119,7 +1171,9 @@ def plotSec6(year, datacard_date = "04_05_24"):
     c.SaveAs(dir_out+"limit_2D_mVsCtau_{}.pdf".format(year))
     c.SaveAs(dir_out+"limit_2D_mVsCtau_{}.png".format(year))
     #c.SaveAs(dir_out+"limit_2D_mVsCtau_{}.root".format(year))
-    
+    """
+
+
     legendDict = {('W', 'MU'): "W#rightarrow#mu#nu", ('W', 'ELE'): "W#rightarrow"+"e#nu",
                   ('Z', 'MU'): "Z#rightarrow#mu#mu", ('Z', 'ELE'): "Z#rightarrow"+"ee"}
 
@@ -1168,14 +1222,17 @@ def plotSec6(year, datacard_date = "04_05_24"):
             limit.SaveAs(dir_out+"limitVsCtau_{}H_m{}_{}_modelIndependent.pdf".format(v,m,year))
             limit.SaveAs(dir_out+"limitVsCtau_{}H_m{}_{}_modelIndependent.png".format(v,m,year))
 
-    
+    """
+
+    masses = [15,20,30,40,50,55]
+    ctaus = [0,10,20,50,100,1000]
     # 2d model independent limits
     for v in ['W', 'Z']:
         g = ROOT.TGraph2D()
         n = 0
         for ct in ctaus:
             for m in masses:
-                f = ROOT.TFile("/uscms/home/gfavila/nobackup/rdf_simple_/datacards_11_13_24/higgsCombine.{}H_m{}_ctau{}_{}_modelIndependent.AsymptoticLimits.mH125.root".format(v,m,ct,year))
+                f = ROOT.TFile("/uscms/home/gfavila/nobackup/rdf_simple_/datacards_040425_GmN/higgsCombine.{}H_m{}_ctau{}_{}_modelIndependent.AsymptoticLimits.mH125.root".format(v,m,ct,year))
                 limit = f.Get("limit")
                 limit.GetEntry(2)
                 g.SetPoint(n, m, max(.01,ct), 0.5*0.1*limit.limit)
@@ -1189,8 +1246,8 @@ def plotSec6(year, datacard_date = "04_05_24"):
         plotEditor.drawCOM(c, startVH.intLumi[year])
         c.SaveAs(dir_out+"limit_2D_{}H_mVsCtau_{}_modelIndependent.pdf".format(v,year))
         c.SaveAs(dir_out+"limit_2D_{}H_mVsCtau_{}_modelIndependent.png".format(v,year))
-        
-    """
+    
+    
 def plotSec6_ZH(year, datacard_date = "04_05_24"):
 
     if not os.path.isdir("AN_{}/figs/signal".format(date)):
@@ -1217,7 +1274,7 @@ def plotSec6_ZH(year, datacard_date = "04_05_24"):
     g.Draw("colz")
     g.SetMaximum(1.0)
     g.SetTitle(";m_{#Phi} [GeV];c#tau [mm];BR(H#rightarrow#Phi#Phi)#timesBR(#Phi#rightarrow#gamma#gamma)")
-    plotEditor.drawPrelim(c, "Work in progress")
+    plotEditor.drawPrelim(c, "Preliminary")
     plotEditor.drawCOM(c, intLumi[year])
     c.SaveAs(dir_out+"limit_2D_mVsCtau_ZH_{}.pdf".format(year))
     c.SaveAs(dir_out+"limit_2D_mVsCtau_ZH_{}.png".format(year))
@@ -1258,7 +1315,7 @@ def plotSec6_ZH(year, datacard_date = "04_05_24"):
                 g.Draw("same")
                 leg.AddEntry(g, legendDict[(v,l)], "l")
         leg.Draw("same")
-        plotEditor.drawPrelim(c, "Work in progress")
+        plotEditor.drawPrelim(c, "Preliminary")
         plotEditor.drawCOM(c, intLumi[year])
         c.SaveAs(dir_out+"limitVsCtau_ZH_m{}_{}_categorized.pdf".format(m,year))
         c.SaveAs(dir_out+"limitVsCtau_ZH_m{}_{}_categorized.png".format(m,year))
@@ -1287,13 +1344,12 @@ def plotSec6_ZH(year, datacard_date = "04_05_24"):
         c.SetLogz()
         g.Draw("colz")
         g.SetTitle(";m_{#Phi} [GeV];c#tau [mm];#sigma"+"({}+#Phi#Phi)".format(v)+"#timesBR(#Phi#rightarrow#gamma#gamma) [pb]")
-        plotEditor.drawPrelim(c, "Work in progress")
+        plotEditor.drawPrelim(c, "Preliminary")
         plotEditor.drawCOM(c, intLumi[year])
         c.SaveAs(dir_out+"limit_2D_{}H_mVsCtau_{}_modelIndependent.pdf".format(v,year))
         c.SaveAs(dir_out+"limit_2D_{}H_mVsCtau_{}_modelIndependent.png".format(v,year))
 
- 
-#plotSec6("Run2",year)   
+#plotSec6("Run2")   
 plotSec4(year)
 #plotSec5(year, options.datacard)
 #plotSec6_ZH("Run2", options.datacard)
