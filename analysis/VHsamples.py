@@ -1,17 +1,28 @@
 samples = {}
 
 # Import samples for all eras
-for era in ['2016','2017','2018']:
-    for s in ['mc','signal','data']:
-        cmd = """
+#for era in ['2016','2017','2018']:
+#    for s in ['mc','signal','data']:
+#        cmd = """
+#from analysis.samples.VHsamples_{s}_{era} import *
+#for s in samples_{s}_{era}:
+#   if s not in samples:
+#        samples[s] = samples_{s}_{era}[s]
+#""".format(s=s, era=era)
+#
+#        exec(cmd)
+
+# temporary testing code 
+for era in ['2022']:
+        for s in ['signal']:
+              cmd = """
 from analysis.samples.VHsamples_{s}_{era} import *
 for s in samples_{s}_{era}:
    if s not in samples:
         samples[s] = samples_{s}_{era}[s]
 """.format(s=s, era=era)
 
-        exec(cmd)
-
+        exec(cmd)  
 
 #samples['TTLep_NLO_2018'] = {'dataset': '/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM',
 #                             'triggers': ['(HLT_IsoMu24||HLT_Ele32_WPTight_Gsf)'],
