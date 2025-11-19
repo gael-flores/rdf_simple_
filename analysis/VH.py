@@ -24,7 +24,7 @@ muTrig = {'2022': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
           '2016preVFP': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24},
                           {'name': 'HLT_IsoTkMu24', 'bits': 1+8, 'pt': 24}]} # Check if filter bits are correct
 
-eleTrig = {'2022': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 2, 'pt': 32}],
+eleTrig = {'2022': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
            '2018': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 2, 'pt': 32}],
            '2017': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 1024, 'pt': 32}],
            '2016postVFP': [{'name': 'HLT_Ele27_WPTight_Gsf', 'bits': 2, 'pt': 27}],

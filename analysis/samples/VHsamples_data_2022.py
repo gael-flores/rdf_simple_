@@ -1,5 +1,6 @@
 #TODO: figure out what triggers to use. It seems you will need smth like
-# HLT_IsoMu24 for singlemuon, HLT_Ele32_WPTight_Gsf_L1DoubleEG for singleelectron with HLT_IsoMu24 veto, 
+# HLT_IsoMu24 for singlemuon, HLT_Ele30_WPTight_Gsf_L1DoubleEG for singleelectron with HLT_IsoMu24 veto, 
+# datasets? singlemuon and egamma  - for all eras for run3 2022
 samples_data_2022 = {
 # looks like everything is merged into EGamma (SingleMuons, SingleElectron, DoubleEG --> EGamma)
 'EGamma_2022C_v2':{'dataset':'/EGamma/Run2022C-PromptNanoAODv10-v2/NANOAOD',
