@@ -14,8 +14,6 @@ cols = "best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z.*|^W.*|Weight.*|^Gen.*|^weigh
 # Bits = trigger bits for HLT path
 # pt = pt threshold for trigger
 
-# TODO: check how these need to be expanded for 2022+ data:
-
 muTrig = {'2022': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
           '2018': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
           '2017': [{'name': 'HLT_IsoMu27', 'bits': 8, 'pt': 27}],
@@ -543,7 +541,7 @@ def zmumuH(data,phi_mass,sample):
 
 def analysis(data,sample):
     #phi_mass=[5,10,20,30]
-    phi_mass=[7,15,20,30,40,50,55]
+    phi_mass=[15,20,30,40,50,55]
     actions = []
     actions.extend(zmumuH(data,phi_mass,sample))
     actions.extend(zeeH(data,phi_mass,sample))
