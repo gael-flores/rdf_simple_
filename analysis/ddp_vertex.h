@@ -498,7 +498,7 @@ RVecF best_2gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE, RV
     const auto i1 = idx_cmb[0][i];
     const auto i2 = idx_cmb[1][i];
     
-    if (!(isLoose[i1] && isLoose[i2]))
+    if (!(isLoose[i1] && isLoose[i2] && gIso[i1] && gIso[i2]))
       continue;
 
     RVecF result;
@@ -508,12 +508,6 @@ RVecF best_2gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE, RV
     ROOT::Math::PtEtaPhiMVector p0(pt[i1],eta[i1],phi[i1],0.0);
     ROOT::Math::PtEtaPhiMVector p1(pt[i2],eta[i2],phi[i2],0.0);
     float raw_m = (p0+p1).M();
-    float iso1 = gIso[i1];
-    float iso2 = gIso[i2];
-    if (DeltaR(eta[i1], eta[i2], phi[i1], phi[i2]) < 0.3){
-      iso1 = iso1 - pt[i2]/pt[i1] > 0 ? iso1 - pt[i2]/pt[i1] : 0.0 ;
-      iso2 = iso2 - pt[i1]/pt[i2] > 0 ? iso2 - pt[i1]/pt[i2] : 0.0 ;
-    }
     std::vector<float> kin_fit= calc->getVertexInfo(pt[i1],eta[i1],phi[i1],EE[i1],EB[i1],pt[i2],eta[i2],phi[i2],EE[i2],EB[i2],mass); 
     delete calc;
     result.emplace_back(kin_fit[0]);
@@ -529,8 +523,8 @@ RVecF best_2gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE, RV
     result.emplace_back(i2);
     result.emplace_back(DeltaPhi(phi[i1], phi[i2]));
     result.emplace_back(DeltaR(eta[i1], eta[i2], phi[i1], phi[i2]));
-    result.emplace_back(gID[i1] && iso1<0.1);
-    result.emplace_back(gID[i2] && iso2<0.1);
+    result.emplace_back(gID[i1]>0); //photon cut based ID
+    result.emplace_back(gID[i2]>0);
     result.emplace_back((p0+p1).pt());
     result.emplace_back((p0+p1).eta());
     result.emplace_back((p0+p1).phi());
