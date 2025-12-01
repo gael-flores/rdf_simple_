@@ -1,13 +1,14 @@
 import ROOT
 ROOT.gInterpreter.Declare('#include "analysis/ddp_vertex.h"')
 ROOT.gInterpreter.Declare('#include "common/scaleFactors.h"')
+ROOT.gInterpreter.Declare('#include "common/signalEfficiency.h"')
 opts = ROOT.RDF.RSnapshotOptions()
 opts.fMode = "UPDATE"
 opts.fOverwriteIfExists = True
 
 from common.pyhelpers import load_meta_data
 
-cols = "best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z.*|^W.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*|^event.*|^Electron_.*|^Pileup_.*|^MET_.*|^run.*|^luminosityBlock.*"
+cols = ".*best_2g.*|sample_.*|^Fsr.*|^Photon_.*|loose_muon|tight_muon|veto_muon.*|^Muon_.*|^FatJet_.*|nFatJet|nJet|^Jet_.*|nJet|^Z.*|^W.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*|^event.*|^Electron_.*|^Pileup_.*|^MET_.*|^run.*|^luminosityBlock.*"
 
 # Muon trigger[era][par], par = ['name', 'bits', 'pt']
 # Name = branch name in tree
@@ -43,7 +44,7 @@ def muonAna(dataframe, era = '2018'):
     muons = muons.Define("mu_SFs_reco", 'scaleFactors_2d(abs(Muon_eta), Muon_pt, MU_RECO_{era}_sf, MU_RECO_{era}_binsX, MU_RECO_{era}_binsY, sample_isMC, Muon_pt>10)'.format(era=era))
     muons = muons.Define("Muon_recoSF_val", "mu_SFs_reco[0]")
     muons = muons.Define("Muon_recoSF_unc", "mu_SFs_reco[1]")
-
+    
     muons = muons.Define("mu_SFs_id", 'scaleFactors_2d(abs(Muon_eta), Muon_pt, MU_ID_{era}_sf, MU_ID_{era}_binsX, MU_ID_{era}_binsY, sample_isMC, tight_muon)'.format(era=era))
     muons = muons.Define("Muon_idSF_val", "mu_SFs_id[0]")
     muons = muons.Define("Muon_idSF_unc", "mu_SFs_id[1]")
@@ -99,9 +100,10 @@ def photonAna(dataframe, era = '2018'):
     photons = photons.Define("Photon_preselection", "Photon_pt>20&&!Photon_pixelSeed&&abs(Photon_eta)<2.5&&(abs(Photon_eta)>1.57||abs(Photon_eta)<1.44)&&!Photon_overlap&&(Photon_isScEtaEE||Photon_isScEtaEB)")
 
     # Common Photon ID definitions (No isolation)
-    photons = photons.Define("Photon_IdNoIso","((Photon_isScEtaEB&&Photon_hoe<0.04596&&Photon_sieie<0.0106)||(Photon_isScEtaEE&&Photon_hoe<0.0590&&Photon_sieie<0.0272))")
+    photons = photons.Define("Photon_passPhIso" , "passPhIso(Photon_vidNestedWPBitmap)")
+    photons = photons.Define("Photon_passCutBasedID","Photon_cutBased>0")
 
-    photons = photons.Define("pho_SFs_id", "scaleFactors_2d(Photon_eta, Photon_pt, PHO_ID_{era}_sf, PHO_ID_{era}_binsX, PHO_ID_{era}_binsY, sample_isMC, Photon_IdNoIso)".format(era=era))
+    photons = photons.Define("pho_SFs_id", "scaleFactors_2d(Photon_eta, Photon_pt, PHO_ID_{era}_sf, PHO_ID_{era}_binsX, PHO_ID_{era}_binsY, sample_isMC, Photon_passCutBasedID)".format(era=era))
     photons = photons.Define("Photon_idSF_val", "pho_SFs_id[0]")
     photons = photons.Define("Photon_idSF_unc", "pho_SFs_id[1]")
 
@@ -199,9 +201,9 @@ def zeeH(data,phi_mass,sample):
     zee = photonAna(zee, data['era'])
 
     # FSR Recovery with loose muons and preselection photons
-    zee=zee.Define("Photon_isFSR","fsr_recovery(Z_idx,Electron_pt, Electron_eta, Electron_phi, Electron_mass,Photon_pt,Photon_eta,Photon_phi,Photon_preselection)");
+    zee=zee.Define("Photon_isFSR","fsr_recovery(Z_idx,Electron_pt, Electron_eta, Electron_phi, Electron_mass,Photon_pt,Photon_eta,Photon_phi,Photon_preselection)")
     # Correct isolation for FSR
-    zee = zee.Define("Photon_pfRelIso03_fsrCorr", "correct_gammaIso_for_muons(Z_idx, Electron_pt, Electron_eta, Electron_phi, Photon_pt, Photon_eta, Photon_phi, Photon_pfRelIso03_all, Photon_isFSR)")
+    #zee = zee.Define("Photon_pfRelIso03_fsrCorr", "correct_gammaIso_for_muons(Z_idx, Electron_pt, Electron_eta, Electron_phi, Photon_pt, Photon_eta, Photon_phi, Photon_pfRelIso03_all, Photon_isFSR)")
         
     ##### gamma gamma +X analysis ######
     ####################################
@@ -210,15 +212,15 @@ def zeeH(data,phi_mass,sample):
     zee2g = zee.Filter("Sum(Photon_preselection==1)>1", "at_least_2_preselection_photons")
     #zee2g = zee2g.Filter("Sum(Photon_preselection==1 && Photon_isFSR==0)>1", "no_fsr_photons")
     for mass in phi_mass:
-        zee2g=zee2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_IdNoIso, Photon_pfRelIso03_fsrCorr, {})'.format(float(mass)))
+        zee2g=zee2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_cutBased, Photon_passPhIso, {})'.format(float(mass)))
         zee2g=zee2g.Define('best_2g_gamma1_pt_m{}'.format(mass),'raw_best_2g_m{}[0]'.format(mass))
         zee2g=zee2g.Define('best_2g_gamma1_eta_m{}'.format(mass),'raw_best_2g_m{}[1]'.format(mass))
         zee2g=zee2g.Define('best_2g_gamma1_phi_m{}'.format(mass),'raw_best_2g_m{}[2]'.format(mass))
-        zee2g=zee2g.Define('best_2g_gamma1_id_m{}'.format(mass), 'raw_best_2g_m{}[13]'.format(mass))
+        zee2g=zee2g.Define('best_2g_gamma1_id_m{}'.format(mass), 'raw_best_2g_m{}[13]'.format(mass)) #photon cut based ID > 0 
         zee2g=zee2g.Define('best_2g_gamma2_pt_m{}'.format(mass),'raw_best_2g_m{}[3]'.format(mass))
         zee2g=zee2g.Define('best_2g_gamma2_eta_m{}'.format(mass),'raw_best_2g_m{}[4]'.format(mass))
         zee2g=zee2g.Define('best_2g_gamma2_phi_m{}'.format(mass),'raw_best_2g_m{}[5]'.format(mass))
-        zee2g=zee2g.Define('best_2g_gamma2_id_m{}'.format(mass), 'raw_best_2g_m{}[14]'.format(mass))
+        zee2g=zee2g.Define('best_2g_gamma2_id_m{}'.format(mass), 'raw_best_2g_m{}[14]'.format(mass))  #photon cut based ID > 0 
         zee2g=zee2g.Define('best_2g_dxy_m{}'.format(mass),'raw_best_2g_m{}[6]'.format(mass))
         zee2g=zee2g.Define('best_2g_valid_m{}'.format(mass),'raw_best_2g_m{}[7]'.format(mass))
         zee2g=zee2g.Define('best_2g_raw_mass_m{}'.format(mass),'raw_best_2g_m{}[8]'.format(mass))
@@ -232,10 +234,8 @@ def zeeH(data,phi_mass,sample):
         zee2g=zee2g.Define('fsr_best_2g_m{}_info'.format(mass), 'Zgg_fsr(Photon_pt, Photon_eta, Photon_phi, best_2g_idx1_m{}, best_2g_idx2_m{}, Electron_pt, Electron_eta, Electron_phi, Electron_mass, Z_idx)'.format(mass,mass))
         zee2g=zee2g.Define('best_2g_fsr1_m{}'.format(mass), "fsr_best_2g_m{}_info[0]".format(mass))
         zee2g=zee2g.Define('best_2g_fsr2_m{}'.format(mass), "fsr_best_2g_m{}_info[1]".format(mass))
-        zee2g=zee2g.Define('best_2g_fsr3_m{}'.format(mass), "fsr_best_2g_m{}_info[2]".format(mass))
-        zee2g=zee2g.Define("Photon_corrIso_m{}".format(mass), "correct_gammaIso_for_photons(best_2g_idx1_m{m}, best_2g_idx2_m{m}, Photon_pt, Photon_eta, Photon_phi, Photon_pfRelIso03_all)".format(m=mass))
-        zee2g = zee2g.Define("Photon_ID_m{}".format(mass), "Photon_preselection&&Photon_corrIso_m{}<0.1&&Photon_IdNoIso".format(mass))
-        zee2g = zee2g.Define("best_2g_sumID_m{}".format(mass), "raw_best_2g_m{m}[13]+raw_best_2g_m{m}[14]".format(m=mass))
+        zee2g=zee2g.Define('best_2g_fsr3_m{}'.format(mass), "fsr_best_2g_m{}_info[2]".format(mass))        
+        zee2g = zee2g.Define("best_2g_sumID_m{}".format(mass), f"raw_best_2g_m{mass}[13]+raw_best_2g_m{mass}[14]")
 
     actions.append(zee2g.Snapshot('zee2g',sample+'.root',cols,opts))
     report = ROOT.RDataFrame(1)
@@ -279,7 +279,7 @@ def wenuH(data,phi_mass,sample):
     wen2g = wen.Filter('Sum(Photon_preselection==1)>1', "at_least_2_preselection_photons")
     
     for mass in phi_mass:
-        wen2g=wen2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_IdNoIso, Photon_pfRelIso03_all, {})'.format(float(mass)))
+        wen2g=wen2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_cutBased, Photon_passPhIso, {})'.format(float(mass)))
         wen2g=wen2g.Define('best_2g_gamma1_pt_m{}'.format(mass),'raw_best_2g_m{}[0]'.format(mass))
         wen2g=wen2g.Define('best_2g_gamma1_eta_m{}'.format(mass),'raw_best_2g_m{}[1]'.format(mass))
         wen2g=wen2g.Define('best_2g_gamma1_phi_m{}'.format(mass),'raw_best_2g_m{}[2]'.format(mass))
@@ -298,8 +298,6 @@ def wenuH(data,phi_mass,sample):
         wen2g=wen2g.Define('best_2g_pt_m{}'.format(mass), 'raw_best_2g_m{}[15]'.format(mass))
         wen2g=wen2g.Define('best_2g_eta_m{}'.format(mass), 'raw_best_2g_m{}[16]'.format(mass))
         wen2g=wen2g.Define('best_2g_phi_m{}'.format(mass), 'raw_best_2g_m{}[17]'.format(mass))
-        wen2g=wen2g.Define("Photon_corrIso_m{}".format(mass), "correct_gammaIso_for_photons(best_2g_idx1_m{m}, best_2g_idx2_m{m}, Photon_pt, Photon_eta, Photon_phi, Photon_pfRelIso03_all)".format(m=mass))
-        wen2g = wen2g.Define("Photon_ID_m{}".format(mass), "Photon_preselection&&Photon_corrIso_m{}<0.1&&Photon_IdNoIso".format(mass))
         wen2g = wen2g.Define("best_2g_sumID_m{}".format(mass), "raw_best_2g_m{m}[13]+raw_best_2g_m{m}[14]".format(m=mass))
         wen2g = wen2g.Define("misID_info_m{}".format(mass), "check_W_misID(Electron_pt[W_l1_idx], Electron_eta[W_l1_idx], Electron_phi[W_l1_idx], Electron_mass[W_l1_idx], Photon_pt, Photon_eta, Photon_phi, best_2g_idx1_m{m}, best_2g_idx2_m{m})".format(m=mass))
         wen2g = wen2g.Define("best_2g_misID1_m{}".format(mass), "misID_info_m{}[0]".format(mass))
@@ -349,7 +347,7 @@ def wmunuH(data,phi_mass,sample):
     wmn2g = wmn.Filter('Sum(Photon_preselection==1)>1', "at_least_2_preselection_photons")
     
     for mass in phi_mass:
-        wmn2g=wmn2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_IdNoIso, Photon_pfRelIso03_all, {})'.format(float(mass)))
+        wmn2g=wmn2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_cutBased, Photon_passPhIso, {})'.format(float(mass)))
         wmn2g=wmn2g.Define('best_2g_gamma1_pt_m{}'.format(mass),'raw_best_2g_m{}[0]'.format(mass))
         wmn2g=wmn2g.Define('best_2g_gamma1_eta_m{}'.format(mass),'raw_best_2g_m{}[1]'.format(mass))
         wmn2g=wmn2g.Define('best_2g_gamma1_phi_m{}'.format(mass),'raw_best_2g_m{}[2]'.format(mass))
@@ -368,8 +366,6 @@ def wmunuH(data,phi_mass,sample):
         wmn2g=wmn2g.Define('best_2g_pt_m{}'.format(mass), 'raw_best_2g_m{}[15]'.format(mass))
         wmn2g=wmn2g.Define('best_2g_eta_m{}'.format(mass), 'raw_best_2g_m{}[16]'.format(mass))
         wmn2g=wmn2g.Define('best_2g_phi_m{}'.format(mass), 'raw_best_2g_m{}[17]'.format(mass))
-        wmn2g=wmn2g.Define("Photon_corrIso_m{}".format(mass), "correct_gammaIso_for_photons(best_2g_idx1_m{m}, best_2g_idx2_m{m}, Photon_pt, Photon_eta, Photon_phi, Photon_pfRelIso03_all)".format(m=mass))
-        wmn2g = wmn2g.Define("Photon_ID_m{}".format(mass), "Photon_preselection&&Photon_corrIso_m{}<0.1&&Photon_IdNoIso".format(mass))
         wmn2g = wmn2g.Define("best_2g_sumID_m{}".format(mass), "raw_best_2g_m{m}[13]+raw_best_2g_m{m}[14]".format(m=mass))
 
     actions.append(wmn2g.Snapshot('wmn2g', sample+".root", cols,opts))
@@ -385,11 +381,51 @@ def wmunuH(data,phi_mass,sample):
         
     return actions
 
-
-
-def zmumuH(data,phi_mass,sample):
+def wmugamma(data,sample):
     actions=[]
 
+    #Declare dataframe and load all meta data 
+    dataframe =load_meta_data(data)
+    ####################
+    #ANALYSIS CODE HERE#        
+    ####################
+    wmg = dataframe['Events'].Filter("isGoodLumi", "passed_lumiFilter")
+    wmg = wmg.Filter('HLT_passed', 'passed_HLT')
+    
+    if data['isMC']:
+        wmg = wmg.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
+        if data['customNanoAOD']:
+            wmg = genAna(wmg)
+    
+    wmg = muonAna(wmg, data['era'])
+    wmg = electronAna(wmg, data['era'])
+    
+    wmg = wmg.Filter("Muon_ntight==1", "exactly_1_tight_muon")
+    ptThresh = 28 if data['era']=='2017' else 25
+    wmg = wmg.Filter("Sum(Muon_pt[tight_muon]>{})>0".format(ptThresh), "muon_pt_over{}".format(ptThresh))
+    wmg = makeW(wmg, "Muon")
+
+    wmg = wmg.Filter("nPhoton==1", "exactly_1photon")
+
+    wmg = photonAna(wmg, data['era'])
+    
+
+    actions.append(wmg.Snapshot('wmugamma', sample+".root", cols,opts))
+    report = ROOT.RDataFrame(1)
+    r = wmg.Report()
+    for cut in r:
+        report = report.Define("report_{}_all".format(cut.GetName()), "{}".format(cut.GetAll()))
+        report = report.Define("report_{}_pass".format(cut.GetName()), "{}".format(cut.GetPass()))
+    actions.append(report.Snapshot("Report_wmugamma", sample+'.root', "", opts))
+
+    for tree in ['Runs']:
+        actions.append(dataframe[tree].Snapshot(tree, sample+".root", "", opts))
+        
+    return actions
+
+def zmumuH(data,phi_mass,sample):
+    
+    actions=[]
     #Declare dataframe and load all meta data 
     dataframe =load_meta_data(data)
 
@@ -428,7 +464,7 @@ def zmumuH(data,phi_mass,sample):
     # FSR Recovery with loose muons and preselection photons
     zmm=zmm.Define("Photon_isFSR","fsr_recovery(Z_idx,Muon_pt, Muon_eta, Muon_phi, Muon_mass,Photon_pt,Photon_eta,Photon_phi,Photon_preselection)");
     # Correct isolation for FSR
-    zmm = zmm.Define("Photon_pfRelIso03_fsrCorr", "correct_gammaIso_for_muons(Z_idx, Muon_pt, Muon_eta, Muon_phi, Photon_pt, Photon_eta, Photon_phi, Photon_pfRelIso03_all, Photon_isFSR)")
+    #zmm = zmm.Define("Photon_pfRelIso03_fsrCorr", "correct_gammaIso_for_muons(Z_idx, Muon_pt, Muon_eta, Muon_phi, Photon_pt, Photon_eta, Photon_phi, Photon_pfRelIso03_all, Photon_isFSR)")
     
     ##### gamma gamma +X analysis ######
     ####################################
@@ -436,7 +472,7 @@ def zmumuH(data,phi_mass,sample):
     #Al least Two good photons
     zmm2g=zmm.Filter('Sum(Photon_preselection==1)>1','at_least_2_preselection_photons')
     for mass in phi_mass:
-        zmm2g=zmm2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_IdNoIso, Photon_pfRelIso03_fsrCorr, {})'.format(float(mass)))
+        zmm2g=zmm2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_cutBased, Photon_passPhIso, {})'.format(float(mass)))
         zmm2g=zmm2g.Define('best_2g_gamma1_pt_m{}'.format(mass),'raw_best_2g_m{}[0]'.format(mass))
         zmm2g=zmm2g.Define('best_2g_gamma1_eta_m{}'.format(mass),'raw_best_2g_m{}[1]'.format(mass))
         zmm2g=zmm2g.Define('best_2g_gamma1_phi_m{}'.format(mass),'raw_best_2g_m{}[2]'.format(mass))
@@ -459,61 +495,57 @@ def zmumuH(data,phi_mass,sample):
         zmm2g=zmm2g.Define('best_2g_fsr1_m{}'.format(mass), "fsr_best_2g_m{}_info[0]".format(mass))
         zmm2g=zmm2g.Define('best_2g_fsr2_m{}'.format(mass), "fsr_best_2g_m{}_info[1]".format(mass))
         zmm2g=zmm2g.Define('best_2g_fsr3_m{}'.format(mass), "fsr_best_2g_m{}_info[2]".format(mass))
-        zmm2g=zmm2g.Define("Photon_corrIso_m{}".format(mass), "correct_gammaIso_for_photons(best_2g_idx1_m{m}, best_2g_idx2_m{m}, Photon_pt, Photon_eta, Photon_phi, Photon_pfRelIso03_all)".format(m=mass))
-        zmm2g = zmm2g.Define("Photon_ID_m{}".format(mass), "Photon_preselection&&Photon_corrIso_m{}<0.1&&Photon_IdNoIso".format(mass))
-        zmm2g = zmm2g.Define("best_2g_sumID_m{}".format(mass), "raw_best_2g_m{m}[13]+raw_best_2g_m{m}[14]".format(m=mass))
-        #zmm2g=zmm2g.Define('best_2g_sumID_m{}'.format(mass), 'Photon_ID_m{m}[best_2g_idx1_m{m}]+Photon_ID_m{m}[best_2g_idx2_m{m}]'.format(m=mass))
-    
+        zmm2g=zmm2g.Define("best_2g_sumID_m{}".format(mass), "raw_best_2g_m{m}[13]+raw_best_2g_m{m}[14]".format(m=mass))
     ##### 3 gamma analysis ######
     #Targets events where one two photons are merged
-    ####################################
-    zmm3g=zmm.Filter('Sum(Photon_preselection)==3','Exactly three no FSR photons')
-    for mass in phi_mass:
-        zmm3g=zmm3g.Define('raw_best_3g_m{}'.format(mass),'best_3gamma(Photon_pt[Photon_preselection],Photon_eta[Photon_preselection],Photon_phi[Photon_preselection],Photon_isScEtaEB[Photon_preselection], Photon_isScEtaEE[Photon_preselection],{})'.format(float(mass)))
-        zmm3g=zmm3g.Define('best_3g_phi_gamma1_pt_m{}'.format(mass),'raw_best_3g_m{}[0]'.format(mass))
-        zmm3g=zmm3g.Define('best_3g_phi_gamma1_eta_m{}'.format(mass),'raw_best_3g_m{}[1]'.format(mass))
-        zmm3g=zmm3g.Define('best_3g_phi_gamma1_phi_m{}'.format(mass),'raw_best_3g_m{}[2]'.format(mass))
-        zmm3g=zmm3g.Define('best_3g_phi_gamma2_pt_m{}'.format(mass),'raw_best_3g_m{}[3]'.format(mass))
-        zmm3g=zmm3g.Define('best_3g_phi_gamma2_eta_m{}'.format(mass),'raw_best_3g_m{}[4]'.format(mass))
-        zmm3g=zmm3g.Define('best_3g_phi_gamma2_phi_m{}'.format(mass),'raw_best_3g_m{}[5]'.format(mass))
-        zmm3g=zmm3g.Define('best_3g_gamma3_pt_m{}'.format(mass),'raw_best_3g_m{}[9]'.format(mass))
-        zmm3g=zmm3g.Define('best_3g_gamma3_eta_m{}'.format(mass),'raw_best_3g_m{}[10]'.format(mass))
-        zmm3g=zmm3g.Define('best_3g_gamma3_phi_m{}'.format(mass),'raw_best_3g_m{}[11]'.format(mass))
-        zmm3g=zmm3g.Define('best_3g_phi_dxy_m{}'.format(mass),'raw_best_3g_m{}[6]'.format(mass))
-        zmm3g=zmm3g.Define('best_3g_phi_valid_m{}'.format(mass),'raw_best_3g_m{}[7]'.format(mass))
-        zmm3g=zmm3g.Define('best_3g_phi_mass_m{}'.format(mass),'raw_best_3g_m{}[8]'.format(mass))
-        zmm3g=zmm3g.Define('best_3g_raw_mass_m{}'.format(mass),'raw_best_3g_m{}[12]'.format(mass))
-
-
+    #####################################
+    #zmm3g=zmm.Filter('Sum(Photon_preselection)==3','Exactly three no FSR photons')
+    #for mass in phi_mass:
+    #    zmm3g=zmm3g.Define('raw_best_3g_m{}'.format(mass),'best_3gamma(Photon_pt[Photon_preselection],Photon_eta[Photon_preselection],Photon_phi[Photon_preselection],Photon_isScEtaEB[Photon_preselection], Photon_isScEtaEE[Photon_preselection],{})'.format(float(mass)))
+    #    zmm3g=zmm3g.Define('best_3g_phi_gamma1_pt_m{}'.format(mass),'raw_best_3g_m{}[0]'.format(mass))
+    #    zmm3g=zmm3g.Define('best_3g_phi_gamma1_eta_m{}'.format(mass),'raw_best_3g_m{}[1]'.format(mass))
+    #    zmm3g=zmm3g.Define('best_3g_phi_gamma1_phi_m{}'.format(mass),'raw_best_3g_m{}[2]'.format(mass))
+    #    zmm3g=zmm3g.Define('best_3g_phi_gamma2_pt_m{}'.format(mass),'raw_best_3g_m{}[3]'.format(mass))
+    #    zmm3g=zmm3g.Define('best_3g_phi_gamma2_eta_m{}'.format(mass),'raw_best_3g_m{}[4]'.format(mass))
+    #    zmm3g=zmm3g.Define('best_3g_phi_gamma2_phi_m{}'.format(mass),'raw_best_3g_m{}[5]'.format(mass))
+    #    zmm3g=zmm3g.Define('best_3g_gamma3_pt_m{}'.format(mass),'raw_best_3g_m{}[9]'.format(mass))
+    #    zmm3g=zmm3g.Define('best_3g_gamma3_eta_m{}'.format(mass),'raw_best_3g_m{}[10]'.format(mass))
+    #    zmm3g=zmm3g.Define('best_3g_gamma3_phi_m{}'.format(mass),'raw_best_3g_m{}[11]'.format(mass))
+    #    zmm3g=zmm3g.Define('best_3g_phi_dxy_m{}'.format(mass),'raw_best_3g_m{}[6]'.format(mass))
+    #    zmm3g=zmm3g.Define('best_3g_phi_valid_m{}'.format(mass),'raw_best_3g_m{}[7]'.format(mass))
+    #    zmm3g=zmm3g.Define('best_3g_phi_mass_m{}'.format(mass),'raw_best_3g_m{}[8]'.format(mass))
+    #    zmm3g=zmm3g.Define('best_3g_raw_mass_m{}'.format(mass),'raw_best_3g_m{}[12]'.format(mass))
+#
+#
 
 
     ##### 4 gamma  analysis       ######
     ####################################
     #Four good photons
-    zmm4g=zmm.Filter('Sum(Photon_preselection)>3','At least 4 good no FSR photons')
-    #Pick the best combination dependening on the mass
-    for mass in phi_mass:
-        zmm4g=zmm4g.Define('raw_best_4g_m{}'.format(mass),'best_4gamma(Photon_pt[Photon_preselection],Photon_eta[Photon_preselection],Photon_phi[Photon_preselection],Photon_isScEtaEB[Photon_preselection], Photon_isScEtaEE[Photon_preselection],{})'.format(float(mass)))
-        zmm4g=zmm4g.Define('best_4g_phi1_gamma1_pt_m{}'.format(mass),'raw_best_4g_m{}[0]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi1_gamma1_eta_m{}'.format(mass),'raw_best_4g_m{}[1]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi1_gamma1_phi_m{}'.format(mass),'raw_best_4g_m{}[2]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi1_gamma2_pt_m{}'.format(mass),'raw_best_4g_m{}[3]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi1_gamma2_eta_m{}'.format(mass),'raw_best_4g_m{}[4]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi1_gamma2_phi_m{}'.format(mass),'raw_best_4g_m{}[5]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi1_dxy_m{}'.format(mass),'raw_best_4g_m{}[6]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi1_valid_m{}'.format(mass),'raw_best_4g_m{}[7]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi2_gamma1_pt_m{}'.format(mass),'raw_best_4g_m{}[8]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi2_gamma1_eta_m{}'.format(mass),'raw_best_4g_m{}[9]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi2_gamma1_phi_m{}'.format(mass),'raw_best_4g_m{}[10]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi2_gamma2_pt_m{}'.format(mass),'raw_best_4g_m{}[11]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi2_gamma2_eta_m{}'.format(mass),'raw_best_4g_m{}[12]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi2_gamma2_phi_m{}'.format(mass),'raw_best_4g_m{}[13]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi2_dxy_m{}'.format(mass),'raw_best_4g_m{}[14]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi2_valid_m{}'.format(mass),'raw_best_4g_m{}[15]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi1_mass_m{}'.format(mass),'raw_best_4g_m{}[16]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_phi2_mass_m{}'.format(mass),'raw_best_4g_m{}[17]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_uncorr_mass_m{}'.format(mass),'raw_best_4g_m{}[18]'.format(mass))
-        zmm4g=zmm4g.Define('best_4g_corr_mass_m{}'.format(mass),'raw_best_4g_m{}[19]'.format(mass))
+    #zmm4g=zmm.Filter('Sum(Photon_preselection)>3','At least 4 good no FSR photons')
+    ##Pick the best combination dependening on the mass
+    #for mass in phi_mass:
+    #    zmm4g=zmm4g.Define('raw_best_4g_m{}'.format(mass),'best_4gamma(Photon_pt[Photon_preselection],Photon_eta[Photon_preselection],Photon_phi[Photon_preselection],Photon_isScEtaEB[Photon_preselection], Photon_isScEtaEE[Photon_preselection],{})'.format(float(mass)))
+    #    zmm4g=zmm4g.Define('best_4g_phi1_gamma1_pt_m{}'.format(mass),'raw_best_4g_m{}[0]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi1_gamma1_eta_m{}'.format(mass),'raw_best_4g_m{}[1]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi1_gamma1_phi_m{}'.format(mass),'raw_best_4g_m{}[2]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi1_gamma2_pt_m{}'.format(mass),'raw_best_4g_m{}[3]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi1_gamma2_eta_m{}'.format(mass),'raw_best_4g_m{}[4]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi1_gamma2_phi_m{}'.format(mass),'raw_best_4g_m{}[5]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi1_dxy_m{}'.format(mass),'raw_best_4g_m{}[6]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi1_valid_m{}'.format(mass),'raw_best_4g_m{}[7]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi2_gamma1_pt_m{}'.format(mass),'raw_best_4g_m{}[8]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi2_gamma1_eta_m{}'.format(mass),'raw_best_4g_m{}[9]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi2_gamma1_phi_m{}'.format(mass),'raw_best_4g_m{}[10]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi2_gamma2_pt_m{}'.format(mass),'raw_best_4g_m{}[11]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi2_gamma2_eta_m{}'.format(mass),'raw_best_4g_m{}[12]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi2_gamma2_phi_m{}'.format(mass),'raw_best_4g_m{}[13]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi2_dxy_m{}'.format(mass),'raw_best_4g_m{}[14]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi2_valid_m{}'.format(mass),'raw_best_4g_m{}[15]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi1_mass_m{}'.format(mass),'raw_best_4g_m{}[16]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_phi2_mass_m{}'.format(mass),'raw_best_4g_m{}[17]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_uncorr_mass_m{}'.format(mass),'raw_best_4g_m{}[18]'.format(mass))
+    #    zmm4g=zmm4g.Define('best_4g_corr_mass_m{}'.format(mass),'raw_best_4g_m{}[19]'.format(mass))
      
         
     actions.append(zmm2g.Snapshot('zmm2g',sample+'.root',cols, opts))
@@ -538,10 +570,11 @@ def zmumuH(data,phi_mass,sample):
 
 def analysis(data,sample):
     #phi_mass=[5,10,20,30]
-    phi_mass=[7,15,20,30,40,50,55]
+    phi_mass=[15,20,30,40,50,55]
     actions = []
     actions.extend(zmumuH(data,phi_mass,sample))
     actions.extend(zeeH(data,phi_mass,sample))
     actions.extend(wmunuH(data,phi_mass,sample))
     actions.extend(wenuH(data,phi_mass,sample))
+    actions.extend(wmugamma(data,sample))
     return actions
