@@ -28,12 +28,12 @@ samp = importlib.import_module('analysis.{}samples'.format(options.analysis))
 Data_redirectors={
 "Europe": "root://xrootd-cms.infn.it//",
 "US":     "root://cmsxrootd.fnal.gov//",
-"Global": "root://cms-xrd-global.cern.ch// ",
+"Global": "root://cms-xrd-global.cern.ch//",
 "Asia":   "root://xrootd-cms-kr.kisti.re.kr//"
 }
 actions=[]
 for sample in args:
-    data=createDataSet(samp.samples[sample],options.splitFactor,options.processPart,Data_redirectors["Europe"])
+    data=createDataSet(samp.samples[sample],options.splitFactor,options.processPart,Data_redirectors["Global"])
     actions.extend(an.analysis(data,sample))
 ROOT.RDF.RunGraphs(actions)
 
