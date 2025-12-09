@@ -87,8 +87,14 @@ def redoPhotonID(plotter,era,ana,isMC = False):
         
 
 def getFiles(query,sampleDir,sampleType,era,prod):
-    ser = pd.Series(subprocess.check_output(['xrdfs', 'root://cmseos.fnal.gov', 'ls', f"{sampleDir}/{sampleType}{era}_{prod}/"], text=True).split("\n"))
-    return(list('root://cmseos.fnal.gov/' + ser[ser.str.contains(query)]))
+    if '/store' in sampleDir:
+        ser = pd.Series(subprocess.check_output(['xrdfs', 'root://cmseos.fnal.gov', 'ls', f"{sampleDir}/{sampleType}{era}_{prod}/"], text=True).split("\n"))
+        return(list('root://cmseos.fnal.gov/' + ser[ser.str.contains(query)]))
+    else:
+        ser = pd.Series(subprocess.check_output(['ls', f"{sampleDir}/{sampleType}{era}_{prod}/"], text=True).split("\n"))
+        return(list(f"{sampleDir}/{sampleType}{era}_{prod}/" +ser[ser.str.contains(query)]))
+    
+        
 
 def getPlotters(era,prod,sampleDir,mass_list,modelIndependent=False,which_ana='all'):
     dataEMU = {}     # merged_plotter of data
@@ -494,7 +500,7 @@ if __name__ == '__main__':
     try:
         era = '2016'
         prod = '03_26_24'
-        sampleDir = "/store/user/gfavila/DDP" #EOS directory
+        sampleDir = "/tank/ddp/DDP" #EOS directory
         m = 20
         v = 'Z'
         l = 'MU'
