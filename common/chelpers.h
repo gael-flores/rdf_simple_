@@ -327,6 +327,20 @@ float calculate_lgamma_mass(const float lpt, float leta, float lphi, float lmass
     return (lep + gamma).M();
 }
 
+float calculate_lgammagamma_mass(const float lpt, const float leta, const float lphi, const float lmass,
+                            const float g1pt, const float g1eta, const float g1phi,
+                            const float g2pt, const float g2eta, const float g2phi) {
+
+    // Build the 4-vectors
+    ROOT::Math::PtEtaPhiMVector lep(lpt, leta, lphi, lmass);
+    ROOT::Math::PtEtaPhiMVector gamma1(g1pt, g1eta, g1phi, 0.0);
+    ROOT::Math::PtEtaPhiMVector gamma2(g2pt, g2eta, g2phi, 0.0);
+
+    // Compute invariant mass of the system
+    ROOT::Math::PtEtaPhiMVector total = lep + gamma1 + gamma2;
+    return total.M();
+}
+
 // Return dR to the closest photon (loop over all photons)
 RVecF deltaR_lgamma(const float leta, const float lphi,const RVecF& geta, const RVecF& gphi) {
     RVecF result;
@@ -345,6 +359,49 @@ RVecF deltaR_lgamma(const float leta, const float lphi,const RVecF& geta, const 
     }
 
     return result; // Empty if no photons exist
+}
+
+//Return idx of an individual particle to the closest particle of collection
+RVecF idx_closest_jet(const float eta, const float phi,const RVecF& other_pt,const RVecF& other_eta, const RVecF& other_phi) {
+    RVecF result;
+    float min_dR = std::numeric_limits<float>::max();
+    int closest_idx = -1;
+
+    for (int i = 0; i < static_cast<int>(other_pt.size()); i++) {
+        if (other_pt[i] < 30.0 || other_pt[i] > 50.0)
+          continue;
+        float dR = DeltaR(other_eta[i], eta, other_phi[i], phi);
+        if (dR < min_dR) {
+            min_dR = dR;
+            closest_idx = i;
+        }
+    }
+    if (closest_idx != -1) {
+        result.emplace_back(closest_idx);
+    }
+
+    return result;
+}
+
+RVecF idx_closest_tau(const float eta, const float phi,const RVecF& other_pt,const RVecF& other_eta, const RVecF& other_phi) {
+    RVecF result;
+    float min_dR = std::numeric_limits<float>::max();
+    int closest_idx = -1;
+
+    for (int i = 0; i < static_cast<int>(other_pt.size()); i++) {
+        if (other_pt[i] < 25.0)
+          continue;
+        float dR = DeltaR(other_eta[i], eta, other_phi[i], phi);
+        if (dR < min_dR) {
+            min_dR = dR;
+            closest_idx = i;
+        }
+    }
+    if (closest_idx != -1) {
+        result.emplace_back(closest_idx);
+    }
+
+    return result;
 }
 
 float calculate_lgamma_mass_idx(const float lpt, float leta, float lphi, float lmass,
