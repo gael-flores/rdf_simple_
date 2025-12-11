@@ -35,57 +35,65 @@ def isValidFile(fname, tree):
 
 # Temp function to use official cut based ID instead of custom ID
 # Remove once ntuples get reprocessed with correct ID (not needed after 03_26_24)
-def redoPhotonID_rdf(rdf,m):
-    rdf = rdf.Define("PassPhIso" , "passPhIso(Photon_vidNestedWPBitmap)")
-    rdf = rdf.Define("best_2g_looseID1_m{}".format(m), "Photon_cutBased[best_2g_idx1_m{}]>0".format(m))
-    rdf = rdf.Define("best_2g_looseID2_m{}".format(m), "Photon_cutBased[best_2g_idx2_m{}]>0".format(m))
-    rdf = rdf.Redefine("best_2g_sumID_m{}".format(m), "best_2g_looseID1_m{m}+best_2g_looseID2_m{m}".format(m=m))
-    return(rdf)
-        
-    
 def redoPhotonID(plotter,era,ana,isMC = False):
-    if ana != 'wmugamma':
-        IsoDef = False
-        passIso =False
-        try:
-            plotter.define("PassPhIso" , "passPhIso(Photon_vidNestedWPBitmap)")
-            passIso = True
-        except:
-            IsoDef = True
-        for m in [15,20,30,40,50,55]:
-            plotter.define(f'DeltaR_g1g2_m{m}', f'DeltaR(Photon_eta[best_2g_idx1_m{m}],Photon_eta[best_2g_idx2_m{m}], Photon_phi[best_2g_idx1_m{m}] , Photon_phi[best_2g_idx2_m{m}])')
-            plotter.define(f'DeltaPhi_g1g2_m{m}', f'abs(DeltaPhi(Photon_phi[best_2g_idx1_m{m}] , Photon_phi[best_2g_idx2_m{m}]))')
-            try:
-                plotter.define(f"best_2g_looseID1_m{m}", f"Photon_cutBased[best_2g_idx1_m{m}]>0")
-                plotter.define(f"best_2g_looseID2_m{m}", f"Photon_cutBased[best_2g_idx2_m{m}]>0")
-                plotter.redefine(f"best_2g_sumID_m{m}", f"best_2g_looseID1_m{m}+best_2g_looseID2_m{m}")
-                plotter.filter(f"PassPhIso[best_2g_idx1_m{m}]==1 && PassPhIso[best_2g_idx2_m{m}]==1") #all photons required to pass isolation
-
-                passIso = True
-            except:
-                passIso = True
-        if ana =='wen2g':
-            plotter.define('mInv_egamma','calculate_lgamma_mass(Electron_pt[W_l1_idx], Electron_eta[W_l1_idx], Electron_phi[W_l1_idx], Electron_mass[W_l1_idx],Photon_pt, Photon_eta, Photon_phi)')
-            plotter.define('DeltaR_closest_photon', 'deltaR_lgamma(Electron_eta[W_l1_idx], Electron_phi[W_l1_idx],Photon_eta[Photon_preselection], Photon_phi[Photon_preselection])')
-            plotter.redefine('DeltaR_closest_photon','DeltaR_closest_photon[0]')
-        elif ana =='wmn2g':
-            plotter.define('mInv_mugamma','calculate_lgamma_mass(Muon_pt[W_l1_idx], Muon_eta[W_l1_idx], Muon_phi[W_l1_idx], Muon_mass[W_l1_idx],Photon_pt, Photon_eta, Photon_phi)')
-            plotter.define('DeltaR_closest_photon', 'deltaR_lgamma(Muon_eta[W_l1_idx], Muon_phi[W_l1_idx],Photon_eta[Photon_preselection], Photon_phi[Photon_preselection])')
-            plotter.redefine('DeltaR_closest_photon','DeltaR_closest_photon[0]')
-        if isMC:
-            plotter.define("pho_SFs_id", "scaleFactors_2d(Photon_eta, Photon_pt, PHO_ID_{era}_sf, PHO_ID_{era}_binsX, PHO_ID_{era}_binsY, sample_isMC, Photon_cutBased>0)".format(era=era))
-            plotter.redefine("Photon_idSF_val", "pho_SFs_id[0]")
-            plotter.redefine("Photon_idSF_unc", "pho_SFs_id[1]")
-            plotter.define("pho_SFs_pix", "getPixelSeedSF(Photon_isScEtaEB, Photon_isScEtaEE, hasPix_UL{era}_sf, sample_isMC, !Photon_pixelSeed)".format(era=era))
-            plotter.redefine("Photon_pixSF_val", "pho_SFs_pix[0]")
-            plotter.redefine("Photon_pixSF_unc", "pho_SFs_pix[1]")
-    else:
-        plotter.filter('Sum(Photon_preselection==1)>0')
-        plotter.define('DeltaR_closest_photon', 'deltaR_lgamma(Muon_eta[W_l1_idx], Muon_phi[W_l1_idx],Photon_eta, Photon_phi)')
-        plotter.redefine('DeltaR_closest_photon','DeltaR_closest_photon[0]')
+    branches = plotter.rdf.GetColumnNames()
+    if "Photon_passPhIso" not in branches:
+        plotter.define("Photon_passPhIso" , "passPhIso(Photon_vidNestedWPBitmap)")
+    for m in [15,20,30,40,50,55]:
+        plotter.define(f'DeltaR_g1g2_m{m}', f'DeltaR(Photon_eta[best_2g_idx1_m{m}],Photon_eta[best_2g_idx2_m{m}], Photon_phi[best_2g_idx1_m{m}] , Photon_phi[best_2g_idx2_m{m}])')
+        plotter.define(f'DeltaPhi_g1g2_m{m}', f'abs(DeltaPhi(Photon_phi[best_2g_idx1_m{m}] , Photon_phi[best_2g_idx2_m{m}]))')
+        if "Jet_pt" in branches and "Jet_eta" in branches and "Jet_phi" in branches:
+            plotter.define(f'best_2g_g1_closestJet_Idx_m{m}', f"idx_closest_jet(Photon_eta[best_2g_idx1_m{m}],Photon_phi[best_2g_idx1_m{m}],Jet_pt,Jet_eta,Jet_phi)[0]")
+            plotter.define(f'best_2g_g2_closestJet_Idx_m{m}', f"idx_closest_jet(Photon_eta[best_2g_idx2_m{m}],Photon_phi[best_2g_idx2_m{m}],Jet_pt,Jet_eta,Jet_phi)[0]")
+            plotter.define(f'best_2g_g1_DeltaR_closestJet_m{m}',f"DeltaR(Photon_eta[best_2g_idx1_m{m}],Jet_eta[best_2g_g1_closestJet_Idx_m{m}],Photon_phi[best_2g_idx1_m{m}],Jet_phi[best_2g_g1_closestJet_Idx_m{m}])")
+            plotter.define(f'best_2g_g2_DeltaR_closestJet_m{m}',f"DeltaR(Photon_eta[best_2g_idx2_m{m}],Jet_eta[best_2g_g2_closestJet_Idx_m{m}],Photon_phi[best_2g_idx2_m{m}],Jet_phi[best_2g_g2_closestJet_Idx_m{m}])")
+            plotter.define(f"Jet1_puId_m{m}",f"Jet_puId[best_2g_g1_closestJet_Idx_m{m}]")
+            plotter.define(f"Jet2_puId_m{m}",f"Jet_puId[best_2g_g2_closestJet_Idx_m{m}]")
+            plotter.define(f'Jetfrac1_m{m}',f'Jet_chFPV0EF[best_2g_g1_closestJet_Idx_m{m}]/(Jet_chHEF[best_2g_g1_closestJet_Idx_m{m}] + Jet_chEmEF[best_2g_g1_closestJet_Idx_m{m}] + Jet_chFPV0EF[best_2g_g1_closestJet_Idx_m{m}])')
+            plotter.define(f'Jetfrac2_m{m}',f'Jet_chFPV0EF[best_2g_g2_closestJet_Idx_m{m}]/(Jet_chHEF[best_2g_g2_closestJet_Idx_m{m}] + Jet_chEmEF[best_2g_g2_closestJet_Idx_m{m}] + Jet_chFPV0EF[best_2g_g2_closestJet_Idx_m{m}])')
+        if "Photon_passPhIso" not in branches:
+            print('what the heck')
+            plotter.define(f"best_2g_looseID1_m{m}", f"Photon_cutBased[best_2g_idx1_m{m}]>0")
+            plotter.define(f"best_2g_looseID2_m{m}", f"Photon_cutBased[best_2g_idx2_m{m}]>0")
+            plotter.redefine(f"best_2g_sumID_m{m}", f"best_2g_looseID1_m{m}+best_2g_looseID2_m{m}")
+            plotter.filter(f"Photon_passPhIso[best_2g_idx1_m{m}]==1 && Photon_passPhIso[best_2g_idx2_m{m}]==1") #all photons required to pass isolation
+        if "Tau_pt" in branches:
+            plotter.define(f'best_2g_g1_closestTau_Idx_m{m}', f"idx_closest_tau(Photon_eta[best_2g_idx1_m{m}],Photon_phi[best_2g_idx1_m{m}],Tau_pt,Tau_eta,Tau_phi)[0]")
+            plotter.define(f'best_2g_g2_closestTau_Idx_m{m}', f"idx_closest_tau(Photon_eta[best_2g_idx2_m{m}],Photon_phi[best_2g_idx2_m{m}],Tau_pt,Tau_eta,Tau_phi)[0]")
+            plotter.define(f'best_2g_g1_DeltaR_closestTau_m{m}',f"DeltaR(Photon_eta[best_2g_idx1_m{m}],Tau_eta[best_2g_g1_closestTau_Idx_m{m}],Photon_phi[best_2g_idx1_m{m}],Tau_phi[best_2g_g1_closestTau_Idx_m{m}])")
+            plotter.define(f'best_2g_g2_DeltaR_closestTau_m{m}',f"DeltaR(Photon_eta[best_2g_idx2_m{m}],Tau_eta[best_2g_g2_closestTau_Idx_m{m}],Photon_phi[best_2g_idx2_m{m}],Tau_phi[best_2g_g2_closestTau_Idx_m{m}])")
+            plotter.define(f"Tau_mass1_m{m}",f"Tau_mass[best_2g_g1_closestTau_Idx_m{m}]")
+            plotter.define(f"Tau_mass2_m{m}",f"Tau_mass[best_2g_g2_closestTau_Idx_m{m}]")
+            plotter.define(f"Tau_decayMode1_m{m}",f"Tau_decayMode[best_2g_g1_closestTau_Idx_m{m}]")
+            plotter.define(f"Tau_decayMode2_m{m}",f"Tau_decayMode[best_2g_g2_closestTau_Idx_m{m}]")
+    if ana =='wen2g':
+        plotter.define('ept','Electron_pt[W_l1_idx]')
+        plotter.define('mInv_egamma','calculate_lgamma_mass(Electron_pt[W_l1_idx], Electron_eta[W_l1_idx], Electron_phi[W_l1_idx], Electron_mass[W_l1_idx],Photon_pt, Photon_eta, Photon_phi)')
+        plotter.define('mInv_egammagamma','calculate_lgammagamma_mass(Electron_pt[W_l1_idx], Electron_eta[W_l1_idx], Electron_phi[W_l1_idx], Muon_mass[W_l1_idx],Photon_pt[best_2g_idx1_m20], Photon_eta[best_2g_idx1_m20], Photon_phi[best_2g_idx1_m20],Photon_pt[best_2g_idx2_m20], Photon_eta[best_2g_idx2_m20], Photon_phi[best_2g_idx2_m20])')
+        plotter.define('DeltaR_closest_photon', 'deltaR_lgamma(Electron_eta[W_l1_idx], Electron_phi[W_l1_idx],Photon_eta[Photon_preselection], Photon_phi[Photon_preselection])[0]')
+        #plotter.define("loose_electron", "Electron_pt>15&&abs(Electron_eta)<2.5&&(abs(Electron_eta)>1.57||abs(Electron_eta)<1.44)&&abs(Electron_dxy)<0.2&&abs(Electron_dz)<0.2&&Electron_lostHits<2&&Electron_convVeto&&Electron_cutBased>0")
+        #plotter.define("tight_electron", "loose_electron&&Electron_cutBased>3")
+        #plotter.define("veto_electron", "Electron_pt>5&&abs(Electron_eta)<2.5&&(abs(Electron_eta)>1.57||abs(Electron_eta)<1.44)&&abs(Electron_dxy)<0.2&&Electron_lostHits<2&&Electron_convVeto&&(tight_electron==0)&&(loose_electron==0)")
+        #plotter.redefine("Electron_nveto", "Sum(veto_electron)")
+    elif ana =='wmn2g':
+        plotter.define('mpt','Muon_pt[W_l1_idx]')
         plotter.define('mInv_mugamma','calculate_lgamma_mass(Muon_pt[W_l1_idx], Muon_eta[W_l1_idx], Muon_phi[W_l1_idx], Muon_mass[W_l1_idx],Photon_pt, Photon_eta, Photon_phi)')
-        
+        plotter.define('mInv_mugammagamma','calculate_lgammagamma_mass(Muon_pt[W_l1_idx], Muon_eta[W_l1_idx], Muon_phi[W_l1_idx], Muon_mass[W_l1_idx],Photon_pt[best_2g_idx1_m20], Photon_eta[best_2g_idx1_m20], Photon_phi[best_2g_idx1_m20],Photon_pt[best_2g_idx2_m20], Photon_eta[best_2g_idx2_m20], Photon_phi[best_2g_idx2_m20])')
+        plotter.define('DeltaR_closest_photon', 'deltaR_lgamma(Muon_eta[W_l1_idx], Muon_phi[W_l1_idx],Photon_eta[Photon_preselection], Photon_phi[Photon_preselection])[0]')
+        #plotter.redefine("veto_muon", "Muon_pt>5&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&(loose_muon==0)&&(tight_muon==0)")
+        #plotter.redefine("Muon_nveto", "Sum(veto_muon)")
+    if isMC:
+        plotter.define("pho_SFs_id", "scaleFactors_2d(Photon_eta, Photon_pt, PHO_ID_{era}_sf, PHO_ID_{era}_binsX, PHO_ID_{era}_binsY, sample_isMC, Photon_cutBased>0)".format(era=era))
+        plotter.redefine("Photon_idSF_val", "pho_SFs_id[0]")
+        plotter.redefine("Photon_idSF_unc", "pho_SFs_id[1]")
+        plotter.define("pho_SFs_pix", "getPixelSeedSF(Photon_isScEtaEB, Photon_isScEtaEE, hasPix_UL{era}_sf, sample_isMC, !Photon_pixelSeed)".format(era=era))
+        plotter.redefine("Photon_pixSF_val", "pho_SFs_pix[0]")
+        plotter.redefine("Photon_pixSF_unc", "pho_SFs_pix[1]")
 
+#def getFiles(query,sampleDir,sampleType,era,prod):
+#    ser = pd.Series(subprocess.check_output(['xrdfs', 'root://cmseos.fnal.gov', 'ls', f"{sampleDir}/{sampleType}{era}_{prod}/"], text=True).split("\n"))
+#    matched = ser[ser.str.contains(f'/{query}', regex=True)]
+#    return list('root://cmseos.fnal.gov/' + matched)
 def getFiles(query,sampleDir,sampleType,era,prod):
     if '/store' in sampleDir:
         ser = pd.Series(subprocess.check_output(['xrdfs', 'root://cmseos.fnal.gov', 'ls', f"{sampleDir}/{sampleType}{era}_{prod}/"], text=True).split("\n"))
@@ -93,8 +101,6 @@ def getFiles(query,sampleDir,sampleType,era,prod):
     else:
         ser = pd.Series(subprocess.check_output(['ls', f"{sampleDir}/{sampleType}{era}_{prod}/"], text=True).split("\n"))
         return(list(f"{sampleDir}/{sampleType}{era}_{prod}/" +ser[ser.str.contains(query)]))
-    
-        
 
 def getPlotters(era,prod,sampleDir,mass_list,modelIndependent=False,which_ana='all'):
     dataEMU = {}     # merged_plotter of data
@@ -294,6 +300,7 @@ def getSigPlotters(era,prod,sampleDir,mass_list,analysis,modelIndependent=False,
         for ana in [analysis]:
             signal[sig][ana]  = {}        
             for m in masses:
+                print(f"\nSignal samples used")
                 signal[sig][ana][m] = {}
                 if which_lifetime == 'all':
                     ctaus = [0,10,20,50,100,1000]
@@ -361,9 +368,7 @@ def getSigPlotters(era,prod,sampleDir,mass_list,analysis,modelIndependent=False,
     plots['signal'] = signal
     return plots
 
-
-
-def getDYPlotters(era,prod,sampleDir,mass_list:list[int],analysis,modelIndependent:bool=False,which_mc:list = ['DYJetsToLL']):
+def getDYPlotters(era,prod,sampleDir,analysis,modelIndependent:bool=False,which_mc:list = ['DYJetsToLL']):  
     dyPlotters = {}  # merged_plotter of w+jets
     global masses #TODO clean this mess up
     masses = mass_list
@@ -371,7 +376,7 @@ def getDYPlotters(era,prod,sampleDir,mass_list:list[int],analysis,modelIndepende
         Samples = []
         for sample_mc in which_mc:
             Samples+= getFiles(sample_mc,sampleDir,sampleType="MC",era=era,prod=prod)
-        print('\nUsing these samples:')
+        print('\nDY samples used:')
         for sample in Samples:
             print(sample)
         print("\n")
@@ -401,7 +406,7 @@ def getDYPlotters(era,prod,sampleDir,mass_list:list[int],analysis,modelIndepende
     plots['DY'] = dyPlotters
     return plots
 
-def getWJPlotters(era,prod,sampleDir,mass_list:list[int],analysis,modelIndependent:bool=False,which_mc:list = ['WGToLNuG','TTJets','WJetsToLNu','WGG']):
+def getWJPlotters(era,prod,sampleDir,analysis,modelIndependent:bool=False,which_mc:list = ['WGToLNuG','TTJets','WJetsToLNu','WGG']):
     wjPlotters = {}  # merged_plotter of w+jets
     global masses #TODO clean this mess up
     masses = mass_list
@@ -409,7 +414,7 @@ def getWJPlotters(era,prod,sampleDir,mass_list:list[int],analysis,modelIndepende
         Samples = []
         for sample_mc in which_mc:
             Samples+= getFiles(sample_mc,sampleDir,sampleType="MC",era=era,prod=prod)
-        print('\nUsing these samples:')
+        print('\nWJ samples used:')
         for sample in Samples:
             print(sample)
         print("\n")
@@ -439,7 +444,7 @@ def getWJPlotters(era,prod,sampleDir,mass_list:list[int],analysis,modelIndepende
     plots['WJets'] = wjPlotters
     return plots
 
-def getDataPlotters(era:str, prod:str, sampleDir: str ,analysis:str ,modelIndependent:bool = False) -> merged_plotter:
+def getDataPlotters(era:str, prod:str, sampleDir: str,analysis:str ,modelIndependent:bool = False) -> merged_plotter:
     if 'e' in analysis:
         if era != '2018':
             EGSamples = getFiles("SingleElectron_",sampleDir,sampleType="DATA",era=era,prod=prod)
@@ -461,7 +466,7 @@ def getDataPlotters(era:str, prod:str, sampleDir: str ,analysis:str ,modelIndepe
         dataEMU = merged_plotter(egPlotters)            
     
     else:
-        singleMuSamples = getFiles("SingleMuon_",sampleDir,sampleType="DATA",era=era,prod=prod)
+        singleMuSamples = getFiles(f"SingleMuon_",sampleDir,sampleType="DATA",era=era,prod=prod)
         singleMuPlotters = []
     
         print("\nSingle muon samples:")
@@ -475,10 +480,6 @@ def getDataPlotters(era:str, prod:str, sampleDir: str ,analysis:str ,modelIndepe
         dataEMU = merged_plotter(singleMuPlotters)
 
     return dataEMU
-
-
-
-
 
 def getSF(scaleFactors, sfToVary = ''):
     if sfToVary == '':
@@ -499,9 +500,6 @@ def unfoldTH2(hist):
             hOut.SetBinContent(1+y+x*binsY, hist.GetBinContent(x+1, y+1))
             hOut.SetBinError(1+y+x*binsY, hist.GetBinError(x+1, y+1))
     return hOut
-
-
-
 
 
 #debugging code
@@ -529,7 +527,7 @@ if __name__ == '__main__':
         signal=merged_plotter([signal_2016,signal_2017,signal_2018])
 
         
-        list_of_plotters = data_2018.plotters
+        list_of_plotters = data_2016_plotters+data_2017_plotters+data_2018.plotters
 
         print("\nIndividual RDFs")
         for plotter in list_of_plotters:
@@ -544,10 +542,7 @@ if __name__ == '__main__':
             report:dict[str] = plotter.readReport()
             for key, value in report.items():
                 print(f"{key}: {value}")
-            print("\n")
-            
-
-#        ROOT.gSystem.Exit(0)
+            print("\n")            
     except Exception as e:
         import traceback
         traceback.print_exc()
