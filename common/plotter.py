@@ -216,7 +216,32 @@ class rdf_plotter(plotter_base):
             h.GetYaxis().SetTitle(titley+ " ["+unitsy+"]")
         return h
 
+    def unrolled2d(self,var1,var2,cuts,lumi,model):
+        corrString="1.0"
+        for corr in self.corrFactors:
+            corrString = corrString+"*("+str(corr['value'])+")" 
+        c = "("+self.defaultCuts+")*("+cuts+")*"+lumi+"*"+self.weight+"*("+corrString+")"
+        rdf=self.rdf.Define('plot_weight',c)
+        h=rdf.Histo2D(model,var1,var2,'plot_weight')
+        h.Sumw2()        
+        hu=ROOT.TH1D(h.GetName(),h.GetTitle(),h.GetNbinsX()*h.GetNbinsY(),0,h.GetNbinsX()*h.GetNbinsY())
+        for i in range(1,h.GetNbinsX()+1):
+            for j in range(1,h.GetNbinsY()+1):
+                b=h.GetBin(i,j)
+                bin1d=(i-1)*h.GetNbinsX()+j
+                hu.SetBinContent(bin1d,h.GetBinContent(b))
+                hu.SetBinError(bin1d,h.GetBinError(b))
+            
+        hu.SetLineStyle(self.linestyle)
+        hu.SetLineColor(self.linecolor)
+        hu.SetLineWidth(self.linewidth)
+        hu.SetFillStyle(self.fillstyle)
+        hu.SetFillColor(self.fillcolor)
+        hu.SetMarkerStyle(self.markerstyle)
+        return hu
 
+
+    
 
 class merged_plotter(plotter_base):
 
@@ -297,6 +322,28 @@ class merged_plotter(plotter_base):
             else:
                 h.GetYaxis().SetTitle(titley+ " ["+unitsy+"]")
             return h
+
+    def unrolled2d(self,var1,var2,cuts,lumi,model):
+        h = None
+        for plotter in self.plotters:
+            if h is None:
+                h = plotter.unrolled2d(var1,var2, cuts, lumi, model)
+            else:
+                h.Add(plotter.unrolled2d(var1,var2, cuts, lumi, model))
+        if h is None:
+            return h
+        else:
+            h.Sumw2()
+            #h.Sumw2(0)
+            #h.SetBinErrorOption(ROOT.TH1D.kPoisson)
+            h.SetLineStyle(self.linestyle)
+            h.SetLineColor(self.linecolor)
+            h.SetLineWidth(self.linewidth)
+            h.SetFillStyle(self.fillstyle)
+            h.SetFillColor(self.fillcolor)
+            h.SetMarkerStyle(self.markerstyle)
+        return h
+                               
     def getArray(self, var, cuts, lumi):
         """
         Applies cuts to RDF and extracts numpy array of values for a specific variable.
@@ -354,6 +401,45 @@ class merged_plotter(plotter_base):
                     out[cut] = r[cut]
         return out
 
+
+
+#Tricky, use with care!
+class background_plotter(merged_plotter):
+    def __init__(self,cutsSR,cutsCR,cutsSB,plotters):
+        self.cutsSR=cutsSR
+        self.cutsCR=cutsCR
+        self.cutsSB=cutsSB
+        super(background_plotter,self).__init__(plotters)
+        self.define('scaleVar','1.0')
+    def getScale(self,cuts,lumi='1.0'):       
+        hNum=super(background_plotter,self).hist1d('scaleVar','&&'.join([cuts,self.cutsSB]),lumi,('a','a',10,-1,1))
+        #replace cuts with cuts from control region
+        hDenom=super(background_plotter,self).hist1d('scaleVar','&&'.join([cuts.replace(self.cutsSR,self.cutsCR),self.cutsSB]),lumi,('a','a',10,-1,1))
+
+        if hDenom.Integral()==0:
+            print("Error , denominator has zero events, returning scale=1")
+            return 1.0
+        else:
+            return hNum.Integral()/hDenom.Integral()        
+        
+    def hist1d(self,var,cuts,lumi,model,titlex = "",units = ""):
+        h=super(background_plotter,self).hist1d(var,cuts.replace(self.cutsSR,self.cutsCR),lumi,model,titlex,units)
+        h.Scale(self.getScale(cuts,lumi))
+        return h
+    
+    def hist2d(self,var1,var2,cuts,lumi,model,titlex = "",unitsx = "",titley="",unitsy=""):
+        h=super(background_plotter,self).hist2d(var1,var2,cuts.replace(self.cutsSR,self.cutsCR),lumi,model,titlex,unitsx,titley,unitsy)
+        h.Scale(self.getScale(cuts,lumi))
+        return h
+
+    def unrolled2d(self,var1,var2,cuts,lumi,model):
+        h=super(background_plotter,self).unrolled2d(var1,var2,cuts.replace(self.cutsSR,self.cutsCR),lumi,model)      
+        h.Scale(self.getScale(cuts,lumi))
+        return h
+
+
+
+    
 class combined_plotter(object):
     def __init__(self,defaultCut="1"):
         self.plotters = []
