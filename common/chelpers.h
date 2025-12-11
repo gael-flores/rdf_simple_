@@ -383,22 +383,23 @@ RVecF idx_closest_jet(const float eta, const float phi,const RVecF& other_pt,con
     return result;
 }
 
-RVecF idx_closest_tau(const float eta, const float phi,const RVecF& other_pt,const RVecF& other_eta, const RVecF& other_phi) {
+RVecF idx_closest_tau(const RVecF& eta, const RVecF& phi,const RVecF& other_pt,const RVecF& other_eta, const RVecF& other_phi) {
     RVecF result;
-    float min_dR = std::numeric_limits<float>::max();
-    int closest_idx = -1;
 
-    for (int i = 0; i < static_cast<int>(other_pt.size()); i++) {
-        if (other_pt[i] < 25.0)
+    for (int i = 0; i < static_cast<int>(eta.size()); i++) {
+      float min_dR = std::numeric_limits<float>::max();
+      int closest_idx = -1;      
+      for (int j = 0; j < static_cast<int>(other_pt.size()); j++) {
+        if (other_pt[j] < 25.0)
           continue;
-        float dR = DeltaR(other_eta[i], eta, other_phi[i], phi);
-        if (dR < min_dR) {
+        float dR = DeltaR(other_eta[j], eta[i], other_phi[j], phi[i]);
+        if ((dR < min_dR) && (dR<0.1)) {
             min_dR = dR;
-            closest_idx = i;
+            closest_idx = j;
         }
-    }
-    if (closest_idx != -1) {
-        result.emplace_back(closest_idx);
+      }
+      
+      result.emplace_back(closest_idx);
     }
 
     return result;
