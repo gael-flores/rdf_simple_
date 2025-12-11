@@ -6,6 +6,7 @@
 #include "TVector3.h"
 #include "TMath.h"
 #include <algorithm>
+#include <stdio.h>
 class VertexCalculator {
  private:
   TVector3 vertex_;
@@ -491,14 +492,13 @@ bool compare_pair_withId(const RVecF& q1,const RVecF& q2) {
   }
 }
 
-RVecF best_2gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE, RVecI isLoose, RVecI gID, RVecF gIso, float mass) {
+RVecF best_2gamma(RVecF pt,RVecF eta, RVecF phi,RVec<bool> EB, RVec<bool> EE, RVecI isLoose, RVecI gID, float mass) {
   RVec<RVecF> all_combos;
   auto idx_cmb = ROOT::VecOps::Combinations(pt, 2);
   for (size_t i = 0; i < idx_cmb[0].size(); i++) {
     const auto i1 = idx_cmb[0][i];
     const auto i2 = idx_cmb[1][i];
-    
-    if (!(isLoose[i1] && isLoose[i2] && gIso[i1] && gIso[i2]))
+    if ( (isLoose[i1] != 1) || (isLoose[i2] != 1) )
       continue;
 
     RVecF result;
