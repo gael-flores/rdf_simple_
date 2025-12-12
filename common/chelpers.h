@@ -361,45 +361,39 @@ RVecF deltaR_lgamma(const float leta, const float lphi,const RVecF& geta, const 
     return result; // Empty if no photons exist
 }
 
-//Return idx of an individual particle to the closest particle of collection
-RVecF idx_closest_jet(const float eta, const float phi,const RVecF& other_pt,const RVecF& other_eta, const RVecF& other_phi) {
+//return PUID of the associated jet to each photon
+RVecF photon_closest_jet_puID(const RVecI& idx , const RVecF& jet_pt,const RVecF& jetPUID) {
     RVecF result;
-    float min_dR = std::numeric_limits<float>::max();
-    int closest_idx = -1;
-
-    for (int i = 0; i < static_cast<int>(other_pt.size()); i++) {
-        if (other_pt[i] < 30.0 || other_pt[i] > 50.0)
-          continue;
-        float dR = DeltaR(other_eta[i], eta, other_phi[i], phi);
-        if (dR < min_dR) {
-            min_dR = dR;
-            closest_idx = i;
-        }
+    for (int i = 0; i < static_cast<int>(idx.size()); i++) {
+      if ((idx[i]<0) ||jet_pt[idx[i]]>50.0) {
+        result.emplace_back(1.0);
+      }
+      else {
+	result.emplace_back(jetPUID[idx[i]]);
+      }
     }
-    if (closest_idx != -1) {
-        result.emplace_back(closest_idx);
-    }
-
     return result;
 }
 
-RVecF idx_closest_tau(const RVecF& eta, const RVecF& phi,const RVecF& other_pt,const RVecF& other_eta, const RVecF& other_phi) {
+RVecF photon_closest_one_prong_tau_mass(const RVecF& eta, const RVecF& phi,const RVecF& tau_pt,const RVecF& tau_eta, const RVecF& tau_phi,const RVecI& tau_decay,const RVecF& tau_mass) {
     RVecF result;
 
     for (int i = 0; i < static_cast<int>(eta.size()); i++) {
       float min_dR = std::numeric_limits<float>::max();
       int closest_idx = -1;      
-      for (int j = 0; j < static_cast<int>(other_pt.size()); j++) {
-        if (other_pt[j] < 25.0)
+      for (int j = 0; j < static_cast<int>(tau_pt.size()); j++) {
+        if (tau_pt[j] < 25.0 ||tau_decay[j]!=1)
           continue;
-        float dR = DeltaR(other_eta[j], eta[i], other_phi[j], phi[i]);
+        float dR = DeltaR(tau_eta[j], eta[i], tau_phi[j], phi[i]);
         if ((dR < min_dR) && (dR<0.1)) {
             min_dR = dR;
             closest_idx = j;
         }
       }
-      
-      result.emplace_back(closest_idx);
+      if (closest_idx>0)
+	result.emplace_back(tau_mass[closest_idx]);
+      else
+	result.emplace_back(-1.0);
     }
 
     return result;

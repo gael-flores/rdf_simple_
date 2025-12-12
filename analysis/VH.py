@@ -9,7 +9,8 @@ opts.fOverwriteIfExists = True
 from common.pyhelpers import load_meta_data
 
 #cols = ".*best_2g.*|sample_.*|^Fsr.*|^Tau_.*|nTau|^Photon_.*|^Muon_.*|^Z.*|^W.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*|^event.*|^Electron_.*|^Pileup_.*|^MET_.*|^run.*|^luminosityBlock.*"
-cols = ".*best_2g.*|sample_.*|^Photon_.*|^Muon_.*|^Z.*|^W.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*|^event.*|^Electron_.*|^Pileup_.*|^MET_.*|^run.*|^luminosityBlock.*"
+cols = ".*best_2g.*|sample_.*|^Photon_.*|^Muon_.*|nMuon|nElectron|nPhoton|^Z.*|^W.*|Weight.*|^Gen.*|^weight.*|^TrigObj_.*|^event.*|^Electron_.*|^Pileup_.*|^MET_.*|^run.*|^luminosityBlock.*"
+
 
 # Muon trigger[era][par], par = ['name', 'bits', 'pt']
 # Name = branch name in tree
@@ -116,16 +117,9 @@ def photonAna(dataframe, era = '2018'):
     photons = photons.Define("Photon_energyScaleDown", "photonEnergyScale(Photon_eta, Photon_seedGain, PHO_scaledown_{}_val, PHO_scaleup_{}_bins, sample_isMC)".format(era, era))
 
     #Find the closest Jet and copy the pileUpId branch
-    photons = photons.Define("Photon_jetPUId", "Jet_puId[Photon_jetIdx]")    
+    photons = photons.Define("Photon_jetPUId", "photon_closest_jet_puID(Photon_jetIdx,Jet_pt,Jet_puId)")    
     #Find the closest Tau and copy the decay mode and the mass:
-    photons=photons.Define("Photon_tauIdx","idx_closest_tau(Photon_eta,Photon_phi,Tau_pt,Tau_eta,Tau_phi)")
-    photons=photons.Define("Photon_tauDecayMode","Tau_decayMode[Photon_tauIdx]")
-    photons=photons.Define("Photon_tauMass","Tau_mass[Photon_tauIdx]")
-    
-    
-    
-
-    
+    photons=photons.Define("Photon_tauMass","photon_closest_one_prong_tau_mass(Photon_eta, Photon_phi,Tau_pt,Tau_eta, Tau_phi,Tau_decayMode,Tau_mass)")
     return photons    
 
 def genAna(dataframe):
