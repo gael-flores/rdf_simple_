@@ -10,14 +10,14 @@ for v in ['ggZ', 'Z', 'Wplus', 'Wminus']:
                     'dataset': 'local:root://cmsxrootd.fnal.gov//store/user/tlam/DDP/UL2016{}/{}H_HTo2LongLivedTo{}_MH-125_MFF-{}_ctau-{}cm.root'.format('preVFP',v,br, m, ct),
                     'triggers': ['(HLT_IsoMu24||HLT_IsoTkMu24||HLT_Ele27_WPTight_Gsf)'],
                     'veto_triggers': [],
-                    'era': '2016preVFP'
+                    'era': '2016preVFP',
                     'sigma': 0.54,
                     'customNanoAOD': True}
                 samples_signal_2016['{}H{}_M{}_ctau{}_2016{}'.format(v,br,m,ct,'postVFP')] = {
                     'dataset': 'local:root://cmsxrootd.fnal.gov//store/user/tlam/DDP/UL2016{}/{}H_HTo2LongLivedTo{}_MH-125_MFF-{}_ctau-{}cm.root'.format('postVFP',v,br, m, ct),
                     'triggers': ['(HLT_IsoMu24||HLT_IsoTkMu24||HLT_Ele27_WPTight_Gsf)'],
                     'veto_triggers': [],
-                    'era': '2016postVFP'.format(run),
+                    'era': '2016postVFP',
                     'sigma': 0.46,
                     'customNanoAOD': True}
                 
