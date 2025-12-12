@@ -457,7 +457,7 @@ class combined_plotter(object):
         self.types.append(typeP)
         self.labels.append(label)
         self.names.append(name)
-
+        
     def define(self, var, definition):
         for plotter in self.plotters:
             plotter.define(var, definition)
