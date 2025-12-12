@@ -55,11 +55,11 @@ for v in ['W', 'Z']:
         cuts['cl'][v][l] = {}
         for m in mass_list:
             cuts['sr'][v][l][m] = "(" + cuts[v][l] + ")&&(" + cuts['pt'][m] + ")&&(" + cuts['photons'][m] + ")&&(" + \
-                                        cuts['misID'][v][l][m] + ")&&(" + cuts['fsr'][v][m] + ")&&(" +"best_2g_sumID_m{m}==2 && best_2g_valid_m{m})".format(m=m)
+                                        cuts['misID'][v][l][m] + ")&&(" + cuts['fsr'][v][m] + ")&&(" +"((Photon_IDandIso[best_2g_idx1_m{m}]+Photon_IDandIso[best_2g_idx2_m{m}])==2) && best_2g_valid_m{m})".format(m=m)
             cuts['cr'][v][l][m] = "(" + cuts[v][l] + ")&&(" + cuts['pt'][m] + ")&&(" + cuts['photons'][m] + ")&&(" + \
-                                        cuts['misID'][v][l][m] + ")&&(" + cuts['fsr'][v][m] + ")&&(" +"best_2g_sumID_m{m}==1 && best_2g_valid_m{m})".format(m=m)            
+                                        cuts['misID'][v][l][m] + ")&&(" + cuts['fsr'][v][m] + ")&&(" +"((Photon_IDandIso[best_2g_idx1_m{m}]+Photon_IDandIso[best_2g_idx2_m{m}])==1) && best_2g_valid_m{m})".format(m=m)            
             cuts['cl'][v][l][m] = "(" + cuts[v][l] + ")&&(" + cuts['pt'][m] + ")&&(" + cuts['photons'][m] + ")&&(" + \
-                                        cuts['misID'][v][l][m] + ")&&(" + cuts['fsr'][v][m] + ")&&("  +"best_2g_sumID_m{m}==0 && best_2g_valid_m{m})".format(m=m)
+                                        cuts['misID'][v][l][m] + ")&&(" + cuts['fsr'][v][m] + ")&&("  +"((Photon_IDandIso[best_2g_idx1_m{m}]+Photon_IDandIso[best_2g_idx2_m{m}])==0) && best_2g_valid_m{m})".format(m=m)
 
 # Cuts for signal efficiencies:
 effCuts = {}

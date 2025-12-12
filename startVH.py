@@ -72,13 +72,13 @@ def getSignalPlotter(sampleDir,prod,eras,analysis,mass,lifetime,signals=['ZH','g
     br='2G2Q'
     for sig in signals:
         if sig == 'ttH':
-            V.extend['tt']
+            V.extend(['tt'])
         elif sig == 'WH':
-            V.extend['Wplus','Wminus']
+            V.extend(['Wplus','Wminus'])
         elif sig == 'ZH':
-            V.extend['Z']
+            V.extend(['Z'])
         elif sig == 'ggZH':
-            V.extend['ggZ']
+            V.extend(['ggZ'])
     plotters=[]
     for era in eras:
         for sig in V:
@@ -116,7 +116,7 @@ def getAnalysis(sampleDir,prod,ana,eras=['2016','2017','2018'],masses=[15, 20, 3
         analysis['signal'][m]={}
         for ct in lifetimes:
             analysis['signal'][m][ct]=getSignalPlotter(sampleDir,prod,eras,ana,m,ct,signals,modelIndependent)
-     return analysis       
+    return analysis       
             
         
 
@@ -135,7 +135,7 @@ def unfoldTH2(hist):
 #debugging code
 if __name__ == '__main__':
     try:
-        analysis = getAnalysis("/tank/ddp/DDP","2025_12_02",'wmn2g')
+        analysis = getAnalysis("/tank/ddp/DDP","2025_12_12",'wmn2g')
 
     except Exception as e:
         import traceback
