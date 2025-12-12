@@ -527,7 +527,7 @@ if __name__ == '__main__':
         signal=merged_plotter([signal_2016,signal_2017,signal_2018])
 
         
-        list_of_plotters = data_2016_plotters+data_2017_plotters+data_2018.plotters
+        list_of_plotters = data_2016.plotters+data_2017.plotters+data_2018.plotters
 
         print("\nIndividual RDFs")
         for plotter in list_of_plotters:
