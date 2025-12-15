@@ -14,7 +14,8 @@ cols = ".*best_2g.*|sample_.*|^Fsr.*|^Photon_.*|loose_muon|tight_muon|veto_muon.
 # Name = branch name in tree
 # Bits = trigger bits for HLT path
 # pt = pt threshold for trigger
-muTrig = {'2022': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
+muTrig = {'2023': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
+          '2022': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
           '2018': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
           '2017': [{'name': 'HLT_IsoMu27', 'bits': 8, 'pt': 27}],
           '2016postVFP': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24},
@@ -22,7 +23,8 @@ muTrig = {'2022': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
           '2016preVFP': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24},
                           {'name': 'HLT_IsoTkMu24', 'bits': 1+8, 'pt': 24}]} # Check if filter bits are correct
 
-eleTrig = {'2022': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
+eleTrig = {'2023': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
+           '2022': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
            '2018': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 2, 'pt': 32}],
            '2017': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 1024, 'pt': 32}],
            '2016postVFP': [{'name': 'HLT_Ele27_WPTight_Gsf', 'bits': 2, 'pt': 27}],

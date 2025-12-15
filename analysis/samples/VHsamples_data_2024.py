@@ -1,5 +1,10 @@
 # HLT_IsoMu24 for singlemuon, HLT_Ele30_WPTight_Gsf for singleelectron with HLT_IsoMu24 veto, 
-samples_data_2022 = {
+samples_data_2024 = {
+'SingleMuon_2022A':{'dataset':'/SingleMuon/Run2022A-22Sep2023-v1/NANOAOD',
+                    'triggers':['HLT_IsoMu24'],
+                    'veto_triggers':[],
+                    'era':'2022',
+                    'jobs':8},
 'SingleMuon_2022B':{'dataset':'/SingleMuon/Run2022B-22Sep2023-v1/NANOAOD',
                     'triggers':['HLT_IsoMu24'],
                     'veto_triggers':[],
@@ -32,6 +37,11 @@ samples_data_2022 = {
                     'jobs':8},        
 
 # EGamma 2022 Data
+'EGamma_2022A': {'dataset': '/EGamma/Run2022A-22Sep2023-v1/NANOAOD',
+                 'triggers': ['HLT_Ele30_WPTight_Gsf'],
+                 'veto_triggers': ['HLT_IsoMu24'],
+                 'era': '2022',
+                 'jobs':8},
 'EGamma_2022B': {'dataset': '/EGamma/Run2022B-22Sep2023-v2/NANOAOD',
                  'triggers': ['HLT_Ele30_WPTight_Gsf'],
                  'veto_triggers': ['HLT_IsoMu24'],
