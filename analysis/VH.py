@@ -98,12 +98,12 @@ def photonAna(dataframe, era = '2018'):
     photons = photons.Define("Photon_overlap", "Photon_muOverlap||Photon_eleOverlap")
     
     # Photon Preselection criteria
-    photons = photons.Define("Photon_preselection", "Photon_pt>20&&!Photon_pixelSeed&&abs(Photon_eta)<2.5&&(abs(Photon_eta)>1.57||abs(Photon_eta)<1.44)&&!Photon_overlap&&(Photon_isScEtaEE||Photon_isScEtaEB)")
+    photons = photons.Define("Photon_preselection", "Photon_pt>20&&!Photon_pixelSeed&&abs(Photon_eta)<2.5&&(abs(Photon_eta)>1.57||abs(Photon_eta)<1.44)&&(!Photon_overlap)&&(Photon_isScEtaEE||Photon_isScEtaEB)&&passPhIso(Photon_vidNestedWPBitmap)")
 
     # Common Photon ID definitions (No isolation)
     photons = photons.Define("Photon_passCutBasedID","Photon_cutBased>0")
-    photons = photons.Define("Photon_passPhIso" , "passPhIso(Photon_vidNestedWPBitmap)")
-    photons = photons.Define("Photon_IDandIso" , "Photon_passCutBasedID&&Photon_passPhIso")
+#    photons = photons.Define("Photon_passPhIso" , "passPhIso(Photon_vidNestedWPBitmap)")
+#    photons = photons.Define("Photon_IDandIso" , "Photon_passCutBasedID&&Photon_passPhIso")
 
     photons = photons.Define("pho_SFs_id", "scaleFactors_2d(Photon_eta, Photon_pt, PHO_ID_{era}_sf, PHO_ID_{era}_binsX, PHO_ID_{era}_binsY, sample_isMC, Photon_passCutBasedID)".format(era=era))
     photons = photons.Define("Photon_idSF_val", "pho_SFs_id[0]")
@@ -218,7 +218,7 @@ def zeeH(data,phi_mass,sample):
     zee2g = zee.Filter("Sum(Photon_preselection==1)>1", "at_least_2_preselection_photons")
     #zee2g = zee2g.Filter("Sum(Photon_preselection==1 && Photon_isFSR==0)>1", "no_fsr_photons")
     for mass in phi_mass:
-        zee2g=zee2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_IDandIso, {})'.format(float(mass)))
+        zee2g=zee2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_passCutBasedID, {})'.format(float(mass)))
 #        zee2g=zee2g.Define('best_2g_gamma1_pt_m{}'.format(mass),'raw_best_2g_m{}[0]'.format(mass))
 #        zee2g=zee2g.Define('best_2g_gamma1_eta_m{}'.format(mass),'raw_best_2g_m{}[1]'.format(mass))
 #        zee2g=zee2g.Define('best_2g_gamma1_phi_m{}'.format(mass),'raw_best_2g_m{}[2]'.format(mass))
@@ -285,7 +285,7 @@ def wenuH(data,phi_mass,sample):
     wen2g = wen.Filter('Sum(Photon_preselection==1)>1', "at_least_2_preselection_photons")
     
     for mass in phi_mass:
-        wen2g=wen2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_cutBased, {})'.format(float(mass)))
+        wen2g=wen2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_passCutBasedID, {})'.format(float(mass)))
 #        wen2g=wen2g.Define('best_2g_gamma1_pt_m{}'.format(mass),'raw_best_2g_m{}[0]'.format(mass))
 #        wen2g=wen2g.Define('best_2g_gamma1_eta_m{}'.format(mass),'raw_best_2g_m{}[1]'.format(mass))
 #        wen2g=wen2g.Define('best_2g_gamma1_phi_m{}'.format(mass),'raw_best_2g_m{}[2]'.format(mass))
@@ -353,7 +353,7 @@ def wmunuH(data,phi_mass,sample):
     wmn2g = wmn.Filter('Sum(Photon_preselection==1)>1', "at_least_2_preselection_photons")
     
     for mass in phi_mass:
-        wmn2g=wmn2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_IDandIso, {})'.format(float(mass)))
+        wmn2g=wmn2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_passCutBasedID, {})'.format(float(mass)))
 #        wmn2g=wmn2g.Define('best_2g_gamma1_pt_m{}'.format(mass),'raw_best_2g_m{}[0]'.format(mass))
 #        wmn2g=wmn2g.Define('best_2g_gamma1_eta_m{}'.format(mass),'raw_best_2g_m{}[1]'.format(mass))
 #        wmn2g=wmn2g.Define('best_2g_gamma1_phi_m{}'.format(mass),'raw_best_2g_m{}[2]'.format(mass))
@@ -410,11 +410,8 @@ def wmugamma(data,sample):
     ptThresh = 28 if data['era']=='2017' else 25
     wmg = wmg.Filter("Sum(Muon_pt[tight_muon]>{})>0".format(ptThresh), "muon_pt_over{}".format(ptThresh))
     wmg = makeW(wmg, "Muon")
-
-    wmg = wmg.Filter("nPhoton==1", "exactly_1photon")
-
     wmg = photonAna(wmg, data['era'])
-    
+    wmg = wmg.Filter("Sum(Photon_preselection)>0", "at_least_1_preselected_photon")
 
     actions.append(wmg.Snapshot('wmugamma', sample+".root", cols,opts))
     report = ROOT.RDataFrame(1)
@@ -425,8 +422,7 @@ def wmugamma(data,sample):
     actions.append(report.Snapshot("Report_wmugamma", sample+'.root', "", opts))
 
     for tree in ['Runs']:
-        actions.append(dataframe[tree].Snapshot(tree, sample+".root", "", opts))
-        
+        actions.append(dataframe[tree].Snapshot(tree, sample+".root", "", opts))        
     return actions
 
 def zmumuH(data,phi_mass,sample):
@@ -477,7 +473,7 @@ def zmumuH(data,phi_mass,sample):
     #Al least Two good photons
     zmm2g=zmm.Filter('Sum(Photon_preselection==1)>1','at_least_2_preselection_photons')
     for mass in phi_mass:
-        zmm2g=zmm2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_IDandIso, {})'.format(float(mass)))
+        zmm2g=zmm2g.Define('raw_best_2g_m{}'.format(mass),'best_2gamma(Photon_pt,Photon_eta,Photon_phi,Photon_isScEtaEB, Photon_isScEtaEE, Photon_preselection, Photon_passCutBasedID, {})'.format(float(mass)))
 #        zmm2g=zmm2g.Define('best_2g_gamma1_pt_m{}'.format(mass),'raw_best_2g_m{}[0]'.format(mass))
 #        zmm2g=zmm2g.Define('best_2g_gamma1_eta_m{}'.format(mass),'raw_best_2g_m{}[1]'.format(mass))
 #        zmm2g=zmm2g.Define('best_2g_gamma1_phi_m{}'.format(mass),'raw_best_2g_m{}[2]'.format(mass))
@@ -577,6 +573,6 @@ def analysis(data,sample):
     actions.extend(zeeH(data,phi_mass,sample))
     actions.extend(wmunuH(data,phi_mass,sample))
     actions.extend(wenuH(data,phi_mass,sample))
-    #actions.extend(wmugamma(data,sample))
+    actions.extend(wmugamma(data,sample))
     return actions
 
