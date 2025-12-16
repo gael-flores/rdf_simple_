@@ -9,7 +9,7 @@ samples_mc_2022 = {
                          'veto_triggers': [],
                          'era': '2022',
                          'jobs': 8,
-                         'sigma': 5558.0},
+                         'sigma': 5731.0},
 
 
 'DYJetsToLL_M50_LO_2022': {'dataset': '/DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8/Run3Summer22NanoAODv11-forPOG_126X_mcRun3_2022_realistic_v2-v1/NANOAODSIM',
@@ -27,10 +27,77 @@ samples_mc_2022 = {
                        'jobs': 8,
                        'sigma': 56120.},
 
-#2022 W+Gamma MC - no datasets appear on DAS for 2022
+#2022 W+Gamma MC
 
+'WGtoLNuG_1Jets_PTG100to200_EE_2022': {'dataset':'/WGtoLNuG-1Jets_PTG-100to200_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM',
+                           'triggers':['(HLT_IsoMu24||HLT_Ele30_WPTight_Gsf)'],
+                           'veto_triggers':[],
+                           'era':'2022',
+                           'jobs':1,
+                           'sigma':2.219}, 
 
-#2022 W+GammaGamma - no datasets appear on DAS for 2022
+'WGtoLNuG_1Jets_PTG100to200_2022': {'dataset':'/WGtoLNuG-1Jets_PTG-100to200_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM',
+                           'triggers':['(HLT_IsoMu24||HLT_Ele30_WPTight_Gsf)'],
+                           'veto_triggers':[],
+                           'era':'2022',
+                           'jobs':1,
+                           'sigma':2.221}, 
+
+'WGtoLNuG_1Jets_PTG10to100_EE_2022': {'dataset':'/WGtoLNuG-1Jets_PTG-10to100_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM',
+                           'triggers':['(HLT_IsoMu24||HLT_Ele30_WPTight_Gsf)'],
+                           'veto_triggers':[],
+                           'era':'2022',
+                           'jobs':1,
+                           'sigma':662.2}, 
+
+'WGtoLNuG_1Jets_PTG10to100_2022': {'dataset':'/WGtoLNuG-1Jets_PTG-10to100_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM',
+                           'triggers':['(HLT_IsoMu24||HLT_Ele30_WPTight_Gsf)'],
+                           'veto_triggers':[],
+                           'era':'2022',
+                           'jobs':1,
+                           'sigma':662.2},
+
+'WGtoLNuG_1Jets_PTG200to400_EE_2022': {'dataset':'/WGtoLNuG-1Jets_PTG-200to400_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v3/NANOAODSIM',
+                           'triggers':['(HLT_IsoMu24||HLT_Ele30_WPTight_Gsf)'],
+                           'veto_triggers':[],
+                           'era':'2022',
+                           'jobs':1,
+                           'sigma':0.2908}, 
+
+'WGtoLNuG_1Jets_PTG200to400_2022': {'dataset':'/WGtoLNuG-1Jets_PTG-200to400_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v1/NANOAODSIM',
+                           'triggers':['(HLT_IsoMu24||HLT_Ele30_WPTight_Gsf)'],
+                           'veto_triggers':[],
+                           'era':'2022',
+                           'jobs':1,
+                           'sigma':0.2908}, 
+
+'WGtoLNuG_1Jets_PTG400to600_EE_2022': {'dataset':'/WGtoLNuG-1Jets_PTG-400to600_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v3/NANOAODSIM',
+                           'triggers':['(HLT_IsoMu24||HLT_Ele30_WPTight_Gsf)'],
+                           'veto_triggers':[],
+                           'era':'2022',
+                           'jobs':1,
+                           'sigma':0.02231},
+
+'WGtoLNuG_1Jets_PTG400to600_2022': {'dataset':'/WGtoLNuG-1Jets_PTG-400to600_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v1/NANOAODSIM',
+                           'triggers':['(HLT_IsoMu24||HLT_Ele30_WPTight_Gsf)'],
+                           'veto_triggers':[],
+                           'era':'2022',
+                           'jobs':1,
+                           'sigma':0.02231},
+
+'WGtoLNuG_1Jets_PTG600_EE_2022': {'dataset':'/WGtoLNuG-1Jets_PTG-600_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v3/NANOAODSIM',
+                           'triggers':['(HLT_IsoMu24||HLT_Ele30_WPTight_Gsf)'],
+                           'veto_triggers':[],
+                           'era':'2022',
+                           'jobs':1,
+                           'sigma':0.004907}, 
+
+'WGtoLNuG_1Jets_PTG600_2022': {'dataset':'/WGtoLNuG-1Jets_PTG-600_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v3/NANOAODSIM',
+                           'triggers':['(HLT_IsoMu24||HLT_Ele30_WPTight_Gsf)'],
+                           'veto_triggers':[],
+                           'era':'2022',
+                           'jobs':1,
+                           'sigma':0.004907},
 
 
 #2022 tt+Gamma
@@ -47,7 +114,7 @@ samples_mc_2022 = {
                            'veto_triggers':[],
                            'era':'2022',
                            'jobs':1,
-                           'sigma':0.4114},
+                           'sigma':0.4072},
 
 'TTGJets_1Jets_PTG-10to100_2022': {'dataset':'/TTG-1Jets_PTG-10to100_TuneCP5_13p6TeV_amcatnloFXFXold-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v1/NANOAODSIM',
                            'triggers':['(HLT_IsoMu24||HLT_Ele30_WPTight_Gsf)'],
@@ -61,7 +128,7 @@ samples_mc_2022 = {
                            'veto_triggers':[],
                            'era':'2022',
                            'jobs':1,
-                           'sigma':4.216},
+                           'sigma':4.237},
 
 
 #2022 tt+GammaGamma
@@ -77,9 +144,6 @@ samples_mc_2022 = {
                            'veto_triggers':[],
                            'era':'2022',
                            'jobs':1,
-                           'sigma':0.02391},
-
-
-#2022 tt+Jets MC - no datasets appear on DAS for 2022
+                           'sigma':0.02391}
 
 }
