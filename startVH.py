@@ -10,7 +10,7 @@ import subprocess
 ROOT.gInterpreter.Declare('#include "common/chelpers.h"')
 ROOT.gInterpreter.Declare('#include "common/signalEfficiency.h"')
 ROOT.gInterpreter.Declare('#include "common/scaleFactors.h"')
-
+ROOT.ROOT.EnableImplicitMT()
 
 
 ctaus = [0,10,20,50,100,1000]
@@ -56,15 +56,25 @@ def getPlotter(sample,sampleDir,sampleType,eras,prod,analysis):
         else: #MC means query
             files = getFiles(sample,sampleDir,sampleType,era,prod)
         for f in files:
-            plotters.append(rdf_plotter(f, tree=analysis, report = "Report_" + analysis))
+            plotters.append(rdf_plotter(f,isMC=(sampleType=='MC'), tree=analysis, report = "Report_" + analysis))
+            #scale with the luminosity
+            if sampleType=='MC':
+                plotters[-1].addCorrectionFactor(lumifb[era], "flat")
+                plotters[-1].addCorrectionFactor('1000', "flat") #to conevrt to pb-1
+            
             #Deal with the HEM cuts
             if era == '2018' and analysis == 'wen2g' and sampleType=='DATA':
                 plotters[-1].defaultCuts = "((run>=319077&&(Electron_eta[W_l1_idx]>-1.3||Electron_eta[W_l1_idx]<-3.0)&&(Electron_phi[W_l1_idx]>-0.87||Electron_phi[W_l1_idx]<-1.57))||(run<319077))"
             elif era=='2018' and  analysis == 'wen2g' and sampleType=='MC':   
                 plotters[-1].addCorrectionFactor(str(21080.0/59830), "flat")
                 plotters.append(rdf_plotter(f, True, tree = analysis, defaultCuts = cutsHEM))
+                plotters[-1].addCorrectionFactor(lumifb[era], "flat")
+                plotters[-1].addCorrectionFactor('1000', "flat") #to conevrt to pb-1                
                 plotters[-1].addCorrectionFactor(str(38750./59830), "flat")
-    return merged_plotter(plotters)
+    p = merged_plotter(plotters)
+    applyDefinitions(p)
+    return p
+
 
 
 def getSignalPlotter(sampleDir,prod,eras,analysis,mass,lifetime,signals=['ZH','ggZH','WH','ttH'],modelIndependent=False):
@@ -84,7 +94,10 @@ def getSignalPlotter(sampleDir,prod,eras,analysis,mass,lifetime,signals=['ZH','g
         for sig in V:
             fs=getFiles(f"{sig}H{br}_M{mass}_ctau{lifetime}_{era}",sampleDir,"MC",era,prod)            
             for f in fs:
-                plotters.append(rdf_plotter(f, tree=analysis, report = "Report_" + analysis))
+                plotters.append(rdf_plotter(f, tree=analysis,isMC=True, report = "Report_" + analysis))
+                plotters[-1].addCorrectionFactor(lumifb[era], "flat")                
+                plotters[-1].addCorrectionFactor('1000', "flat") #to conevrt to pb-1                
+                
                 weight = "(1)"
                 if not modelIndependent:
                     weight +="*"+xsecs[v]
@@ -100,23 +113,65 @@ def getSignalPlotter(sampleDir,prod,eras,analysis,mass,lifetime,signals=['ZH','g
                 elif era=='2018' and  analysis == 'wen2g':   
                     plotters[-1].addCorrectionFactor(str(21080.0/59830), "flat")
                     plotters.append(rdf_plotter(f, True, tree = analysis, defaultCuts = cutsHEM))
+                    plotters[-1].addCorrectionFactor(lumifb[era], "flat")
+                    plotters[-1].addCorrectionFactor('1000', "flat") #to conevrt to pb-1                             
                     plotters[-1].addCorrectionFactor(str(38750./59830), "flat")
                     plotters[-1].addCorrectionFactor(weight, "flat")
-    return merged_plotter(plotters)
+    p = merged_plotter(plotters)
+    applyDefinitions(p)
+    return p
 
 
-def getAnalysis(sampleDir,prod,ana,eras=['2016','2017','2018'],masses=[15, 20, 30, 40, 50, 55],lifetimes=[0, 10, 20, 50, 100, 1000],signals=['ZH','ggZH','WH','ttH'],modelIndependent=False):
+
+        
+
+
+def getAnalysis(sampleDir,prod,ana,eras=['2016','2017','2018'],masses=[15, 20, 30, 40, 50, 55],lifetimes=[0, 10, 20, 50, 100, 1000],signals=['ZH','ggZH','WH','ttH'],modelIndependent=False,br=0.01):
     analysis={}
     analysis['data']=getPlotter('nothing',sampleDir,'DATA',eras,prod,ana)
+
+    #now create a background plotter with the sideband method we are talking about
+    analysis['bkg']={}
+    for m in masses:
+        analysis['bkg'][m]=background_plotter(cuts[ana][m]['sr'],
+                                              cuts[ana][m]['cr'],
+                                              cuts[ana][m]['ssb'],
+                                              cuts[ana][m]['csb'],analysis['data'].plotters)
+        analysis['bkg'][m].setFillProperties(1001, ROOT.kAzure+5)
+        analysis['bkg'][m].setLineProperties(1, ROOT.kAzure+5, 3)        
+
     analysis['wjets']=getPlotter('WJetsToLNu_HT',sampleDir,'MC',eras,prod,ana)
+    analysis['wjets'].setFillProperties(1001, ROOT.kAzure+5)
+    analysis['wjets'].setLineProperties(1, ROOT.kAzure+5, 3)        
+    
     analysis['zjets']=getPlotter('DYJetsToLL_M50_LO',sampleDir,'MC',eras,prod,ana)
+    analysis['zjets'].setFillProperties(1001, ROOT.kAzure-9)
+    analysis['zjets'].setLineProperties(1, ROOT.kAzure-9, 3)
+
     analysis['tt']=getPlotter('TTJets',sampleDir,'MC',eras,prod,ana)
+    analysis['tt'].setFillProperties(1001, ROOT.kAzure-2)
+    analysis['tt'].setLineProperties(1, ROOT.kAzure-2, 3)
+    
     analysis['signal']={}
+    signalColors={
+        0: ROOT.kAzure,
+        10: ROOT.kAzure-2,
+        20: ROOT.kAzure-5,
+        50: ROOT.kRed-5,
+        100:ROOT.kRed-2,
+        1000:ROOT.kRed}
+        
+        
     for m in masses:
         analysis['signal'][m]={}
+        i=0
         for ct in lifetimes:
             analysis['signal'][m][ct]=getSignalPlotter(sampleDir,prod,eras,ana,m,ct,signals,modelIndependent)
-    return analysis       
+            analysis['signal'][m][ct].addCorrectionFactor(str(br),'flat')
+            analysis['signal'][m][ct].setFillProperties(0, ROOT.kWhite)
+            analysis['signal'][m][ct].setLineProperties(1, signalColors[ct], 3)
+            i=i+1
+    return analysis
             
         
 
@@ -136,7 +191,39 @@ def unfoldTH2(hist):
 if __name__ == '__main__':
     try:
         analysis = getAnalysis("/tank/ddp/DDP","2025_12_12",'wmn2g')
+        #standard stack
+        stack = stack_plotter('stack')
+        stack.add_plotter(analysis['data'],name='data',label='Data',typeP='data')
+#        stack.add_plotter(analysis['signal'][20][100],name='sig20_100',label='Signal, m_#phi = 20 GeV, c#tau=100 mm',typeP='signal')
+#        stack.add_plotter(analysis['signal'][20][1000],name='sig20_1000',label='Signal, m_#phi = 20 GeV, c#tau=1000 mm',typeP='signal')        
+        stack.add_plotter(analysis['bkg'][20],name='background',label='Background',typeP='background')
 
+        #Now a stack for the closure of the BKG estimation
+        mcBackground = merged_plotter([analysis['wjets'],analysis['zjets'],analysis['tt']])
+        mcBackgroundPlotter=background_plotter(cuts['wmn2g'][20]['sr'],
+                                              cuts['wmn2g'][20]['cr'],
+                                              cuts['wmn2g'][20]['ssb'],
+                                              cuts['wmn2g'][20]['csb'],[analysis['wjets'],analysis['zjets'],analysis['tt']])
+        
+        closureStack = stack_plotter('stack')
+        closureStack.add_plotter(mcBackground,name='mcdata',label='MC like Data',typeP='data')
+        closureStack.add_plotter(mcBackgroundPlotter,name='mcbkg',label='MC like Bkg',typeP='background')
+        
+
+        #MC only stack 
+        mcStack = stack_plotter('comp')
+        mcStack.add_plotter(analysis['signal'][20][100],name='sig20_100',label='Signal (20 GeV,100 mm)',typeP='signal')
+        mcStack.add_plotter(analysis['data'],name='data',label='Data',typeP='data')
+        mcStack.add_plotter(analysis['wjets'],name='wjets',label='W+jets',typeP='background')
+        mcStack.add_plotter(analysis['zjets'],name='zjets',label='Z+jets',typeP='background')
+        mcStack.add_plotter(analysis['tt'],name='tt',label='tt+jets',typeP='background')
+        analysis['wjets'].setFillProperties(0, ROOT.kAzure+5)
+        analysis['zjets'].setFillProperties(0, ROOT.kAzure+5)
+        analysis['tt'].setFillProperties(0, ROOT.kAzure+5)
+        
+
+        
+        myCuts = cuts['wmn2g']
     except Exception as e:
         import traceback
         traceback.print_exc()

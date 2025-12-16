@@ -1,4 +1,4 @@
-samples_signal_2017 = {}
+\65;6800;1csamples_signal_2017 = {}
 for v in ['ggZ', 'Z', 'Wplus', 'Wminus']:
     for m in [15, 20, 30, 40, 50, 55]:
         for ct in [0, 10, 20, 50, 100, 1000]:
