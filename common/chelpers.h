@@ -294,8 +294,40 @@ RVec<bool> fsr_recovery(const RVec<size_t>& idx,RVecF mpt, RVecF meta, RVecF mph
 }
 
 
+float invMass3(float pt1,float eta1,float phi1, float m1,float pt2,float eta2,float phi2, float m2,float pt3,float eta3,float phi3, float m3) {
+  ROOT::Math::PtEtaPhiMVector p1(pt1,eta1,phi1,m1);
+  ROOT::Math::PtEtaPhiMVector p2(pt2,eta2,phi2,m2);
+  ROOT::Math::PtEtaPhiMVector p3(pt3,eta3,phi3,m3);
+  return (p1+p2+p3).M();
+}
+float invMass4(float pt1,float eta1,float phi1, float m1,float pt2,float eta2,float phi2, float m2,float pt3,float eta3,float phi3, float m3,float pt4,float eta4,float phi4,float m4) {
+  ROOT::Math::PtEtaPhiMVector p1(pt1,eta1,phi1,m1);
+  ROOT::Math::PtEtaPhiMVector p2(pt2,eta2,phi2,m2);
+  ROOT::Math::PtEtaPhiMVector p3(pt3,eta3,phi3,m3);
+  ROOT::Math::PtEtaPhiMVector p4(pt4,eta4,phi4,m4);
+  return (p1+p2+p3+p4).M();
+}
 
+int closestIdx(float eta,float phi,const RVecF& meta, const RVecF& mphi,int idx1,int idx2) {
+    float min_dR = std::numeric_limits<float>::max();
+    int closest_idx = -1;
+    for (int i : {idx1, idx2}) {
+      if (i < 0 || i >= static_cast<int>(meta.size()))  // Check index bounds
+          continue;
 
+      float dR = DeltaR(eta, meta[i], phi, mphi[i]);
+      if (dR < min_dR) {
+	min_dR = dR;
+	closest_idx = i;
+      }
+    }
+    if (closest_idx != -1) {
+      return closest_idx;
+    }
+    else {
+      return -1;
+    }
+}
 
 float ll_mass(const RVec<size_t>& idx,RVecF mpt, RVecF meta, RVecF mphi, RVecF mmass) {
   RVec<bool> result;  
@@ -327,6 +359,20 @@ float calculate_lgamma_mass(const float lpt, float leta, float lphi, float lmass
     return (lep + gamma).M();
 }
 
+float calculate_lgammagamma_mass(const float lpt, const float leta, const float lphi, const float lmass,
+                            const float g1pt, const float g1eta, const float g1phi,
+                            const float g2pt, const float g2eta, const float g2phi) {
+
+    // Build the 4-vectors
+    ROOT::Math::PtEtaPhiMVector lep(lpt, leta, lphi, lmass);
+    ROOT::Math::PtEtaPhiMVector gamma1(g1pt, g1eta, g1phi, 0.0);
+    ROOT::Math::PtEtaPhiMVector gamma2(g2pt, g2eta, g2phi, 0.0);
+
+    // Compute invariant mass of the system
+    ROOT::Math::PtEtaPhiMVector total = lep + gamma1 + gamma2;
+    return total.M();
+}
+
 // Return dR to the closest photon (loop over all photons)
 RVecF deltaR_lgamma(const float leta, const float lphi,const RVecF& geta, const RVecF& gphi) {
     RVecF result;
@@ -345,6 +391,44 @@ RVecF deltaR_lgamma(const float leta, const float lphi,const RVecF& geta, const 
     }
 
     return result; // Empty if no photons exist
+}
+
+//return PUID of the associated jet to each photon
+RVecF photon_closest_jet_puID(const RVecI& idx , const RVecF& jet_pt,const RVecF& jetPUID) {
+    RVecF result;
+    for (int i = 0; i < static_cast<int>(idx.size()); i++) {
+      if ((idx[i]<0) ||jet_pt[idx[i]]>50.0) {
+        result.emplace_back(1.0);
+      }
+      else {
+	result.emplace_back(jetPUID[idx[i]]);
+      }
+    }
+    return result;
+}
+
+RVecF photon_closest_one_prong_tau_mass(const RVecF& eta, const RVecF& phi,const RVecF& tau_pt,const RVecF& tau_eta, const RVecF& tau_phi,const RVecI& tau_decay,const RVecF& tau_mass) {
+    RVecF result;
+
+    for (int i = 0; i < static_cast<int>(eta.size()); i++) {
+      float min_dR = std::numeric_limits<float>::max();
+      int closest_idx = -1;      
+      for (int j = 0; j < static_cast<int>(tau_pt.size()); j++) {
+        if (tau_pt[j] < 25.0 ||tau_decay[j]!=1)
+          continue;
+        float dR = DeltaR(tau_eta[j], eta[i], tau_phi[j], phi[i]);
+        if ((dR < min_dR) && (dR<0.1)) {
+            min_dR = dR;
+            closest_idx = j;
+        }
+      }
+      if (closest_idx>0)
+	result.emplace_back(tau_mass[closest_idx]);
+      else
+	result.emplace_back(-1.0);
+    }
+
+    return result;
 }
 
 float calculate_lgamma_mass_idx(const float lpt, float leta, float lphi, float lmass,
