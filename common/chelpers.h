@@ -294,8 +294,40 @@ RVec<bool> fsr_recovery(const RVec<size_t>& idx,RVecF mpt, RVecF meta, RVecF mph
 }
 
 
+float invMass3(float pt1,float eta1,float phi1, float m1,float pt2,float eta2,float phi2, float m2,float pt3,float eta3,float phi3, float m3) {
+  ROOT::Math::PtEtaPhiMVector p1(pt1,eta1,phi1,m1);
+  ROOT::Math::PtEtaPhiMVector p2(pt2,eta2,phi2,m2);
+  ROOT::Math::PtEtaPhiMVector p3(pt3,eta3,phi3,m3);
+  return (p1+p2+p3).M();
+}
+float invMass4(float pt1,float eta1,float phi1, float m1,float pt2,float eta2,float phi2, float m2,float pt3,float eta3,float phi3, float m3,float pt4,float eta4,float phi4,float m4) {
+  ROOT::Math::PtEtaPhiMVector p1(pt1,eta1,phi1,m1);
+  ROOT::Math::PtEtaPhiMVector p2(pt2,eta2,phi2,m2);
+  ROOT::Math::PtEtaPhiMVector p3(pt3,eta3,phi3,m3);
+  ROOT::Math::PtEtaPhiMVector p4(pt4,eta4,phi4,m4);
+  return (p1+p2+p3+p4).M();
+}
 
+int closestIdx(float eta,float phi,const RVecF& meta, const RVecF& mphi,int idx1,int idx2) {
+    float min_dR = std::numeric_limits<float>::max();
+    int closest_idx = -1;
+    for (int i : {idx1, idx2}) {
+      if (i < 0 || i >= static_cast<int>(meta.size()))  // Check index bounds
+          continue;
 
+      float dR = DeltaR(eta, meta[i], phi, mphi[i]);
+      if (dR < min_dR) {
+	min_dR = dR;
+	closest_idx = i;
+      }
+    }
+    if (closest_idx != -1) {
+      return closest_idx;
+    }
+    else {
+      return -1;
+    }
+}
 
 float ll_mass(const RVec<size_t>& idx,RVecF mpt, RVecF meta, RVecF mphi, RVecF mmass) {
   RVec<bool> result;  
