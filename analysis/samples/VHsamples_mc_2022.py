@@ -11,10 +11,6 @@ samples_mc_2022 = {
                          'jobs': 8,
                          'sigma': 5731.0},
 
-<<<<<<< HEAD
-
-=======
->>>>>>> run3-mc-data-samples
 'DYJetsToLL_M50_LO_2022': {'dataset': '/DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8/Run3Summer22NanoAODv11-forPOG_126X_mcRun3_2022_realistic_v2-v1/NANOAODSIM',
                          'triggers': ['(HLT_IsoMu24||HLT_Ele30_WPTight_Gsf)'],
                          'veto_triggers': [],
@@ -30,10 +26,6 @@ samples_mc_2022 = {
                        'jobs': 8,
                        'sigma': 56120.},
 
-<<<<<<< HEAD
-#2022 W+Gamma MC
-
-=======
 #2022 tt+Jets MC
 'TTto2L2Nu_2Jets_EE_2022': {'dataset': '/TTto2L2Nu-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v3/NANOAODSIM',
                        'triggers': ['(HLT_IsoMu24||HLT_Ele30_WPTight_Gsf)'],
@@ -80,7 +72,6 @@ samples_mc_2022 = {
 
 
 #2022 W+Gamma MC
->>>>>>> run3-mc-data-samples
 'WGtoLNuG_1Jets_PTG100to200_EE_2022': {'dataset':'/WGtoLNuG-1Jets_PTG-100to200_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM',
                            'triggers':['(HLT_IsoMu24||HLT_Ele30_WPTight_Gsf)'],
                            'veto_triggers':[],
