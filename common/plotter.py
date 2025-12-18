@@ -1,6 +1,7 @@
 import ROOT
 import sys
 from array import array
+import numpy as np
 import pickle
 import ctypes
 import math
@@ -8,7 +9,7 @@ import common.tdrstyle as tdrstyle
 import common.CMS_lumi as CMS_lumi
 from python.VHTools.py_helpers import *
 sty = tdrstyle.setTDRStyle()
-
+from scipy.stats import chi2
 ### = commented out to test tdrStyle, uncomment if not using
 
 drawprelim = True
@@ -62,6 +63,7 @@ class plotter_base(object):
         self.fillcolor=ROOT.kOrange-3
         self.markerstyle=20
         self.corrFactors=[]
+        self.CLs='sumw2'
 
     def addCorrectionFactor(self,value,model):
         corr=dict()
@@ -81,6 +83,32 @@ class plotter_base(object):
     def setMarkerProperties(self,markerstyle):
         self.markerstyle=markerstyle
 
+    def array1d(self,var,cuts,model):
+        hist=self.hist1d(var,cuts,'1',model,titlex = "",units = "")
+        arr=hist.GetArray()
+        axis=hist.GetXaxis()
+        num_bins = hist.GetNbinsX()
+        data = np.ndarray((num_bins,), dtype=np.float64, buffer=arr)
+        #get also the bin edges
+        edges = np.array([axis.GetBinLowEdge(i) for i in range(1, num_bins + 2)])
+        #now CLs
+        dataUp=None
+        dataDown=None
+        if self.CLs =='sumw2':
+            errors2 = hist.GetSumw2().GetArray()
+            errorsArr2 = np.ndarray((num_bins,), dtype=np.float64, buffer=errors2)
+            errors=np.sqrt(errorsArr2)
+            dataUp = data+errors
+            dataDown = data-errors
+        elif self.CLs=='poisson':
+            alpha = 1 - 0.68  # Significance level (0.32 for 68% CI)
+            dataDown = chi2.ppf(alpha / 2, 2 * data) / 2
+            dataUp = chi2.ppf(1 - alpha / 2, 2 * data + 2) / 2
+            for i in range(0,len(dataDown)):
+                if data[i]==0.0:
+                    dataDown[i]=0.0
+
+        return data[1:-1],edges,dataUp[1:-1],dataDown[1:-1]
 
 
 class rdf_plotter(plotter_base):
@@ -169,6 +197,8 @@ class rdf_plotter(plotter_base):
         return h.GetPtr()
 
 
+
+    
     def profile1d(self,var1,var2,cuts,lumi,model,titlex = "",unitsx = "",titley = "",unitsy = ""):
         corrString="1.0"
         for corr in self.corrFactors:
@@ -249,13 +279,7 @@ class rdf_plotter(plotter_base):
 class merged_plotter(plotter_base):
 
     def __init__(self, plotters):
-        self.fillstyle=1001
-        self.linestyle=1
-        self.linecolor=1
-        self.linewidth=2
-        self.fillcolor=ROOT.kOrange-3
-        self.markerstyle=20
-        self.corrFactors=[]
+        super(merged_plotter,self).__init__()
         self.plotters = plotters
 
     def define(self, var, definition):

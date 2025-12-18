@@ -190,8 +190,8 @@ def unfoldTH2(hist):
 #debugging code
 if __name__ == '__main__':
     try:
-        analysis = getAnalysis("/tank/ddp/DDP","2025_12_12",'wmn2g')
-        #standard stack
+        analysis = getAnalysis("/tank/ddp/DDP","2025_12_17",'wmn2g')
+        #standard stack     
         stack = stack_plotter('stack')
         stack.add_plotter(analysis['data'],name='data',label='Data',typeP='data')
 #        stack.add_plotter(analysis['signal'][20][100],name='sig20_100',label='Signal, m_#phi = 20 GeV, c#tau=100 mm',typeP='signal')
@@ -220,7 +220,9 @@ if __name__ == '__main__':
         analysis['wjets'].setFillProperties(0, ROOT.kAzure+5)
         analysis['zjets'].setFillProperties(0, ROOT.kAzure+5)
         analysis['tt'].setFillProperties(0, ROOT.kAzure+5)
-        
+
+        #fake rate plotter
+        fr = getPlotter('nothing','/tank/ddp/DDP','DATA',['2016','2017','2018'],'2025_12_17','wmugamma')
 
         
         myCuts = cuts['wmn2g']
