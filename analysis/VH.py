@@ -38,10 +38,8 @@ eleTrig = {'2024': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
 def muonAna(dataframe, era = '2018'):
 
     # Common Muon ID definitions (No isolation)
-    muons = dataframe.Define("loose_muon", "Muon_looseId==1&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&Muon_pt>10&&Muon_pfIsoId>1")
+    muons = dataframe.Define("veto_muon", "Muon_pt>5&&Muon_looseId==1&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&Muon_pt>10&&Muon_pfIsoId>1")
     muons = muons.Define("tight_muon", "loose_muon&&Muon_tightId&&Muon_pfIsoId>3")
-    muons = muons.Define("veto_muon", "Muon_pt>5&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&(loose_muon==0)&&(tight_muon==0)")
-    muons = muons.Define("Muon_nloose", "Sum(loose_muon)")
     muons = muons.Define("Muon_ntight", "Sum(tight_muon)")
     muons = muons.Define("Muon_nveto", "Sum(veto_muon)")
 
