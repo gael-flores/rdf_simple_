@@ -70,7 +70,7 @@ def electronAna(dataframe, era = '2018'):
 
     # Common Electron ID definitions
 
-    electrons = electrons.Define("tight_electron", "Electron_pt>15&&abs(Electron_eta)<2.5&&Electron_cutBased>3")
+    electrons = dataframe.Define("tight_electron", "Electron_pt>15&&abs(Electron_eta)<2.5&&Electron_cutBased>3")
     electrons = electrons.Define("veto_electron", "Electron_pt>10&&abs(Electron_eta)<2.5&&Electron_cutBased>0")
     electrons = electrons.Define("Electron_ntight", "Sum(tight_electron)")
     electrons = electrons.Define("Electron_nveto", "Sum(veto_electron)")
