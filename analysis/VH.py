@@ -39,7 +39,7 @@ def muonAna(dataframe, era = '2018'):
 
     # Common Muon ID definitions (No isolation)
     muons = dataframe.Define("veto_muon", "Muon_pt>5&&Muon_looseId==1&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&Muon_pt>10&&Muon_pfIsoId>1")
-    muons = muons.Define("tight_muon", "loose_muon&&Muon_tightId&&Muon_pfIsoId>3")
+    muons = muons.Define("tight_muon", "veto_muon&&Muon_tightId&&Muon_pfIsoId>3")
     muons = muons.Define("Muon_ntight", "Sum(tight_muon)")
     muons = muons.Define("Muon_nveto", "Sum(veto_muon)")
 
@@ -70,7 +70,7 @@ def electronAna(dataframe, era = '2018'):
 
     # Common Electron ID definitions
 
-    electrons = electrons.Define("tight_electron", "Electron_pt>15&&abs(Electron_eta)<2.5&&Electron_cutBased>3")
+    electrons = dataframe.Define("tight_electron", "Electron_pt>15&&abs(Electron_eta)<2.5&&Electron_cutBased>3")
     electrons = electrons.Define("veto_electron", "Electron_pt>10&&abs(Electron_eta)<2.5&&Electron_cutBased>0")
     electrons = electrons.Define("Electron_ntight", "Sum(tight_electron)")
     electrons = electrons.Define("Electron_nveto", "Sum(veto_electron)")
@@ -93,11 +93,11 @@ def electronAna(dataframe, era = '2018'):
     
     return electrons
 
-# Must run muon + electron analyzer first to do overlap with loose leptons
+# Must run muon + electron analyzer first to do overlap with leptons
 def photonAna(dataframe, era = '2018'):
     # Overlap with loose leptons
-    photons = dataframe.Define("Photon_muOverlap", "overlapClean(Photon_phi, Photon_eta, Muon_phi[loose_muon], Muon_eta[loose_muon])")
-    photons = photons.Define("Photon_eleOverlap", "overlapClean(Photon_phi, Photon_eta, Electron_phi[loose_electron], Electron_eta[loose_electron])")
+    photons = dataframe.Define("Photon_muOverlap", "overlapClean(Photon_phi, Photon_eta, Muon_phi[tight_muon], Muon_eta[tight_muon])")
+    photons = photons.Define("Photon_eleOverlap", "overlapClean(Photon_phi, Photon_eta, Electron_phi[tight_electron], Electron_eta[tight_electron])")
     photons = photons.Define("Photon_overlap", "Photon_muOverlap||Photon_eleOverlap")
     
     # Photon Preselection criteria
