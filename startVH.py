@@ -192,14 +192,15 @@ if __name__ == '__main__':
     try:
         analysis = getAnalysis("/tank/ddp/DDP","2025_12_19",'wmn2g')
         stack=mplhep_plotter()
-        stack.add_plotter(analysis['tt'],label='tt+jets',typeP='background')
-        stack.add_plotter(analysis['zjets'],label='Z+jets',typeP='background')
         stack.add_plotter(analysis['wjets'],label='W+jets',typeP='background')
+        stack.add_plotter(analysis['zjets'],label='Z+jets',typeP='background')
+        stack.add_plotter(analysis['tt'],label='tt+jets',typeP='background')
+ 
         #scale the signal plotters to a BR of 0.01
-        analysis['signal'][20][100].addCorrectionFactor(0.01,'flat')
-        analysis['signal'][20][1000].addCorrectionFactor(0.01,'flat')
-        stack.add_plotter(analysis['signal'][20][100],label='Signal (20 GeV,100 mm)',typeP='signal',color='maroon')
-        stack.add_plotter(analysis['signal'][20][1000],label='Signal (20 GeV,1000 mm)',typeP='signal',color='salmon')
+#        analysis['signal'][20][100].addCorrectionFactor(0.01,'flat')
+#        analysis['signal'][20][1000].addCorrectionFactor(0.01,'flat')
+#        stack.add_plotter(analysis['signal'][20][100],label='Signal (20 GeV,100 mm)',typeP='signal',color='maroon')
+#        stack.add_plotter(analysis['signal'][20][1000],label='Signal (20 GeV,1000 mm)',typeP='signal',color='salmon')
         stack.add_plotter(analysis['data'],label='Data',typeP='data')
         
 

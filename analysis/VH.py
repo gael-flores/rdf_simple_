@@ -69,12 +69,11 @@ def muonAna(dataframe, era = '2018'):
 def electronAna(dataframe, era = '2018'):
 
     # Common Electron ID definitions
-
-    electrons = dataframe.Define("tight_electron", "Electron_pt>15&&abs(Electron_eta)<2.5&&Electron_cutBased>3")
-    electrons = electrons.Define("veto_electron", "Electron_pt>10&&abs(Electron_eta)<2.5&&Electron_cutBased>0")
+    electrons = dataframe.Define("Electron_scEta","Electron_eta + Electron_deltaEtaSC")    
+    electrons = electrons.Define("veto_electron", "Electron_pt>10&&abs(Electron_eta)<2.5&&Electron_cutBased>1&&Electron_scEta<2.4 && ((Electron_scEta>1.479 && abs(Electron_dxy)<0.1 && abs(Electron_dz)<0.2)||(Electron_scEta<=1.479 && abs(Electron_dxy)<0.05 && abs(Electron_dz)<0.1))")
+    electrons = electrons.Define("tight_electron", "veto_electron&&Electron_pt>15&&abs(Electron_eta)<2.5&&Electron_cutBased>3")
     electrons = electrons.Define("Electron_ntight", "Sum(tight_electron)")
     electrons = electrons.Define("Electron_nveto", "Sum(veto_electron)")
-    
     for trigger in eleTrig[era]:
         electrons = electrons.Define("Electron_pass{}".format(trigger['name']), "matchTrigger(Electron_eta, Electron_phi, Electron_pdgId, TrigObj_eta, TrigObj_phi, TrigObj_pt, TrigObj_id, TrigObj_filterBits, {}, {})".format(trigger['bits'], trigger['pt']))
     electrons = electrons.Define("Electron_isTrigger", "||".join(["Electron_pass{}".format(trig['name']) for trig in eleTrig[era]]))
@@ -96,8 +95,8 @@ def electronAna(dataframe, era = '2018'):
 # Must run muon + electron analyzer first to do overlap with leptons
 def photonAna(dataframe, era = '2018'):
     # Overlap with loose leptons
-    photons = dataframe.Define("Photon_muOverlap", "overlapClean(Photon_phi, Photon_eta, Muon_phi[tight_muon], Muon_eta[tight_muon])")
-    photons = photons.Define("Photon_eleOverlap", "overlapClean(Photon_phi, Photon_eta, Electron_phi[tight_electron], Electron_eta[tight_electron])")
+    photons = dataframe.Define("Photon_muOverlap", "overlapClean(Photon_phi, Photon_eta, Muon_phi[veto_muon], Muon_eta[veto_muon])")
+    photons = photons.Define("Photon_eleOverlap", "overlapClean(Photon_phi, Photon_eta, Electron_phi[veto_electron], Electron_eta[veto_electron])")
     photons = photons.Define("Photon_overlap", "Photon_muOverlap||Photon_eleOverlap")
     
     # Photon Preselection criteria

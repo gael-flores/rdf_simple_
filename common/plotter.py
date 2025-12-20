@@ -92,11 +92,12 @@ class plotter_base(object):
         data = np.ndarray(num_bins, dtype=np.float64, buffer=hist.GetArray())
         w2   = np.ndarray(num_bins, dtype=np.float64, buffer=hist.GetSumw2().GetArray())
         edges = np.array([axis.GetBinLowEdge(i) for i in range(1, hist.GetNbinsX()+1)])
-        edges=np.append(edges,axis.GetBinUpEdge(num_bins))
+        edges=np.append(edges,axis.GetBinUpEdge(num_bins-2))
         if include_overflow==False:
             return edges.copy(),data[1:-1].copy(),w2[1:-1].copy()
         else:
             return edges.copy(),data.copy(),w2.copy()
+
     def array2d(self,var1,var2,cuts,model,include_overflow=False):
         h=self.hist2d(var1,var2,cuts,model,titlex = "",unitsx = "",titley="",unitsy="")        
         nx = h.GetNbinsX() + 2
@@ -106,11 +107,12 @@ class plotter_base(object):
         xaxis=h.GetXaxis()
         yaxis=h.GetYaxis()
         xedges = np.array([xaxis.GetBinLowEdge(i) for i in range(1, h.GetNbinsX() + 1)])
-        xedges=np.append(xedges,xaxis.GetBinUpEdge(nx))                     
+        xedges=np.append(xedges,xaxis.GetBinUpEdge(h.GetNbinsX()))                     
         yedges = np.array([yaxis.GetBinLowEdge(i) for i in range(1, h.GetNbinsY() + 1)])
-        yedges=np.append(yedges,yaxis.GetBinUpEdge(ny))
+        yedges=np.append(yedges,yaxis.GetBinUpEdge(h.GetNbinsY()))
+
         if include_overflow==False:
-            return xedges.copy(),yedges.copy(),data[1:-1.1:-1].copy(),w2[1:-1,1:-1].copy()
+            return xedges.copy(),yedges.copy(),data[1:-1,1:-1].copy(),w2[1:-1,1:-1].copy()
         else:
             return xedges.copy(),yedges.copy(),data.copy(),w2.copy()        
 
@@ -621,13 +623,14 @@ class stack_plotter(object):
 
 #MPLHEP specific plotter
 class mplhep_plotter(object):
-    def __init__(self,label='Preliminary',lumi=137.62,defaultCut="1",stack=True):
+    def __init__(self,label='Preliminary',lumi=137.62,defaultCut="1",stack=True,capsize=5):
         self.plotters = []        
         self.defaultCut=defaultCut
         mh.style.use('CMS')
         self.label=label
         self.lumi=lumi
         self.stack=stack
+        self.capsize=capsize
         
     def add_plotter(self,plotter,name='name',label = "label",typeP = "background",color='black'):
         packet = {'plotter':plotter,
@@ -645,7 +648,7 @@ class mplhep_plotter(object):
         for plotter in self.plotters:
             plotter['plotter'].redefine(var, definition)
 
-    def plot1d(self,var,cuts,model,alpha=1.0,xlabel="",xunits="",legend_loc='upper right',show=True):
+    def hist1d(self,var,cuts,model,alpha=1.0,xlabel="",xunits="",legend_loc='upper right',show=True):
         background_hists=[]
         background_edges=[]
         background_w2=[]
@@ -699,31 +702,37 @@ class mplhep_plotter(object):
                 signal_labels.append(p['label'])
                 signal_colors.append(p['color'])                                    
 
-
-                
         fig,ax = plt.subplots()
         if len(signal_hists)>0:
-            mh.histplot(signal_hists,background_edges[0],
+            mh.histplot(signal_hists,signal_edges[0],
                         histtype='step',
                         stack=False,
                         label=signal_labels,
                         color=signal_colors,
                         yerr=None,
                         sort='label',
-                        ax=ax
+                        ax=ax,
+                        density=(True if self.stack==False else False)                        
                         )                   
         if len(background_hists)>0:
             #plot background stack            
             mh.histplot(background_hists,background_edges[0],
-                        histtype='fill',
-                        alpha = 1.0 if self.stack==True else 0.7,
+                        histtype=('fill' if self.stack==True else 'step'),
                         stack=self.stack,
                         label=background_labels,
                         sort='label',
-                        ax=ax
+                        ax=ax,
+                        density=(True if self.stack==False else False)
                         )
             #plot background error band in a custom way (since we use old version of mplhep)
             if self.stack:
+                mh.histplot(background_hists,background_edges[0],
+                            histtype='step',
+                            color=(['black']*len(background_hists)),
+                            stack=self.stack,
+                            ax=ax
+                            )
+                
                 ax.fill_between(background_edges[0],
                                 np.append(background_sum-np.sqrt(background_sumw2),0),
                                 np.append(background_sum+np.sqrt(background_sumw2),0),
@@ -736,7 +745,9 @@ class mplhep_plotter(object):
                         color=data_colors,
                         sort='label',
                         w2method='poisson',
-                        ax=ax
+                        capsize=self.capsize,
+                        ax=ax,
+                        density=(True if self.stack==False else False)                        
                         )
 
         #then stack backgrounds and then draw band
@@ -750,12 +761,137 @@ class mplhep_plotter(object):
         if self.stack:
             ax.set_ylabel("Events")
         else:
-           ax.set_ylabel("a.u")
+           ax.set_ylabel("Event density")
              
         if show:
             plt.show()
             
 
+    def unrolled2d(self,var1,var2,cuts,model,alpha=1.0,xlabel="",xunits="",legend_loc='upper right',show=True):
+        background_hists=[]
+        background_edges=[]
+        background_w2=[]
+        background_labels=[]
+        background_colors=[]
+        data_hists=[]
+        data_edges=[]
+        data_w2=[]
+        data_labels=[]
+        data_colors=[]
+        signal_hists=[]
+        signal_edges=[]
+        signal_w2=[]
+        signal_labels=[]
+        signal_colors=[]
+
+        bkgExists=False        
+        for p in self.plotters:
+            if p['type']=='data':
+                xedges,yedges,data,w2=p['plotter'].array2d(var1,var2,cuts,model)
+                data_hists.append(data)
+                data_edges.append((xedges,yedges))
+                data_w2.append(w2)
+                data_labels.append(p['label'])
+                data_colors.append(p['color'])                                    
+            elif p['type']=='background':
+                xedges,yedges,data,w2=p['plotter'].array2d(var1,var2,cuts,model)
+                if bkgExists==False:
+                    background_sum=data
+                    background_sumw2=w2
+                    bkgExists=True
+                else:
+                    background_sum=background_sum+data
+                    background_sumw2=background_sumw2+w2
+
+                background_hists.append(data)
+                background_edges.append((xedges,yedges))
+                background_w2.append(w2)
+                background_labels.append(p['label'])
+                background_colors.append(p['color'])                                                    
+        for p in self.plotters:                   
+            if p['type']=='signal':
+                xedges,yedges,data,w2=p['plotter'].array2d(var1,var2,cuts,model)
+                if self.stack==True:
+                    signal_hists.append(data+background_sum)
+                    signal_w2.append(w2+background_sumw2)
+                else:
+                    signal_hists.append(data)
+                    signal_w2.append(w2)                    
+                signal_edges.append((xedges,yedges))
+                signal_labels.append(p['label'])
+                signal_colors.append(p['color'])                                    
+
+        
+        if len(background_hists)>0:
+            xedges=background_edges[0][0]
+            yedges=background_edges[0][1]
+        elif len(signal_hists)>0:
+            xedges=signal_edges[0][0]
+            yedges=signal_edges[0][1]
+        elif len(data_hists)>0:
+            xedges=data_edges[0][0]
+            yedges=data_edges[0][1]
+        fig,ax = plt.subplots(1,len(yedges)-1,sharey=True,figsize=(25,10))
+        plt.subplots_adjust(wspace=0)        
+        for i in range(0,len(yedges)-1):
+            if len(signal_hists)>0:
+                mh.histplot([arr[i, :] for arr in signal_hists],xedges,
+                            histtype='step',
+                            stack=False,
+                            label=signal_labels,
+                            color=signal_colors,
+                            yerr=None,
+                            sort='label',
+                            ax=ax[i],
+                            density=(True if self.stack==False else False)                        
+                            )                   
+            if len(background_hists)>0:
+                #plot background stack            
+                mh.histplot([arr[i, :] for arr in background_hists],xedges,
+                            histtype=('fill' if self.stack==True else 'step'),
+                            stack=self.stack,
+                            label=background_labels,
+                            sort='label',
+                            ax=ax[i],
+                            density=(True if self.stack==False else False)
+                            )
+                #plot background error band in a custom way (since we use old version of mplhep)
+                if self.stack:
+                    mh.histplot([arr[i, :] for arr in background_hists],xedges,
+                            histtype='step',
+                            color=(['black']*len(background_hists)),
+                            stack=self.stack,
+                            ax=ax[i]
+                            )                    
+                    ax[i].fill_between(xedges,
+                                    np.append(background_sum[i,:]-np.sqrt(background_sumw2)[i,:],0),
+                                    np.append(background_sum[i,:]+np.sqrt(background_sumw2)[i,:],0),
+                                    step='post', color='lightgray', alpha=0.5, hatch='////')            
+                if len(data_hists)>0:           
+                    mh.histplot([arr[i, :] for arr in data_hists],xedges,
+                                histtype='errorbar',
+                                stack=False,
+                                label=data_labels,
+                                color=data_colors,
+                                sort='label',
+                                w2method='poisson',
+                                ax=ax[i],
+                                density=(True if self.stack==False else False)                        
+                                )
+
+        #then stack backgrounds and then draw band
+        ax[-1].legend(loc=legend_loc)
+#        mh.cms.label(self.label, data=True,ax=ax[0], loc=0)
+        #fix the lower limit
+        if xlabel!="":
+            ax[-1].set_xlabel(f"{xlabel} ({xunits})")
+        if self.stack:
+            ax[0].set_ylabel("Events")
+        else:
+           ax[0].set_ylabel("Event density")
+             
+        if show:
+            plt.show()
         
         
                     
