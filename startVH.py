@@ -190,7 +190,9 @@ def unfoldTH2(hist):
 #debugging code
 if __name__ == '__main__':
     try:
-        analysis = getAnalysis("/tank/ddp/DDP","2025_12_19",'wmn2g')
+        analysis = getAnalysis("/tank/ddp/DDP","2025_12_20",'wmn2g')
+
+
         stack=mplhep_plotter()
         stack.add_plotter(analysis['wjets'],label='W+jets',typeP='background')
         stack.add_plotter(analysis['zjets'],label='Z+jets',typeP='background')
@@ -217,8 +219,11 @@ if __name__ == '__main__':
         closureStack.add_plotter(mcBackgroundPlotter,name='mcbkg',label='MC like Bkg',typeP='background')
         
 
+        
+
+
         #MC only stack 
-        mcStack = stack_plotter('comp')
+        mcStack = stack_plotter('stack')
         mcStack.add_plotter(analysis['data'],name='data',label='Data',typeP='data')
         mcStack.add_plotter(analysis['signal'][20][100],name='sig20_100',label='Signal (20 GeV,100 mm)',typeP='signal')
         mcStack.add_plotter(analysis['wjets'],name='wjets',label='W+jets',typeP='background')
@@ -229,7 +234,7 @@ if __name__ == '__main__':
         analysis['tt'].setFillProperties(0, ROOT.kAzure+5)
 
         #fake rate plotter
-        fr = getPlotter('nothing','/tank/ddp/DDP','DATA',['2016','2017','2018'],'2025_12_19','wmugamma')
+        fr = getPlotter('nothing','/tank/ddp/DDP','DATA',['2016','2017','2018'],'2025_12_20','wmugamma')
 
         
         myCuts = cuts['wmn2g']

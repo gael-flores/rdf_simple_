@@ -5,11 +5,11 @@ mass_list = [15,20,30,40,50,55]
 cuts = {}
 
 # Tight + veto lepton cuts
-cuts['W'] = {'MU': "(Muon_isTrigger[W_l1_idx] && Muon_ntight == 1 && Muon_nveto == 1 && Electron_nveto==0)",
-             'ELE': "(Electron_isTrigger[W_l1_idx] && Electron_ntight==1 &&Electron_nveto==1 && Muon_nveto == 0)"}
+cuts['W'] = {'MU': "(Muon_isTrigger[W_l1_idx] && Muon_nveto == 0 && Electron_nveto==0 && Muon_nloose==1 && Electron_nloose==0)",
+             'ELE': "(Electron_isTrigger[W_l1_idx] && Electron_nloose==1 &&Electron_nveto==0 && Muon_nveto == 0 && Muon_nloose==0)"}
              
-cuts['Z'] = {'MU': "((Muon_isTrigger[Z_idx[0]] || Muon_isTrigger[Z_idx[1]]) && Muon_ntight==2 && Muon_nveto == 2 && Electron_nveto==0)",
-             'ELE': "((Electron_isTrigger[Z_idx[0]] || Electron_isTrigger[Z_idx[1]]) && Electron_ntight==2 && Electron_nveto == 2 && Muon_nveto == 0)"}
+cuts['Z'] = {'MU': "((Muon_isTrigger[Z_idx[0]] || Muon_isTrigger[Z_idx[1]]) && Muon_nloose==2 && Muon_nveto == 0 && Electron_nveto==0 && Electron_nloose==0)",
+             'ELE': "((Electron_isTrigger[Z_idx[0]] || Electron_isTrigger[Z_idx[1]]) && Electron_nloose==2 && Electron_nveto == 0 && Muon_nveto == 0 && Muon_nloose==0)"}
 
 
 # Photon pt and kinematic cuts
