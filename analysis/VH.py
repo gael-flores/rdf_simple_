@@ -17,7 +17,8 @@ cols = ".*best_2g.*|sample_.*|^Photon_.*|^Muon_.*|nMuon|nElectron|nPhoton|^Z.*|^
 # Bits = trigger bits for HLT path
 # pt = pt threshold for trigger
 muTrig = {'2024': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
-          '2023': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
+          '2023postBPIX': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
+          '2023preBPIX': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
           '2022postEE': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
           '2022preEE': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
           '2018': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
@@ -28,7 +29,8 @@ muTrig = {'2024': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
                           {'name': 'HLT_IsoTkMu24', 'bits': 1+8, 'pt': 24}]} # Check if filter bits are correct
 
 eleTrig = {'2024': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
-           '2023': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
+           '2023postBPIX': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
+           '2023preBPIX': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
            '2022postEE': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
            '2022preEE': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
            '2018': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 2, 'pt': 32}],
