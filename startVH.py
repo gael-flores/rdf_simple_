@@ -190,13 +190,22 @@ def unfoldTH2(hist):
 #debugging code
 if __name__ == '__main__':
     try:
-        analysis = getAnalysis("/tank/ddp/DDP","2025_12_12",'wmn2g')
-        #standard stack
-        stack = stack_plotter('stack')
-        stack.add_plotter(analysis['data'],name='data',label='Data',typeP='data')
-#        stack.add_plotter(analysis['signal'][20][100],name='sig20_100',label='Signal, m_#phi = 20 GeV, c#tau=100 mm',typeP='signal')
-#        stack.add_plotter(analysis['signal'][20][1000],name='sig20_1000',label='Signal, m_#phi = 20 GeV, c#tau=1000 mm',typeP='signal')        
-        stack.add_plotter(analysis['bkg'][20],name='background',label='Background',typeP='background')
+        analysis = getAnalysis("/tank/ddp/DDP","2025_12_20",'wmn2g')
+
+
+        stack=mplhep_plotter()
+        stack.add_plotter(analysis['wjets'],label='W+jets',typeP='background')
+        stack.add_plotter(analysis['zjets'],label='Z+jets',typeP='background')
+        stack.add_plotter(analysis['tt'],label='tt+jets',typeP='background')
+ 
+        #scale the signal plotters to a BR of 0.01
+#        analysis['signal'][20][100].addCorrectionFactor(0.01,'flat')
+#        analysis['signal'][20][1000].addCorrectionFactor(0.01,'flat')
+#        stack.add_plotter(analysis['signal'][20][100],label='Signal (20 GeV,100 mm)',typeP='signal',color='maroon')
+#        stack.add_plotter(analysis['signal'][20][1000],label='Signal (20 GeV,1000 mm)',typeP='signal',color='salmon')
+        stack.add_plotter(analysis['data'],label='Data',typeP='data')
+        
+
 
         #Now a stack for the closure of the BKG estimation
         mcBackground = merged_plotter([analysis['wjets'],analysis['zjets'],analysis['tt']])
@@ -210,17 +219,22 @@ if __name__ == '__main__':
         closureStack.add_plotter(mcBackgroundPlotter,name='mcbkg',label='MC like Bkg',typeP='background')
         
 
+        
+
+
         #MC only stack 
-        mcStack = stack_plotter('comp')
-        mcStack.add_plotter(analysis['signal'][20][100],name='sig20_100',label='Signal (20 GeV,100 mm)',typeP='signal')
+        mcStack = stack_plotter('stack')
         mcStack.add_plotter(analysis['data'],name='data',label='Data',typeP='data')
+        mcStack.add_plotter(analysis['signal'][20][100],name='sig20_100',label='Signal (20 GeV,100 mm)',typeP='signal')
         mcStack.add_plotter(analysis['wjets'],name='wjets',label='W+jets',typeP='background')
         mcStack.add_plotter(analysis['zjets'],name='zjets',label='Z+jets',typeP='background')
         mcStack.add_plotter(analysis['tt'],name='tt',label='tt+jets',typeP='background')
         analysis['wjets'].setFillProperties(0, ROOT.kAzure+5)
         analysis['zjets'].setFillProperties(0, ROOT.kAzure+5)
         analysis['tt'].setFillProperties(0, ROOT.kAzure+5)
-        
+
+        #fake rate plotter
+        fr = getPlotter('nothing','/tank/ddp/DDP','DATA',['2016','2017','2018'],'2025_12_20','wmugamma')
 
         
         myCuts = cuts['wmn2g']

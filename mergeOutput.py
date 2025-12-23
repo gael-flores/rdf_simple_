@@ -59,17 +59,17 @@ files=result.stdout.split('\n')
 filesWithExt= [item for item in files if 'ext' in item]
 
 #replace the extention with *
-fs4 = [s.replace('ext4','*') for s in filesWithExt]
-fs3 = [s.replace('ext3','*') for s in fs4]
-fs2 = [s.replace('ext2','*') for s in fs3]
-fs1 = [s.replace('ext1','*') for s in fs2]
-fs0 = [s.replace('ext','*') for s in fs1]
+fs4 = [s.replace('_ext4_','*') for s in filesWithExt]
+fs3 = [s.replace('_ext3_','*') for s in fs4]
+fs2 = [s.replace('_ext2_','*') for s in fs3]
+fs1 = [s.replace('_ext1_','*') for s in fs2]
+fs0 = [s.replace('_ext_','*') for s in fs1]
 wildcard_str = list(set(fs0))
 for s in wildcard_str:
-    fname=s.replace("_*","")
-    os.system(f"hadd {options.localdir}{fname} {options.localdir}{s}")
-os.system(f"rm {options.localdir}*ext*.root")
-
+    os.system(f"hadd  {options.localdir}tmp.root {options.localdir}{s}")
+    os.system(f"rm {options.localdir}{s}")
+    fname=s.replace("*",'_')
+    os.system(f"mv {options.localdir}tmp.root {options.localdir}{fname}")
 #finally categorize files
 for year in years:
     os.system(f"mkdir {options.localdir}MC{year}_{today}")

@@ -1,6 +1,7 @@
 import ROOT
 import sys
 from array import array
+import numpy as np
 import pickle
 import ctypes
 import math
@@ -8,8 +9,10 @@ import common.tdrstyle as tdrstyle
 import common.CMS_lumi as CMS_lumi
 from python.VHTools.py_helpers import *
 sty = tdrstyle.setTDRStyle()
-
+from scipy.stats import chi2
 ### = commented out to test tdrStyle, uncomment if not using
+import matplotlib.pyplot as plt
+import mplhep as mh
 
 drawprelim = True
 
@@ -80,6 +83,39 @@ class plotter_base(object):
 
     def setMarkerProperties(self,markerstyle):
         self.markerstyle=markerstyle
+        
+        
+    def array1d(self,var,cuts,model,include_overflow=False):
+        hist=self.hist1d(var,cuts,model,titlex = "",units = "")
+        axis=hist.GetXaxis()
+        num_bins = hist.GetNbinsX()+2
+        data = np.ndarray(num_bins, dtype=np.float64, buffer=hist.GetArray())
+        w2   = np.ndarray(num_bins, dtype=np.float64, buffer=hist.GetSumw2().GetArray())
+        edges = np.array([axis.GetBinLowEdge(i) for i in range(1, hist.GetNbinsX()+1)])
+        edges=np.append(edges,axis.GetBinUpEdge(num_bins-2))
+        if include_overflow==False:
+            return edges.copy(),data[1:-1].copy(),w2[1:-1].copy()
+        else:
+            return edges.copy(),data.copy(),w2.copy()
+
+    def array2d(self,var1,var2,cuts,model,include_overflow=False):
+        h=self.hist2d(var1,var2,cuts,model,titlex = "",unitsx = "",titley="",unitsy="")        
+        nx = h.GetNbinsX() + 2
+        ny = h.GetNbinsY() + 2
+        data = np.ndarray((nx, ny), buffer=h.GetArray(), dtype=np.float64)
+        w2   = np.ndarray((nx, ny), buffer=h.GetSumw2().GetArray(), dtype=np.float64)
+        xaxis=h.GetXaxis()
+        yaxis=h.GetYaxis()
+        xedges = np.array([xaxis.GetBinLowEdge(i) for i in range(1, h.GetNbinsX() + 1)])
+        xedges=np.append(xedges,xaxis.GetBinUpEdge(h.GetNbinsX()))                     
+        yedges = np.array([yaxis.GetBinLowEdge(i) for i in range(1, h.GetNbinsY() + 1)])
+        yedges=np.append(yedges,yaxis.GetBinUpEdge(h.GetNbinsY()))
+
+        if include_overflow==False:
+            return xedges.copy(),yedges.copy(),data[1:-1,1:-1].copy(),w2[1:-1,1:-1].copy()
+        else:
+            return xedges.copy(),yedges.copy(),data.copy(),w2.copy()        
+
 
 
 
@@ -143,16 +179,13 @@ class rdf_plotter(plotter_base):
         self.rdf = self.rdf.Filter(condition)
 
         
-    def hist1d(self,var,cuts,lumi,model,titlex = "",units = ""):
+    def hist1d(self,var,cuts,model,titlex = "",units = ""):
         corrString="1.0"
         for corr in self.corrFactors:
             corrString = corrString+"*("+str(corr['value'])+")" 
-        c = "("+self.defaultCuts+")*("+cuts+")*"+lumi+"*"+self.weight+"*("+corrString+")"
+        c = "("+self.defaultCuts+")*("+cuts+")*"+self.weight+"*("+corrString+")"
         rdf=self.rdf.Define('plot_weight',c)
         h=rdf.Histo1D(model,var,'plot_weight')
-        h.Sumw2()
-        #h.Sumw2(0)
-        #h.SetBinErrorOption(ROOT.TH1D.kPoisson)
         h.SetLineStyle(self.linestyle)
         h.SetLineColor(self.linecolor)
         h.SetLineWidth(self.linewidth)
@@ -169,11 +202,13 @@ class rdf_plotter(plotter_base):
         return h.GetPtr()
 
 
-    def profile1d(self,var1,var2,cuts,lumi,model,titlex = "",unitsx = "",titley = "",unitsy = ""):
+
+    
+    def profile1d(self,var1,var2,cuts,model,titlex = "",unitsx = "",titley = "",unitsy = ""):
         corrString="1.0"
         for corr in self.corrFactors:
             corrString = corrString+"*("+str(corr['value'])+")" 
-        c = "("+self.defaultCuts+")*("+cuts+")*"+lumi+"*"+self.weight+"*("+corrString+")"
+        c = "("+self.defaultCuts+")*("+cuts+")*"+self.weight+"*("+corrString+")"
         rdf=self.rdf.Define('plot_weight',c)
         h=rdf.Profile1D(model,var1,var2,'plot_weight')
         h.SetLineStyle(self.linestyle)
@@ -193,14 +228,14 @@ class rdf_plotter(plotter_base):
         return h.GetPtr()
 
 
-    def hist2d(self,var1,var2,cuts,lumi,model,titlex = "",unitsx = "",titley="",unitsy=""):
+    def hist2d(self,var1,var2,cuts,model,titlex = "",unitsx = "",titley="",unitsy=""):
         corrString="1.0"
         for corr in self.corrFactors:
             corrString = corrString+"*("+str(corr['value'])+")" 
-        c = "("+self.defaultCuts+")*("+cuts+")*"+lumi+"*"+self.weight+"*("+corrString+")"
+        c = "("+self.defaultCuts+")*("+cuts+")*"+self.weight+"*("+corrString+")"
         rdf=self.rdf.Define('plot_weight',c)
         h=rdf.Histo2D(model,var1,var2,'plot_weight')
-        h.Sumw2()
+
         #h.Sumw2(0)
         #h.SetBinErrorOption(ROOT.TH1D.kPoisson)
         h.SetLineStyle(self.linestyle)
@@ -219,14 +254,14 @@ class rdf_plotter(plotter_base):
             h.GetYaxis().SetTitle(titley+ " ["+unitsy+"]")
         return h.GetPtr()
 
-    def unrolled2d(self,var1,var2,cuts,lumi,model):
+    def unrolled2d(self,var1,var2,cuts,model):
         corrString="1.0"
         for corr in self.corrFactors:
             corrString = corrString+"*("+str(corr['value'])+")" 
-        c = "("+self.defaultCuts+")*("+cuts+")*"+lumi+"*"+self.weight+"*("+corrString+")"
+        c = "("+self.defaultCuts+")*("+cuts+")*"+self.weight+"*("+corrString+")"
         rdf=self.rdf.Define('plot_weight',c)
         h=rdf.Histo2D(model,var1,var2,'plot_weight')
-        h.Sumw2()        
+
         hu=ROOT.TH1D(h.GetName(),h.GetTitle(),h.GetNbinsX()*h.GetNbinsY(),0,h.GetNbinsX()*h.GetNbinsY())
         for i in range(1,h.GetNbinsX()+1):
             for j in range(1,h.GetNbinsY()+1):
@@ -249,13 +284,7 @@ class rdf_plotter(plotter_base):
 class merged_plotter(plotter_base):
 
     def __init__(self, plotters):
-        self.fillstyle=1001
-        self.linestyle=1
-        self.linecolor=1
-        self.linewidth=2
-        self.fillcolor=ROOT.kOrange-3
-        self.markerstyle=20
-        self.corrFactors=[]
+        super(merged_plotter,self).__init__()
         self.plotters = plotters
 
     def define(self, var, definition):
@@ -270,20 +299,17 @@ class merged_plotter(plotter_base):
         for plotter in self.plotters:
             plotter.redefine(var, definition)
 
-    def hist1d(self,var,cuts,lumi,model,titlex = "",units = ""):
+    def hist1d(self,var,cuts,model,titlex = "",units = ""):
         h = None
         for plotter in self.plotters:
             if h is None:
-                h = plotter.hist1d(var, cuts, lumi, model, titlex, units)
+                h = plotter.hist1d(var, cuts, model, titlex, units)
             else:
-                h.Add(plotter.hist1d(var, cuts, lumi, model, titlex, units))
+                h.Add(plotter.hist1d(var, cuts, model, titlex, units))
         if h is None:
             tmprdf = ROOT.RDataFrame(1)
             tmprdf = tmprdf.Define("x", "0")
             h = tmprdf.Define("goodX", "x!=0").Histo1D(model, "goodX")
-        #h.Sumw2()
-        #h.Sumw2(0)
-        #h.SetBinErrorOption(ROOT.TH1D.kPoisson)
         h.SetLineStyle(self.linestyle)
         h.SetLineColor(self.linecolor)
         h.SetLineWidth(self.linewidth)
@@ -297,19 +323,16 @@ class merged_plotter(plotter_base):
         return h
 
 
-    def hist2d(self,var1,var2,cuts,lumi,model,titlex = "",unitsx = "",titley="",unitsy=""):
+    def hist2d(self,var1,var2,cuts,model,titlex = "",unitsx = "",titley="",unitsy=""):
         h = None
         for plotter in self.plotters:
             if h is None:
-                h = plotter.hist2d(var1,var2, cuts, lumi, model, titlex, unitsx, titley, unitsy)
+                h = plotter.hist2d(var1,var2, cuts, model, titlex, unitsx, titley, unitsy)
             else:
-                h.Add(plotter.hist2d(var1,var2, cuts, lumi, model, titlex, unitsx, titley, unitsy))
+                h.Add(plotter.hist2d(var1,var2, cuts, model, titlex, unitsx, titley, unitsy))
         if h is None:
             return h
         else:
-            #h.Sumw2()
-            #h.Sumw2(0)
-            #h.SetBinErrorOption(ROOT.TH1D.kPoisson)
             h.SetLineStyle(self.linestyle)
             h.SetLineColor(self.linecolor)
             h.SetLineWidth(self.linewidth)
@@ -326,19 +349,16 @@ class merged_plotter(plotter_base):
                 h.GetYaxis().SetTitle(titley+ " ["+unitsy+"]")
             return h
 
-    def unrolled2d(self,var1,var2,cuts,lumi,model):
+    def unrolled2d(self,var1,var2,cuts,model):
         h = None
         for plotter in self.plotters:
             if h is None:
-                h = plotter.unrolled2d(var1,var2, cuts, lumi, model)
+                h = plotter.unrolled2d(var1,var2, cuts, model)
             else:
-                h.Add(plotter.unrolled2d(var1,var2, cuts, lumi, model))
+                h.Add(plotter.unrolled2d(var1,var2, cuts, model))
         if h is None:
             return h
         else:
-            #h.Sumw2()
-            #h.Sumw2(0)
-            #h.SetBinErrorOption(ROOT.TH1D.kPoisson)
             h.SetLineStyle(self.linestyle)
             h.SetLineColor(self.linecolor)
             h.SetLineWidth(self.linewidth)
@@ -347,14 +367,14 @@ class merged_plotter(plotter_base):
             h.SetMarkerStyle(self.markerstyle)
         return h
                                
-    def getArray(self, var, cuts, lumi):
+    def getArray(self, var, cuts):
         """
         Applies cuts to RDF and extracts numpy array of values for a specific variable.
 
         Parameters:
             vars (str): variable
             cuts (str): Selection cuts
-            lumi (str): Luminosity weight
+
             range (tuple) : range over
 
         Returns:
@@ -371,7 +391,7 @@ class merged_plotter(plotter_base):
                 corrString += f"*({corr['value']})"
 
             # Apply cuts and filters based on the provided cuts and lumi
-            weight_expr = f"({plotter.defaultCuts})*({cuts})*{lumi}*{plotter.weight}*({corrString})"
+            weight_expr = f"({plotter.defaultCuts})*({cuts})*{plotter.weight}*({corrString})"
             rdf = plotter.rdf.Define("plot_weight", weight_expr)
             rdf = rdf.Filter("plot_weight")
 
@@ -416,377 +436,36 @@ class background_plotter(merged_plotter):
         super(background_plotter,self).__init__(plotters)
         super(background_plotter,self).define('scaleVar','1.0')
 
-    def getScale(self,cuts,lumi='1.0'):       
+    def getScale(self,cuts):       
         numeratorCuts = cuts.replace(self.cutsSR,self.cutsSSB)
         denominatorCuts = cuts.replace(self.cutsSR,self.cutsCSB)
         print(numeratorCuts)
         print(denominatorCuts)
         
-        hNum=super(background_plotter,self).hist1d('scaleVar',numeratorCuts,lumi,('a','a',10,-5,5))
+        hNum=super(background_plotter,self).hist1d('scaleVar',numeratorCuts,('a','a',10,-5,5))
         #replace cuts with cuts from control region
-        hDenom=super(background_plotter,self).hist1d('scaleVar',denominatorCuts,lumi,('a','a',10,-5,5))
+        hDenom=super(background_plotter,self).hist1d('scaleVar',denominatorCuts,('a','a',10,-5,5))
         if hDenom.Integral()==0:
             print("Error , denominator has zero events, returning scale=1")
             return 1.0
         else:
             return hNum.Integral()/hDenom.Integral()        
         
-    def hist1d(self,var,cuts,lumi,model,titlex = "",units = ""):
-        h=super(background_plotter,self).hist1d(var,cuts.replace(self.cutsSR,self.cutsCR),lumi,model,titlex,units)
-        h.Scale(self.getScale(cuts,lumi))
+    def hist1d(self,var,cuts,model,titlex = "",units = ""):
+        h=super(background_plotter,self).hist1d(var,cuts.replace(self.cutsSR,self.cutsCR),model,titlex,units)
+        h.Scale(self.getScale(cuts))
         return h
     
-    def hist2d(self,var1,var2,cuts,lumi,model,titlex = "",unitsx = "",titley="",unitsy=""):
-        h=super(background_plotter,self).hist2d(var1,var2,cuts.replace(self.cutsSR,self.cutsCR),lumi,model,titlex,unitsx,titley,unitsy)
-        h.Scale(self.getScale(cuts,lumi))
+    def hist2d(self,var1,var2,cuts,model,titlex = "",unitsx = "",titley="",unitsy=""):
+        h=super(background_plotter,self).hist2d(var1,var2,cuts.replace(self.cutsSR,self.cutsCR),model,titlex,unitsx,titley,unitsy)
+        h.Scale(self.getScale(cuts))
         return h
 
-    def unrolled2d(self,var1,var2,cuts,lumi,model):
-        h=super(background_plotter,self).unrolled2d(var1,var2,cuts.replace(self.cutsSR,self.cutsCR),lumi,model)      
-        h.Scale(self.getScale(cuts,lumi))
+    def unrolled2d(self,var1,var2,cuts,model):
+        h=super(background_plotter,self).unrolled2d(var1,var2,cuts.replace(self.cutsSR,self.cutsCR),model)      
+        h.Scale(self.getScale(cuts))
         return h
-
-
-
     
-class combined_plotter(object):
-    def __init__(self,defaultCut="1"):
-        self.plotters = []
-        self.types    = []
-        self.labels   = []
-        self.names    = []
-        self.log=False
-        self.defaultCut=defaultCut
-
-    def setLog(self,doLog):
-        self.log=doLog
-
-    def add_plotter(self,plotter,name="",label = "label",typeP = "background"):
-        self.plotters.append(plotter)
-        self.types.append(typeP)
-        self.labels.append(label)
-        self.names.append(name)
-        
-    def define(self, var, definition):
-        for plotter in self.plotters:
-            plotter.define(var, definition)
-
-    def redefine(self, var, definition):
-        for plotter in self.plotters:
-            plotter.redefine(var, definition)
-
-
-    def draw_stack(self,var,cut,lumi,model, titlex = "", units = "",expandY=0.0,SFs="(1)", verbose = False, prelim = "Work in progress", lumi_label = "", outOfFrame = 1):
-###        canvas = ROOT.TCanvas("canvas","")
-        canvas = ROOT.TCanvas("canvas", "", 800, 600)
-#        ROOT.gStyle.SetOptStat(0)
-#        ROOT.gStyle.SetOptTitle(0)
-#        canvas.Range(-68.75,-7.5,856.25,42.5)
-#        canvas.SetFillColor(0)
-#        canvas.SetBorderMode(0)
-#        canvas.SetBorderSize(2)
-#        canvas.SetTickx(1)
-#        canvas.SetTicky(1)
-#        canvas.SetLeftMargin(0.15)
-###        canvas.SetRightMargin(0.05) #commented to test tdrStyle
-#        canvas.SetTopMargin(0.05)
-#        canvas.SetBottomMargin(0.15)
-#        canvas.SetFrameFillStyle(0)
-#        canvas.SetFrameBorderMode(0)
-#        canvas.SetFrameFillStyle(0)
-#        canvas.SetFrameBorderMode(0)
-
-        canvas.SetTopMargin(0.055) # testing tdr style
-        canvas.SetBottomMargin(0.12) # testing
-        canvas.SetLeftMargin(0.12) # testing
-
-        canvas.cd()
-        hists=[]
-        stack = ROOT.THStack("stack","")
-        
-        signal=0
-        background=0
-        backgroundErr=0
-        
-        data=None
-        dataG=None
-        error=ctypes.c_double(0.0)
-
-        cutL="("+self.defaultCut+")*("+cut+")"
-
-        for (plotter,typeP,label,name) in zip(self.plotters,self.types,self.labels,self.names):
-            if typeP == "signal" or typeP =="background":
-                if plotter.isMC:
-                    hist = plotter.hist1d(var,cutL+"*("+SFs+")",lumi,model,titlex,units)
-                    hist.SetName(name)
-                    stack.Add(hist)
-                    hists.append(hist)
-                else:
-                    hist = plotter.hist1d(var,cutL+"*("+SFs+")",'1',model,titlex,units)
-                    hist.SetName(name)
-                    stack.Add(hist)
-                    hists.append(hist)
-                if verbose:
-                    print( label+" : %f\n" % hist.Integral())
- 
-                if typeP == "signal" :
-                    signal+=hist.Integral()
-                if typeP == "background" :
-                    background+=hist.IntegralAndError(1,hist.GetNbinsX(),error)
-                    backgroundErr+=error.value*error.value
-       
-            if typeP =="data":
-                hist = plotter.hist1d(var,cutL,"1",model,titlex,units)
-                hist.SetName(hist.GetName()+label)
-                hists.append(hist)
-                data=hist
-                dataG=convertToPoisson(hist)
-                dataG.SetLineWidth(1)
-                if verbose:
-                    print( label+" : %f\n" % hist.Integral())
-       
-       
-        #if data not found plot stack only
-        if data != None:                  
-            datamax = ROOT.Math.chisquared_quantile_c((1-0.6827)/2.,2*(data.GetMaximum()+1))/2.
-
-        else: 
-            datamax = stack.GetMaximum()
-        if not self.log:
-            frame = canvas.DrawFrame(hists[0].GetXaxis().GetXmin(),0.0,hists[0].GetXaxis().GetXmax(),max(stack.GetMaximum(),datamax)*(1.20+expandY*0.3))
-        else:    
-            frame = canvas.DrawFrame(hists[0].GetXaxis().GetXmin(),0.1,hists[0].GetXaxis().GetXmax(),max(stack.GetMaximum(),datamax)*100)
-
-#        frame.GetXaxis().SetLabelFont(42)
-#        frame.GetXaxis().SetLabelOffset(0.007)
-#        frame.GetXaxis().SetLabelSize(0.045)
-        frame.GetXaxis().SetTitleSize(0.05)
-#        frame.GetXaxis().SetTitleOffset(1.15)
-#        frame.GetXaxis().SetTitleFont(42)
-#        frame.GetYaxis().SetLabelFont(42)
-#        frame.GetYaxis().SetLabelOffset(0.007)
-#        frame.GetYaxis().SetLabelSize(0.045)
-        frame.GetYaxis().SetTitleSize(0.05)
-#        frame.GetYaxis().SetTitleOffset(1.4)
-#        frame.GetYaxis().SetTitleFont(42)
-#        frame.GetZaxis().SetLabelFont(42)
-#        frame.GetZaxis().SetLabelOffset(0.007)
-#        frame.GetZaxis().SetLabelSize(0.045)
-#        frame.GetZaxis().SetTitleSize(0.05)
-#        frame.GetZaxis().SetTitleFont(42)
-
-        if len(units)>0:
-            frame.GetXaxis().SetTitle(titlex + " (" +units+")")
-            frame.GetYaxis().SetTitle("Events / "+str((hists[0].GetXaxis().GetXmax()-hists[0].GetXaxis().GetXmin())/hists[0].GetNbinsX())+ " "+units)
-        else:    
-            frame.GetXaxis().SetTitle(titlex)
-            frame.GetYaxis().SetTitle("Events")
-
-        frame.Draw()
-        stack.Draw("A,HIST,SAME")
-        if data !=None:
-            dataG.Draw("Psame")              
-
-        ###legend = ROOT.TLegend(0.62,0.6,0.92,0.90,"","brNDC")
-        legend = ROOT.TLegend(0.63,0.64,0.93,0.94,"","brNDC") # if using tdrstyle
-        legend.SetBorderSize(0)
-        legend.SetLineColor(1)
-        legend.SetLineStyle(1)
-        legend.SetLineWidth(1)
-        legend.SetFillColor(0)
-        legend.SetFillStyle(0)
-        legend.SetTextFont(42)
-
-        legend.SetFillColor(ROOT.kWhite)
-        for (histo,label,typeP) in  list(zip(hists,self.labels,self.types))[::-1]:
-            if typeP != "data" and typeP !='signal':
-                legend.AddEntry(histo,label,"f")
-            elif typeP == 'data':
-                legend.AddEntry(histo,label,"p")
-
-        for (histo,label,typeP) in  list(zip(hists,self.labels,self.types))[::-1]:
-            if typeP == "signal":
-                legend.AddEntry(histo,label,"f")
-
-        ###tex_prelim = ROOT.TLatex()
-        ###if drawprelim:
-        ###    if prelim != "":
-        ###        tex_prelim.SetTextSize(0.03)
-        ###        tex_prelim.DrawLatexNDC(.11, .91, "#scale[1.5]{CMS}"+" {}".format(prelim))
-        ###        tex_prelim.Draw("same")
-        
-        float_lumi = float(lumi)
-        float_lumi = float_lumi/1000.
-        ###tex_lumi = ROOT.TLatex()
-        ###tex_lumi.SetTextSize(0.035)
-        ###tex_lumi.SetTextAlign(31)
-        ###tex_lumi.DrawLatexNDC(.93, .91, "13 TeV ({:.1f}".format(float_lumi) + " fb^{-1})")
-        ###tex_lumi.Draw("same")
-        if outOfFrame:
-            CMS_lumi.CMS_lumi(canvas, 4, 0, relPosX=0.077, lumi_13TeV = str(float_lumi), extraText = prelim)
-        else:
-            CMS_lumi.CMS_lumi(canvas, 4, 10, lumi_13TeV = str(float_lumi), extraText = prelim)
-
- #       ROOT.SetOwnership(legend,False)
-
-        legend.Draw()
-        if self.log:
-            canvas.SetLogy()
-#       canvas.SetLeftMargin(canvas.GetLeftMargin()*1.15)
-        canvas.Update()
-
-
-
-        if verbose:
-            print("---------------------------")
-            print( "Signal = %f" %(signal))
-            print( "Bkg    = %f" %(background))
-            if data is not None:
-                print ("Observed = %f"%(data.Integral()))
-                integral = data.IntegralAndError(1,data.GetNbinsX(),error)
-                if background>0.0:
-                    print ("Data/Bkg= {ratio} +- {err}".format(ratio=integral/background,err=math.sqrt(error.value*error.value/(background*background)+integral*integral*backgroundErr/(background*background*background*background))))
-
-        canvas.RedrawAxis()
-
-
-
-        canvas.Update()
-        ###plot={'canvas':canvas,'stack':stack,'legend':legend,'data':data,'dataG':dataG,'hists':hists,'prelim':tex_prelim, 'lumi': tex_lumi}
-        plot={'canvas':canvas,'stack':stack,'legend':legend,'data':data,'dataG':dataG,'hists':hists}
-
-        return plot
-
-
-# The nostack option normalizes the background and signal
-# contributions separately. Without this all MC contributions
-# are normalized together and drawn stacked
-    def draw_comp(self,var,cut,model, titlex = "", units = "",expandY=0.0,nostack=True,prelim="Work in progress",SFs = "(1)", outOfFrame = 1): 
-        ###canvas = ROOT.TCanvas("canvas","")
-        canvas = ROOT.TCanvas("canvas", "", 800, 600)
-#        ROOT.gStyle.SetOptStat(0)
-#        ROOT.gStyle.SetOptTitle(0)
-#        canvas.Range(-68.75,-7.5,856.25,42.5)
-#        canvas.SetFillColor(0)
-#        canvas.SetBorderMode(0)
-#        canvas.SetBorderSize(2)
-#        canvas.SetTickx(1)
-#        canvas.SetTicky(1)
-#        canvas.SetLeftMargin(0.15)
-###        canvas.SetRightMargin(0.05)
-#        canvas.SetTopMargin(0.05)
-#        canvas.SetBottomMargin(0.15)
-#        canvas.SetFrameFillStyle(0)
-#        canvas.SetFrameBorderMode(0)
-#        canvas.SetFrameFillStyle(0)
-#        canvas.SetFrameBorderMode(0)
-
-        canvas.SetTopMargin(0.055) # testing tdr style
-        canvas.SetBottomMargin(0.12) # testing
-        canvas.SetLeftMargin(0.12) # testing
-
-
-        canvas.cd()
-        hists=[]
-        labels = {}
-        stack = ROOT.THStack("stack","")
-        
-        signal=0
-        background=0
-        backgroundErr=0
-        
-        data=[]
-
-        cutL="("+self.defaultCut+")*("+cut+")"
-        scale = 0.0
-
-
-
-        for (plotter,typeP,label,name) in zip(self.plotters,self.types,self.labels,self.names):
-            hist = plotter.hist1d(var,cutL+"*("+SFs+")","1",model,titlex,units)
-            hist.SetFillStyle(0)
-            hist.SetName(name+label)
-            labels[hist] = label
-            if nostack:
-                if hist.Integral() == 0:
-                    stack.Add(hist)
-                    hists.append(hist)
-                    continue
-                hist.Scale(1.0/hist.Integral())
-                stack.Add(hist)
-                hists.append(hist)
-            else:
-                if typeP =="data":
-                    if hist.Integral() > 0:
-                        hist.Scale(1.0/hist.Integral())
-                    data.append(hist)
-
-                else:
-                    scale += hist.Integral()
-                    hists.append(hist)
-                    
-        if nostack:
-            stack.Draw("hist,nostack")
-        else:
-            for h in hists:
-                h.Scale(1./scale)
-                stack.Add(h)
-            stack.Draw("hist")
-            for h in data:
-                h.Draw("hist,same")
-
-        ###canvas.SetLeftMargin(canvas.GetLeftMargin()*1.15)
-        stack.SetMinimum(0)
-        if len(units):
-            stack.GetXaxis().SetTitle(titlex + " ["+units+"]")
-        else:
-            stack.GetXaxis().SetTitle(titlex)
-
-        stack.GetYaxis().SetTitle("a.u.")
-        stack.GetYaxis().SetTitleOffset(0.9)
-        stack.GetYaxis().SetTitleSize(0.05)
-        stack.GetXaxis().SetTitleSize(0.05)
-
-        #legend = ROOT.TLegend(0.6, 0.6, 0.9, 0.9)
-        legend = ROOT.TLegend(0.61,0.64,0.91,0.94,"","brNDC") # if using tdrstyle
-        legend.SetBorderSize(0)
-        legend.SetLineColor(1)
-        legend.SetLineStyle(1)
-        legend.SetLineWidth(1)
-        legend.SetFillColor(0)
-        legend.SetFillStyle(0)
-        legend.SetTextFont(42)
-
-        legend.SetFillColor(ROOT.kWhite)
-        for histo in labels.keys():
-            legend.AddEntry(histo, labels[histo], 'lf')
-        legend.SetFillStyle(0)
-        legend.SetBorderSize(0)
-        ROOT.SetOwnership(legend, False)
-        legend.Draw()
-        
-        #if drawprelim:
-        #    tex_prelim = ROOT.TLatex()
-        #    if prelim != "":
-        #        tex_prelim.SetTextSize(0.03)
-        #        tex_prelim.DrawLatexNDC(.11, .91, "#scale[1.5]{CMS}"+" {}".format(prelim))
-        #        tex_prelim.Draw("same")
-        
-        if outOfFrame:
-            CMS_lumi.CMS_lumi(canvas, 0, 0, relPosX=0.077, extraText = prelim)
-        else:
-            CMS_lumi.CMS_lumi(canvas, 0, 10, extraText = prelim)
-
-
-
-
-
-        canvas.Update()
-
-        return {'canvas': canvas, 'stack': stack, 'legend': legend, 'data': data, 'hists': hists}
-
-#new version with getattr to automatically propagate code
-
 class stack_plotter(object):
     def __init__(self,mode='stack',defaultCut="1"):
         self.plotters = []        
@@ -939,3 +618,286 @@ class stack_plotter(object):
             return {'canvas': canvas, 'legend': legend,'hists': sig_histograms+bkg_histograms+data_histograms}
     
         return fill_histograms
+
+
+
+#MPLHEP specific plotter
+class mplhep_plotter(object):
+    def __init__(self,label='Preliminary',lumi=137.62,defaultCut="1",stack=True,capsize=5):
+        self.plotters = []        
+        self.defaultCut=defaultCut
+        mh.style.use('CMS')
+        self.label=label
+        self.lumi=lumi
+        self.stack=stack
+        self.capsize=capsize
+        
+    def add_plotter(self,plotter,name='name',label = "label",typeP = "background",color='black'):
+        packet = {'plotter':plotter,
+                  'type':typeP,
+                  'label':label,
+                  'name':name,
+                  'color':color}
+        self.plotters.append(packet)
+        
+    def define(self, var, definition):
+        for plotter in self.plotters:
+            plotter['plotter'].define(var, definition)
+
+    def redefine(self, var, definition):
+        for plotter in self.plotters:
+            plotter['plotter'].redefine(var, definition)
+
+    def hist1d(self,var,cuts,model,alpha=1.0,xlabel="",xunits="",legend_loc='upper right',show=True):
+        background_hists=[]
+        background_edges=[]
+        background_w2=[]
+        background_labels=[]
+        background_colors=[]
+        data_hists=[]
+        data_edges=[]
+        data_w2=[]
+        data_labels=[]
+        data_colors=[]
+        signal_hists=[]
+        signal_edges=[]
+        signal_w2=[]
+        signal_labels=[]
+        signal_colors=[]
+
+        bkgExists=False        
+        for p in self.plotters:
+            if p['type']=='data':
+                edges,data,w2=p['plotter'].array1d(var,cuts,model)
+                data_hists.append(data)
+                data_edges.append(edges)
+                data_w2.append(w2)
+                data_labels.append(p['label'])
+                data_colors.append(p['color'])                                    
+            elif p['type']=='background':
+                edges,data,w2=p['plotter'].array1d(var,cuts,model)
+                if bkgExists==False:
+                    background_sum=data
+                    background_sumw2=w2
+                    bkgExists=True
+                else:
+                    background_sum=background_sum+data
+                    background_sumw2=background_sumw2+w2
+
+                background_hists.append(data)
+                background_edges.append(edges)
+                background_w2.append(w2)
+                background_labels.append(p['label'])
+                background_colors.append(p['color'])                                                    
+        for p in self.plotters:                   
+            if p['type']=='signal':
+                edges,data,w2=p['plotter'].array1d(var,cuts,model)
+                if self.stack==True:
+                    signal_hists.append(data+background_sum)
+                    signal_w2.append(w2+background_sumw2)
+                else:
+                    signal_hists.append(data)
+                    signal_w2.append(w2)                    
+                signal_edges.append(edges)
+                signal_labels.append(p['label'])
+                signal_colors.append(p['color'])                                    
+
+        fig,ax = plt.subplots()
+        if len(signal_hists)>0:
+            mh.histplot(signal_hists,signal_edges[0],
+                        histtype='step',
+                        stack=False,
+                        label=signal_labels,
+                        color=signal_colors,
+                        yerr=None,
+                        sort='label',
+                        ax=ax,
+                        density=(True if self.stack==False else False)                        
+                        )                   
+        if len(background_hists)>0:
+            #plot background stack            
+            mh.histplot(background_hists,background_edges[0],
+                        histtype=('fill' if self.stack==True else 'step'),
+                        stack=self.stack,
+                        label=background_labels,
+                        sort='label',
+                        ax=ax,
+                        density=(True if self.stack==False else False)
+                        )
+            #plot background error band in a custom way (since we use old version of mplhep)
+            if self.stack:
+                mh.histplot(background_hists,background_edges[0],
+                            histtype='step',
+                            color=(['black']*len(background_hists)),
+                            stack=self.stack,
+                            ax=ax
+                            )
+                
+                ax.fill_between(background_edges[0],
+                                np.append(background_sum-np.sqrt(background_sumw2),0),
+                                np.append(background_sum+np.sqrt(background_sumw2),0),
+                                step='post', color='lightgray', alpha=0.5, hatch='////')            
+        if len(data_hists)>0:           
+            mh.histplot(data_hists,data_edges[0],
+                        histtype='errorbar',
+                        stack=False,
+                        label=data_labels,
+                        color=data_colors,
+                        sort='label',
+                        w2method='poisson',
+                        capsize=self.capsize,
+                        ax=ax,
+                        density=(True if self.stack==False else False)                        
+                        )
+
+        #then stack backgrounds and then draw band
+        ax.legend(loc=legend_loc)
+        mh.cms.label(self.label, data=True, lumi=self.lumi, ax=ax, loc=0)
+        #fix the lower limit
+        lims=plt.ylim()
+        plt.ylim(0.0, lims[1])
+        if xlabel!="":
+            ax.set_xlabel(f"{xlabel} ({xunits})")
+        if self.stack:
+            ax.set_ylabel("Events")
+        else:
+           ax.set_ylabel("Event density")
+             
+        if show:
+            plt.show()
+            
+
+    def unrolled2d(self,var1,var2,cuts,model,alpha=1.0,xlabel="",xunits="",legend_loc='upper right',show=True):
+        background_hists=[]
+        background_edges=[]
+        background_w2=[]
+        background_labels=[]
+        background_colors=[]
+        data_hists=[]
+        data_edges=[]
+        data_w2=[]
+        data_labels=[]
+        data_colors=[]
+        signal_hists=[]
+        signal_edges=[]
+        signal_w2=[]
+        signal_labels=[]
+        signal_colors=[]
+
+        bkgExists=False        
+        for p in self.plotters:
+            if p['type']=='data':
+                xedges,yedges,data,w2=p['plotter'].array2d(var1,var2,cuts,model)
+                data_hists.append(data)
+                data_edges.append((xedges,yedges))
+                data_w2.append(w2)
+                data_labels.append(p['label'])
+                data_colors.append(p['color'])                                    
+            elif p['type']=='background':
+                xedges,yedges,data,w2=p['plotter'].array2d(var1,var2,cuts,model)
+                if bkgExists==False:
+                    background_sum=data
+                    background_sumw2=w2
+                    bkgExists=True
+                else:
+                    background_sum=background_sum+data
+                    background_sumw2=background_sumw2+w2
+
+                background_hists.append(data)
+                background_edges.append((xedges,yedges))
+                background_w2.append(w2)
+                background_labels.append(p['label'])
+                background_colors.append(p['color'])                                                    
+        for p in self.plotters:                   
+            if p['type']=='signal':
+                xedges,yedges,data,w2=p['plotter'].array2d(var1,var2,cuts,model)
+                if self.stack==True:
+                    signal_hists.append(data+background_sum)
+                    signal_w2.append(w2+background_sumw2)
+                else:
+                    signal_hists.append(data)
+                    signal_w2.append(w2)                    
+                signal_edges.append((xedges,yedges))
+                signal_labels.append(p['label'])
+                signal_colors.append(p['color'])                                    
+
+        
+        if len(background_hists)>0:
+            xedges=background_edges[0][0]
+            yedges=background_edges[0][1]
+        elif len(signal_hists)>0:
+            xedges=signal_edges[0][0]
+            yedges=signal_edges[0][1]
+        elif len(data_hists)>0:
+            xedges=data_edges[0][0]
+            yedges=data_edges[0][1]
+        fig,ax = plt.subplots(1,len(yedges)-1,sharey=True,figsize=(25,10))
+        plt.subplots_adjust(wspace=0)        
+        for i in range(0,len(yedges)-1):
+            if len(signal_hists)>0:
+                mh.histplot([arr[i, :] for arr in signal_hists],xedges,
+                            histtype='step',
+                            stack=False,
+                            label=signal_labels,
+                            color=signal_colors,
+                            yerr=None,
+                            sort='label',
+                            ax=ax[i],
+                            density=(True if self.stack==False else False)                        
+                            )                   
+            if len(background_hists)>0:
+                #plot background stack            
+                mh.histplot([arr[i, :] for arr in background_hists],xedges,
+                            histtype=('fill' if self.stack==True else 'step'),
+                            stack=self.stack,
+                            label=background_labels,
+                            sort='label',
+                            ax=ax[i],
+                            density=(True if self.stack==False else False)
+                            )
+                #plot background error band in a custom way (since we use old version of mplhep)
+                if self.stack:
+                    mh.histplot([arr[i, :] for arr in background_hists],xedges,
+                            histtype='step',
+                            color=(['black']*len(background_hists)),
+                            stack=self.stack,
+                            ax=ax[i]
+                            )                    
+                    ax[i].fill_between(xedges,
+                                    np.append(background_sum[i,:]-np.sqrt(background_sumw2)[i,:],0),
+                                    np.append(background_sum[i,:]+np.sqrt(background_sumw2)[i,:],0),
+                                    step='post', color='lightgray', alpha=0.5, hatch='////')            
+                if len(data_hists)>0:           
+                    mh.histplot([arr[i, :] for arr in data_hists],xedges,
+                                histtype='errorbar',
+                                stack=False,
+                                label=data_labels,
+                                color=data_colors,
+                                sort='label',
+                                w2method='poisson',
+                                ax=ax[i],
+                                density=(True if self.stack==False else False)                        
+                                )
+
+        #then stack backgrounds and then draw band
+        ax[-1].legend(loc=legend_loc)
+#        mh.cms.label(self.label, data=True,ax=ax[0], loc=0)
+        #fix the lower limit
+        if xlabel!="":
+            ax[-1].set_xlabel(f"{xlabel} ({xunits})")
+        if self.stack:
+            ax[0].set_ylabel("Events")
+        else:
+           ax[0].set_ylabel("Event density")
+             
+        if show:
+            plt.show()
+        
+        
+                    
+            
+        
+
+
+
+        
