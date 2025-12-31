@@ -39,7 +39,7 @@ def muonAna(dataframe, era = '2018'):
 
     # Common Muon ID definitions (No isolation)
     muons = dataframe.Define("loose_muon", "(Muon_pt>5&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&Muon_pfIsoId>1&&Muon_looseId>0)")
-    muons = dataframe.Define("tight_muon", "(loose_muon&&Muon_tightId>0&&Muon_pfIsoId>3)")
+    muons = muons.Define("tight_muon", "(loose_muon&&Muon_tightId>0&&Muon_pfIsoId>3)")
     muons = muons.Define("overlap_muon", "(Muon_pt>3&&abs(Muon_eta)<2.4&&Muon_softId>0)")        
 
     
