@@ -9,7 +9,7 @@ import common.tdrstyle as tdrstyle
 import common.CMS_lumi as CMS_lumi
 from python.VHTools.py_helpers import *
 sty = tdrstyle.setTDRStyle()
-from scipy.stats import chi2
+from scipy.stats import chi2,poisson
 ### = commented out to test tdrStyle, uncomment if not using
 import matplotlib.pyplot as plt
 import mplhep as mh
@@ -65,6 +65,7 @@ class plotter_base(object):
         self.fillcolor=ROOT.kOrange-3
         self.markerstyle=20
         self.corrFactors=[]
+        self.n_bootstraps=10000
 
     def addCorrectionFactor(self,value,model):
         corr=dict()
@@ -84,26 +85,102 @@ class plotter_base(object):
     def setMarkerProperties(self,markerstyle):
         self.markerstyle=markerstyle
         
-        
-    def array1d(self,var,cuts,model,include_overflow=False):
+    def poisson_confidence_interval(self,k, confidence=0.6827):
+        """
+        Computes the Garwood (exact) confidence interval for a Poisson rate.
+        k: observed number of events (can be 0)
+        confidence: confidence level (e.g., 0.95)
+        """
+        k_array = k
+        alpha = 1 - confidence
+    
+        # Lower bound: use 0 where k is 0, otherwise calculate chi2
+        # We use np.maximum(2*k, 0) to ensure we don't pass negatives
+        lower = np.where(
+            k_array > 0, 
+            chi2.ppf(alpha / 2, 2 * k_array) / 2, 
+            0.0
+        )
+    
+        # Upper bound: always calculated using 2*k + 2
+        upper = chi2.ppf(1 - alpha / 2, 2 * k_array + 2) / 2
+        return lower, upper
+
+
+    def poisson_bootstrap_ci(self,weights, n_bootstraps=1000, ci_level=0.6827):
+        """
+        Calculates the CI for a sum of weighted Poisson events.
+        """
+        # Convert to array for vectorization
+        n_events = len(weights)
+    
+        # Generate a matrix of Poisson(1) multipliers
+        # Shape: (n_bootstraps, n_events)
+        poisson_counts = np.random.poisson(1, size=(n_bootstraps, n_events))
+    
+        # Calculate the weighted sum for every bootstrap iteration
+        # Matrix multiplication: (n_bootstraps, n_events) @ (n_events, 1)
+        bootstrap_sums = poisson_counts @ weights
+    
+        # Calculate percentiles for the confidence interval
+        lower_bound = (1 - ci_level) / 2
+        upper_bound = 1 - lower_bound
+    
+        ci_low, ci_high = np.percentile(bootstrap_sums, [lower_bound * 100, upper_bound * 100])
+        del bootstrap_sums
+        del poisson_counts
+        return ci_low, ci_high
+    
+    def array1d(self,var,cuts,model,include_overflow=False,error_mode='w2'):
         hist=self.hist1d(var,cuts,model,titlex = "",units = "")
         axis=hist.GetXaxis()
         num_bins = hist.GetNbinsX()+2
         data = np.ndarray(num_bins, dtype=np.float64, buffer=hist.GetArray())
-        w2   = np.ndarray(num_bins, dtype=np.float64, buffer=hist.GetSumw2().GetArray())
         edges = np.array([axis.GetBinLowEdge(i) for i in range(1, hist.GetNbinsX()+1)])
         edges=np.append(edges,axis.GetBinUpEdge(num_bins-2))
+        if error_mode=='w2':
+            w2   = np.ndarray(num_bins, dtype=np.float64, buffer=hist.GetSumw2().GetArray())
+            w2=np.array([w2,w2])            
+        elif error_mode=='poisson':
+            low, high = self.poisson_confidence_interval(data,0.6827)
+            w2=np.array([np.square(data-low),np.square(high-data)])
+        elif error_mode=='poisson_bootstrap':
+            low = data.copy()
+            high = data.copy()
+            for i in range(0,len(data)):
+                if (data[i]==0.0):
+                    continue;
+                if i==0:
+                    low_edge=edges[0]
+                    c = "*".join([cuts,f"({var}<{low_edge})"])
+                elif i==(len(data)-1):
+                    up_edge=edges[-1]
+                    c = "*".join([cuts,f"({var}>={up_edge})"])
+                else:
+                    lo=edges[i-1]
+                    hi=edges[i]
+                    c = "*".join([cuts,f"({var}>={lo}&&{var}<{hi})"])
+                weights = self.event_weights(c)
+                if len(weights)>0:
+                    l,h = self.poisson_bootstrap_ci(weights, n_bootstraps=self.n_bootstraps,ci_level=0.6827)
+                    weights=None
+                    low[i]=l
+                    high[i]=h
+                    d=data[i]
+                    print(f"Poisson Bootstrap: Observation = {d} Interval E [{l},{h}]")
+            w2=np.array([np.square(data-low),np.square(high-data)])            
+        del hist    
         if include_overflow==False:
-            return edges.copy(),data[1:-1].copy(),w2[1:-1].copy()
+            return edges.copy(),data[1:-1].copy(),w2[:,1:-1].copy()
         else:
             return edges.copy(),data.copy(),w2.copy()
 
-    def array2d(self,var1,var2,cuts,model,include_overflow=False):
+    def array2d(self,var1,var2,cuts,model,include_overflow=False,error_mode='w2'):
         h=self.hist2d(var1,var2,cuts,model,titlex = "",unitsx = "",titley="",unitsy="")        
         nx = h.GetNbinsX() + 2
         ny = h.GetNbinsY() + 2
-        data = np.ndarray((nx, ny), buffer=h.GetArray(), dtype=np.float64)
-        w2   = np.ndarray((nx, ny), buffer=h.GetSumw2().GetArray(), dtype=np.float64)
+        data1d = np.ndarray(shape=(nx*ny,), buffer=h.GetArray(), dtype=np.float64)
+        data=data1d.reshape(ny,nx)
         xaxis=h.GetXaxis()
         yaxis=h.GetYaxis()
         xedges = np.array([xaxis.GetBinLowEdge(i) for i in range(1, h.GetNbinsX() + 1)])
@@ -111,8 +188,55 @@ class plotter_base(object):
         yedges = np.array([yaxis.GetBinLowEdge(i) for i in range(1, h.GetNbinsY() + 1)])
         yedges=np.append(yedges,yaxis.GetBinUpEdge(h.GetNbinsY()))
 
+        if error_mode=='w2':
+            w22d   = np.ndarray((nx*ny,), buffer=h.GetSumw2().GetArray(), dtype=np.float64)            
+            w2=w22d.reshape(ny,nx)
+            w2=np.array([w2,w2])
+        elif error_mode=='poisson':
+            low, high = self.poisson_confidence_interval(data,0.6827)
+            w2=np.array([np.square(data-low),np.square(high-data)])
+        elif error_mode=='poisson_bootstrap':
+            cx=None
+            cy=None            
+            low = data.copy()
+            high = data.copy()
+            for i in range(0,len(data[0,:])):
+                if i==0:
+                    low_edge=xedges[0]
+                    cx = f"({var1}<{low_edge})"
+                elif i==(len(data[0,:])-1):
+                    up_edge=xedges[-1]
+                    cx = f"({var1}>={up_edge})"
+                else:
+                    lo=xedges[i-1]
+                    hi=xedges[i]
+                    cx = f"({var1}>={lo}&&{var1}<{hi})"
+                for j in range(0,len(data[:,0])):
+                    if data[j,i]==0.0:
+                        continue
+                    if j==0:
+                        low_edge=yedges[0]
+                        cy = f"({var2}<{low_edge})"
+                    elif j==(len(data[:,0])-1):
+                        up_edge=yedges[-1]
+                        cy = f"({var2}>={up_edge})"
+                    else:
+                        lo=yedges[j-1]
+                        hi=yedges[j]
+                        cy = f"({var2}>={lo}&&{var2}<{hi})"
+                    print(f"Poisson bootstrap for ({i},{j})","*".join([cx,cy]))
+                    weights = self.event_weights("*".join([cuts,cx,cy]))
+                    if len(weights)>0:
+                        l,h = self.poisson_bootstrap_ci(weights, n_bootstraps=self.n_bootstraps,ci_level=0.6827)
+                        low[j,i]=l
+                        high[j,i]=h
+                        d=data[j,i]
+                        print(f"Observation = {d} Interval E [{l},{h}]")
+                    weights=None
+            w2=np.array([np.square(data-low),np.square(high-data)])
+        del h    
         if include_overflow==False:
-            return xedges.copy(),yedges.copy(),data[1:-1,1:-1].copy(),w2[1:-1,1:-1].copy()
+            return xedges.copy(),yedges.copy(),data[1:-1,1:-1].copy(),w2[:,1:-1,1:-1].copy()
         else:
             return xedges.copy(),yedges.copy(),data.copy(),w2.copy()        
 
@@ -178,6 +302,18 @@ class rdf_plotter(plotter_base):
         '''
         self.rdf = self.rdf.Filter(condition)
 
+    def event_weights(self,cuts):
+        c="1.0"
+        for corr in self.corrFactors:
+            c = c+"*("+str(corr['value'])+")" 
+        c = "("+self.defaultCuts+")*("+cuts+")*"+self.weight+"*("+c+")"
+        rdf=self.rdf.Define('plot_weight',c)
+        filtered = rdf.Filter("plot_weight!=0")
+        arr=filtered.AsNumpy(["plot_weight"])
+        del rdf
+        del filtered        
+        return arr['plot_weight'].copy()
+        
         
     def hist1d(self,var,cuts,model,titlex = "",units = ""):
         corrString="1.0"
@@ -298,6 +434,22 @@ class merged_plotter(plotter_base):
     def redefine(self, var, definition):
         for plotter in self.plotters:
             plotter.redefine(var, definition)
+
+
+    def addCorrectionFactor(self,value,model):
+        for plotter in self.plotters:
+            plotter.addCorrectionFactor(value,model)
+            
+    def event_weights(self,cuts):
+        arr =None
+        for plotter in self.plotters:
+            if arr is None:
+                arr = plotter.event_weights(cuts)
+            else:
+                extra=plotter.event_weights(cuts)
+                arr=np.concatenate([arr,extra])
+        return arr        
+        
 
     def hist1d(self,var,cuts,model,titlex = "",units = ""):
         h = None
@@ -427,24 +579,24 @@ class merged_plotter(plotter_base):
 
 
 #Tricky, use with care!
-class background_plotter(merged_plotter):
+class abcd_plotter(merged_plotter):
     def __init__(self,cutsSR,cutsCR,cutsSSB,cutsCSB,plotters):
         self.cutsSR=cutsSR
         self.cutsCR=cutsCR
         self.cutsSSB=cutsSSB
         self.cutsCSB=cutsCSB
-        super(background_plotter,self).__init__(plotters)
-        super(background_plotter,self).define('scaleVar','1.0')
+        super(abcd_plotter,self).__init__(plotters)
+        super(abcd_plotter,self).define('scaleVar','1.0')
 
-    def getScale(self,cuts):       
-        numeratorCuts = cuts.replace(self.cutsSR,self.cutsSSB)
-        denominatorCuts = cuts.replace(self.cutsSR,self.cutsCSB)
+    def getScale(self):       
+        numeratorCuts = self.cutsSSB
+        denominatorCuts = self.cutsCSB
         print(numeratorCuts)
         print(denominatorCuts)
         
-        hNum=super(background_plotter,self).hist1d('scaleVar',numeratorCuts,('a','a',10,-5,5))
+        hNum=super(abcd_plotter,self).hist1d('scaleVar',numeratorCuts,('a','a',10,-5,5))
         #replace cuts with cuts from control region
-        hDenom=super(background_plotter,self).hist1d('scaleVar',denominatorCuts,('a','a',10,-5,5))
+        hDenom=super(abcd_plotter,self).hist1d('scaleVar',denominatorCuts,('a','a',10,-5,5))
         if hDenom.Integral()==0:
             print("Error , denominator has zero events, returning scale=1")
             return 1.0
@@ -452,19 +604,53 @@ class background_plotter(merged_plotter):
             return hNum.Integral()/hDenom.Integral()        
         
     def hist1d(self,var,cuts,model,titlex = "",units = ""):
-        h=super(background_plotter,self).hist1d(var,cuts.replace(self.cutsSR,self.cutsCR),model,titlex,units)
-        h.Scale(self.getScale(cuts))
+        h=super(abcd_plotter,self).hist1d(var,cuts.replace(self.cutsSR,self.cutsCR),model,titlex,units)
+        h.Scale(self.getScale())
         return h
     
     def hist2d(self,var1,var2,cuts,model,titlex = "",unitsx = "",titley="",unitsy=""):
-        h=super(background_plotter,self).hist2d(var1,var2,cuts.replace(self.cutsSR,self.cutsCR),model,titlex,unitsx,titley,unitsy)
-        h.Scale(self.getScale(cuts))
+        h=super(abcd_plotter,self).hist2d(var1,var2,cuts.replace(self.cutsSR,self.cutsCR),model,titlex,unitsx,titley,unitsy)
+        h.Scale(self.getScale())
         return h
 
     def unrolled2d(self,var1,var2,cuts,model):
-        h=super(background_plotter,self).unrolled2d(var1,var2,cuts.replace(self.cutsSR,self.cutsCR),model)      
-        h.Scale(self.getScale(cuts))
+        h=super(abcd_plotter,self).unrolled2d(var1,var2,cuts.replace(self.cutsSR,self.cutsCR),model)      
+        h.Scale(self.getScale())
         return h
+
+
+
+#Tricky, use with care!
+class fakerate_plotter(merged_plotter):
+    def __init__(self,cutsSR,cutsCR,plotters,fakeRateVar,definition):
+        self.cutsSR=cutsSR
+        self.cutsCR=cutsCR
+        super(fakerate_plotter,self).__init__(plotters)
+        self.fakeRateVar=fakeRateVar
+        self.define(fakeRateVar,definition)
+
+    def hist1d(self,var,cuts,model,titlex = "",units = "",variation=0):
+        h=super(fakerate_plotter,self).hist1d(var,'('+cuts.replace(self.cutsSR,self.cutsCR)+f")*({self.fakeRateVar}[{variation}])",model,titlex,units)
+        return h
+    
+    def hist2d(self,var1,var2,cuts,model,titlex = "",unitsx = "",titley="",unitsy="",variation=0):
+        h=super(fakerate_plotter,self).hist2d(var1,var2,'('+cuts.replace(self.cutsSR,self.cutsCR)+f")*({self.fakeRateVar}[{variation}])",model,titlex,unitsx,titley,unitsy)
+        return h
+
+    def unrolled2d(self,var1,var2,cuts,model,variation=0):
+        h=super(fakerate_plotter,self).unrolled2d(var1,var2,'('+cuts.replace(self.cutsSR,self.cutsCR)+f")*({self.fakeRateVar}[{variation}])",model)      
+        return h
+
+    def event_weights(self,cuts,variation=0):
+        arr =None
+        for plotter in self.plotters:
+            if arr is None:
+                arr = plotter.event_weights('('+cuts.replace(self.cutsSR,self.cutsCR)+f")*({self.fakeRateVar}[{variation}])")
+            else:
+                extra=plotter.event_weights('('+cuts.replace(self.cutsSR,self.cutsCR)+f")*({self.fakeRateVar}[{variation}])")
+                arr=np.concatenate([arr,extra])
+        return arr        
+
     
 class stack_plotter(object):
     def __init__(self,mode='stack',defaultCut="1"):
@@ -632,9 +818,10 @@ class mplhep_plotter(object):
         self.stack=stack
         self.capsize=capsize
         
-    def add_plotter(self,plotter,name='name',label = "label",typeP = "background",color='black'):
+    def add_plotter(self,plotter,name='name',label = "label",typeP = "background",error_mode='w2',color='black'):
         packet = {'plotter':plotter,
                   'type':typeP,
+                  'error_mode':error_mode,
                   'label':label,
                   'name':name,
                   'color':color}
@@ -668,14 +855,14 @@ class mplhep_plotter(object):
         bkgExists=False        
         for p in self.plotters:
             if p['type']=='data':
-                edges,data,w2=p['plotter'].array1d(var,cuts,model)
+                edges,data,w2=p['plotter'].array1d(var,cuts,model,error_mode=p['error_mode'])
                 data_hists.append(data)
                 data_edges.append(edges)
                 data_w2.append(w2)
                 data_labels.append(p['label'])
                 data_colors.append(p['color'])                                    
             elif p['type']=='background':
-                edges,data,w2=p['plotter'].array1d(var,cuts,model)
+                edges,data,w2=p['plotter'].array1d(var,cuts,model,error_mode=p['error_mode'])
                 if bkgExists==False:
                     background_sum=data
                     background_sumw2=w2
@@ -691,7 +878,7 @@ class mplhep_plotter(object):
                 background_colors.append(p['color'])                                                    
         for p in self.plotters:                   
             if p['type']=='signal':
-                edges,data,w2=p['plotter'].array1d(var,cuts,model)
+                edges,data,w2=p['plotter'].array1d(var,cuts,model,error_mode=p['error_mode'])
                 if self.stack==True:
                     signal_hists.append(data+background_sum)
                     signal_w2.append(w2+background_sumw2)
@@ -717,11 +904,12 @@ class mplhep_plotter(object):
         if len(background_hists)>0:
             #plot background stack            
             mh.histplot(background_hists,background_edges[0],
-                        histtype=('fill' if self.stack==True else 'step'),
+                        histtype='fill',
                         stack=self.stack,
                         label=background_labels,
                         sort='label',
                         ax=ax,
+                        alpha=(alpha if self.stack==False else 1.0), 
                         density=(True if self.stack==False else False)
                         )
             #plot background error band in a custom way (since we use old version of mplhep)
@@ -734,8 +922,8 @@ class mplhep_plotter(object):
                             )
                 
                 ax.fill_between(background_edges[0],
-                                np.append(background_sum-np.sqrt(background_sumw2),0),
-                                np.append(background_sum+np.sqrt(background_sumw2),0),
+                                np.append(background_sum-np.sqrt(background_sumw2[0]),0),
+                                np.append(background_sum+np.sqrt(background_sumw2[1]),0),
                                 step='post', color='lightgray', alpha=0.5, hatch='////')            
         if len(data_hists)>0:           
             mh.histplot(data_hists,data_edges[0],
@@ -744,7 +932,7 @@ class mplhep_plotter(object):
                         label=data_labels,
                         color=data_colors,
                         sort='label',
-                        w2method='poisson',
+                        yerr = [np.sqrt(a) for a in data_w2],
                         capsize=self.capsize,
                         ax=ax,
                         density=(True if self.stack==False else False)                        
@@ -757,7 +945,10 @@ class mplhep_plotter(object):
         lims=plt.ylim()
         plt.ylim(0.0, lims[1])
         if xlabel!="":
-            ax.set_xlabel(f"{xlabel} ({xunits})")
+            if xunits!='':
+                ax.set_xlabel(f"{xlabel} ({xunits})")
+            else:
+                ax.set_xlabel(f"{xlabel}")                
         if self.stack:
             ax.set_ylabel("Events")
         else:
@@ -787,14 +978,14 @@ class mplhep_plotter(object):
         bkgExists=False        
         for p in self.plotters:
             if p['type']=='data':
-                xedges,yedges,data,w2=p['plotter'].array2d(var1,var2,cuts,model)
+                xedges,yedges,data,w2=p['plotter'].array2d(var1,var2,cuts,model,error_mode=p['error_mode'])
                 data_hists.append(data)
                 data_edges.append((xedges,yedges))
                 data_w2.append(w2)
                 data_labels.append(p['label'])
                 data_colors.append(p['color'])                                    
             elif p['type']=='background':
-                xedges,yedges,data,w2=p['plotter'].array2d(var1,var2,cuts,model)
+                xedges,yedges,data,w2=p['plotter'].array2d(var1,var2,cuts,model,error_mode=p['error_mode'])
                 if bkgExists==False:
                     background_sum=data
                     background_sumw2=w2
@@ -810,7 +1001,7 @@ class mplhep_plotter(object):
                 background_colors.append(p['color'])                                                    
         for p in self.plotters:                   
             if p['type']=='signal':
-                xedges,yedges,data,w2=p['plotter'].array2d(var1,var2,cuts,model)
+                xedges,yedges,data,w2=p['plotter'].array2d(var1,var2,cuts,model,error_mode=p['error_mode'])
                 if self.stack==True:
                     signal_hists.append(data+background_sum)
                     signal_w2.append(w2+background_sumw2)
@@ -864,8 +1055,8 @@ class mplhep_plotter(object):
                             ax=ax[i]
                             )                    
                     ax[i].fill_between(xedges,
-                                    np.append(background_sum[i,:]-np.sqrt(background_sumw2)[i,:],0),
-                                    np.append(background_sum[i,:]+np.sqrt(background_sumw2)[i,:],0),
+                                    np.append(background_sum[i,:]-np.sqrt(background_sumw2[0])[i,:],0),
+                                    np.append(background_sum[i,:]+np.sqrt(background_sumw2[1])[i,:],0),
                                     step='post', color='lightgray', alpha=0.5, hatch='////')            
                 if len(data_hists)>0:           
                     mh.histplot([arr[i, :] for arr in data_hists],xedges,
@@ -874,7 +1065,8 @@ class mplhep_plotter(object):
                                 label=data_labels,
                                 color=data_colors,
                                 sort='label',
-                                w2method='poisson',
+                                yerr = [np.array([np.sqrt(a[0,i,:]),np.sqrt(a[1,i,:])]) for a in data_w2],
+                                capsize=self.capsize,                                
                                 ax=ax[i],
                                 density=(True if self.stack==False else False)                        
                                 )
@@ -893,6 +1085,129 @@ class mplhep_plotter(object):
         if show:
             plt.show()
         
+    def unrolledCustom(self,var1,var2,cuts,custom_binning,alpha=1.0,xlabel="",xunits="",legend_loc='upper right',show=True):
+
+        fig,ax = plt.subplots(1,len(custom_binning),sharey=True,figsize=(25,10))
+        plt.subplots_adjust(wspace=0)        
+
+        
+        for i,binning in enumerate(custom_binning):
+            xedges=binning[0]
+            yedges=binning[1]
+            
+            background_hists=[]
+            background_w2=[]
+            background_labels=[]
+            background_colors=[]
+            data_hists=[]
+            data_w2=[]
+            data_labels=[]
+            data_colors=[]
+            signal_hists=[]
+            signal_w2=[]
+            signal_labels=[]
+            signal_colors=[]
+
+            bkgExists=False        
+            for p in self.plotters:
+
+                if p['type']=='data':
+                    edg,data,w2=p['plotter'].array1d(var2,cuts+f"*({var1}>={xedges[0]}&&{var1}<{xedges[1]})",(p['name'],p['name'],len(yedges)-1,np.array(yedges)),error_mode=p['error_mode'])
+                    data_hists.append(data)
+                    data_w2.append(w2)
+                    data_labels.append(p['label'])
+                    data_colors.append(p['color'])                                    
+                elif p['type']=='background':
+                    edg,data,w2=p['plotter'].array1d(var2,cuts+f"*({var1}>={xedges[0]}&&{var1}<{xedges[1]})",(p['name'],p['name'],len(yedges)-1,np.array(yedges)),error_mode=p['error_mode'])
+                    if bkgExists==False:
+                        background_sum=data
+                        background_sumw2=w2
+                        bkgExists=True
+                    else:
+                        background_sum=background_sum+data
+                        background_sumw2=background_sumw2+w2
+                    background_hists.append(data)
+                    background_w2.append(w2)
+                    background_labels.append(p['label'])
+                    background_colors.append(p['color'])                                                    
+            for p in self.plotters:                
+                if p['type']=='signal':
+                    edg,data,w2=p['plotter'].array1d(var2,cuts+f"*({var1}>={xedges[0]}&&{var1}<{xedges[1]})",(p['name'],p['name'],len(yedges)-1,np.array(yedges)),error_mode=p['error_mode'])
+                    if self.stack==True:
+                        signal_hists.append(data+background_sum)
+                        signal_w2.append(w2+background_sumw2)
+                    else:
+                        signal_hists.append(data)
+                        signal_w2.append(w2)                    
+                    signal_labels.append(p['label'])
+                    signal_colors.append(p['color'])                                    
+
+        
+
+            if len(signal_hists)>0:
+                mh.histplot(signal_hists,yedges,
+                            histtype='step',
+                            stack=False,
+                            label=signal_labels,
+                            color=signal_colors,
+                            yerr=None,
+                            sort='label',
+                            ax=ax[i],
+                            density=(True if self.stack==False else False)                        
+                            )                   
+            if len(background_hists)>0:
+                #plot background stack
+                if self.stack:
+                    mh.histplot(background_hists,yedges,
+                                histtype='fill',
+                                stack=True,
+                                label=background_labels,
+                                sort='label',
+                                ax=ax[i],
+                                density=(True if self.stack==False else False)
+                                )
+                    ax[i].fill_between(yedges,
+                                       np.append(background_sum-np.sqrt(background_sumw2[0]),0),
+                                       np.append(background_sum+np.sqrt(background_sumw2[1]),0),
+                                       step='post', color='lightgray', alpha=0.5, hatch='////')            
+                    
+                else:
+                    mh.histplot(background_hists,yedges,
+                                histtype='fill',
+                                stack=False,
+                                label=background_labels,
+                                sort='label',
+                                alpha=alpha,
+                                ax=ax[i],
+                                density=True
+                                )
+                    
+            if len(data_hists)>0:           
+                    mh.histplot(data_hists,yedges,
+                                histtype='errorbar',
+                                stack=False,
+                                label=data_labels,
+                                color=data_colors,
+                                sort='label',
+                                yerr = [np.sqrt(a) for a in data_w2],
+                                capsize=self.capsize,                                
+                                ax=ax[i],
+                                density=(True if self.stack==False else False)                        
+                                )
+
+        #then stack backgrounds and then draw band
+        ax[-1].legend(loc=legend_loc)
+#        mh.cms.label(self.label, data=True,ax=ax[0], loc=0)
+        #fix the lower limit
+        if xlabel!="":
+            ax[-1].set_xlabel(f"{xlabel} ({xunits})")
+        if self.stack:
+            ax[0].set_ylabel("Events")
+        else:
+           ax[0].set_ylabel("Event density")
+             
+        if show:
+            plt.show()
         
                     
             

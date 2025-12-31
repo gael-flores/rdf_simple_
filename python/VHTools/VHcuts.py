@@ -67,11 +67,14 @@ for analysis in ['wmn2g','wen2g','zmm2g','zee2g']:
                                            cuts['fsr'][v][m],
                                            f"((Photon_passCutBasedID[best_2g_idx1_m{m}]+Photon_passCutBasedID[best_2g_idx2_m{m}])==2)"])
         cuts[analysis][m]['precr']='&&'.join([cuts[v][l],
-                                           cuts['pt'][m],
-                                           cuts['photons'][m],
-                                           cuts['misID'][v][l][m],
-                                           cuts['fsr'][v][m],
-                                           f"((Photon_passCutBasedID[best_2g_idx1_m{m}]+Photon_passCutBasedID[best_2g_idx2_m{m}])==1)"])
+                                              cuts['pt'][m],
+                                              cuts['photons'][m],
+                                              cuts['misID'][v][l][m],
+                                              cuts['fsr'][v][m],
+                                              f"((Photon_passCutBasedID[best_2g_idx1_m{m}]+Photon_passCutBasedID[best_2g_idx2_m{m}])==1)"])
+                                              
+#                                              f"(Photon_passCutBasedID[best_2g_idx1_m{m}]>0)"])                                              
+#                                           f"(Photon_passCutBasedID[best_2g_idx1_m{m}]>0)"])
 
         cuts[analysis][m]['precl']='&&'.join([cuts[v][l],
                                            cuts['pt'][m],

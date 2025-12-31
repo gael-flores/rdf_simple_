@@ -24,6 +24,39 @@ using RVecU = ROOT::VecOps::RVec<unsigned int>;
 using RVecUL = ROOT::VecOps::RVec<unsigned long int>;
 using RVecULL = ROOT::VecOps::RVec<unsigned long long int>;
 
+
+//Check if a photon is prompt (comes from quark or lepton)
+RVecI prompt_photon(const RVecI& photon_flavor,const RVecI& photon_genIdx,const RVecI& genPdgId,const RVecI& genMotherIdx) {
+  RVecI result;
+  for (size_t i=0;i<photon_flavor.size();++i) {
+    if (photon_flavor[i]!=1) {
+      result.emplace_back(0);
+    }
+    else {
+      int gIdx = photon_genIdx[i];
+      if (gIdx<0) {
+	result.emplace_back(0);
+      }
+      else {
+	int motherIndex  = genMotherIdx[gIdx];
+	if (motherIndex<0) {
+	  result.emplace_back(0);
+	}
+	else {
+	  int pdg = abs(genPdgId[motherIndex]);
+	  if ((pdg>0&&pdg<=6)||(pdg==11)||(pdg==13)||(pdg==15))
+	    result.emplace_back(1);
+	  else
+	    result.emplace_back(0);
+	}
+      }
+    }
+  }
+  return result;
+}
+
+
+
 // Reconstruct the best Z-> ll candidate
 RVec<size_t> best_z(RVecF pt, RVecF eta, RVecF phi, RVecF mass, RVecI charge, RVecB isTight)
 {
@@ -502,8 +535,48 @@ int getBin(const float val, const std::vector<float> bins){
   if (val <= bins.front())
     return 0;
   auto lower = std::lower_bound(bins.begin(), bins.end(), val); // Finds iterator of bin upper edge
-  return (int) (std::distance(bins.begin(), lower) - 1);
+  //Michalis found an issue with the overflows here. Need extra checks:
+  if (lower==bins.begin()) {
+    return 0;
+  }
+  else if (lower==bins.end()) {
+    return bins.size()-2;
+  }
+  else  {
+    return (int) (std::distance(bins.begin(), lower) - 1);
+  }
 }
+
+//Apply on ID +preselection
+RVecF fake_rate(float pt1,float eta1,float pt2,float eta2,bool id1,bool id2,
+		const std::vector <std::vector<std::vector<float> > >& SFs,
+		const std::vector<float>& binsX,
+		const std::vector<float>& binsY
+		){
+  RVecF fr;//3 entries, nominal, up , down
+  fr.reserve(3);
+  //  if (id2&&(!id1)) { //only for the one that failed ID
+  //  int binX1 = getBin(pt1, binsX);
+  //  int binY1 = getBin(eta1, binsY);
+  //  float fr1 = SFs[binX1][binY1][0];
+  //  float fr1U = SFs[binX1][binY1][1];
+  //  float fr1D = SFs[binX1][binY1][2];
+
+  int binX2 = getBin(pt2, binsX);
+  int binY2 = getBin(eta2, binsY);
+  float fr2 = SFs[binX2][binY2][0];
+  float fr2U = SFs[binX2][binY2][1];
+  float fr2D = SFs[binX2][binY2][2];
+
+
+  
+  fr.emplace_back(fr2);
+  fr.emplace_back(fr2U);
+  fr.emplace_back(fr2D);    
+  return fr;
+}
+
+
 
 // Get scale factors as a function of 1 variable
 RVec<RVecF> scaleFactors_1d(RVecF x, std::vector<std::vector<float>> SFs, std::vector<float> binsX, const bool CR, RVecB selection){
