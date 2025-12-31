@@ -11,6 +11,8 @@ from common.plotter import *
 ROOT.gInterpreter.Declare('#include "common/chelpers.h"')
 ROOT.gInterpreter.Declare('#include "common/signalEfficiency.h"')
 ROOT.gInterpreter.Declare('#include "common/scaleFactors.h"')
+ROOT.gInterpreter.Declare('#include "common/vhFakeRates.h"')        
+        
 ROOT.ROOT.EnableImplicitMT()
 
 masses = [15,20,30,40,50,55]
@@ -28,11 +30,11 @@ lumifb = {'2018': "59.83",
 # Standard Analysis Cuts
 cuts = {}
 # Tight + veto lepton cuts
-cuts['W'] = {'MU': "(Muon_isTrigger[W_l1_idx] && Muon_nveto == 0 && Electron_nveto==0 && Muon_nloose==1 && Electron_nloose==0)",
-             'ELE': "(Electron_isTrigger[W_l1_idx] && Electron_nloose==1 &&Electron_nveto==0 && Muon_nveto == 0 && Muon_nloose==0)"}
+cuts['W'] = {'MU': "(Muon_isTrigger[W_l1_idx] && Muon_nloose==1 && Electron_nloose==0)",
+             'ELE': "(Electron_isTrigger[W_l1_idx] && Muon_nloose==0 && Electron_nloose==1)"}
             
-cuts['Z'] = {'MU': "((Muon_isTrigger[Z_idx[0]] || Muon_isTrigger[Z_idx[1]]) && Muon_nloose==2 && Muon_nveto == 0 && Electron_nveto==0 && Electron_nloose==0)",
-             'ELE': "((Electron_isTrigger[Z_idx[0]] || Electron_isTrigger[Z_idx[1]]) && Electron_nloose==2 && Electron_nveto == 0 && Muon_nveto == 0 && Muon_nloose==0)"}
+cuts['Z'] = {'MU': "((Muon_isTrigger[Z_idx[0]] || Muon_isTrigger[Z_idx[1]]) && Muon_nloose==2 && Electron_nloose==0)",
+             'ELE': "((Electron_isTrigger[Z_idx[0]] || Electron_isTrigger[Z_idx[1]]) && Electron_nloose==2 && Muon_nloose==0)"}
 # Photon pt and kinematic cuts
 cuts['pt'] = {}
 cuts['photons'] = {}
@@ -245,7 +247,7 @@ def getPlotter(sample,sampleDir,sampleType,eras,prod,analysis):
                 plotters[-1].addCorrectionFactor('1000', "flat") #to conevrt to pb-1                
                 plotters[-1].addCorrectionFactor(str(38750./59830), "flat")
     p = merged_plotter(plotters)
-    applyDefinitions(p)
+
     return p
 
 
@@ -400,7 +402,7 @@ def getSignalPlotter(sampleDir,prod,eras,analysis,mass,lifetime,signals=['ZH','g
                     plotters[-1].addCorrectionFactor(str(38750./59830), "flat")
                     plotters[-1].addCorrectionFactor(weight, "flat")
     p = merged_plotter(plotters)
-    applyDefinitions(p)
+
     return p
 
 
@@ -420,7 +422,7 @@ def getAnalysis(sampleDir,prod,ana,era='Run2',masses=[15, 20, 30, 40, 50, 55],li
     
     photonSF={}
     for m in masses:
-        photonSF[m] = ['Photon_idSF_val[best_2g_idx1_m{}]'.format(m), 'Photon_idSF_val[best_2g_idx2_m{}]'.format(m), 'Photon_pixSF_val[best_2g_idx1_m{}]'.format(m), 'Photon_pixSF_val[best_2g_idx2_m{}]'.format(m)]
+        photonSF[m] = "*".join(['Photon_idSF_val[best_2g_idx1_m{}]'.format(m), 'Photon_idSF_val[best_2g_idx2_m{}]'.format(m), 'Photon_pixSF_val[best_2g_idx1_m{}]'.format(m), 'Photon_pixSF_val[best_2g_idx2_m{}]'.format(m)])
 
 
     
@@ -483,7 +485,7 @@ def getAnalysis(sampleDir,prod,ana,era='Run2',masses=[15, 20, 30, 40, 50, 55],li
         for ct in lifetimes:
             analysis['signal'][m][ct]=getSignalPlotter(sampleDir,prod,eras,ana,m,ct,signals,modelIndependent)
             analysis['signal'][m][ct].addCorrectionFactor(leptonSF[ana],'flat')
-            analysis['signal'][m][ct].addCorrectionFactor(photonSF[ana][m],'flat')            
+            analysis['signal'][m][ct].addCorrectionFactor(photonSF[m],'flat')            
             analysis['signal'][m][ct].addCorrectionFactor(str(br),'flat')
     return analysis
             
@@ -517,7 +519,6 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
 
     #ACTION: fake rate MC Closure
     elif action=="fakerate_closure":
-        ROOT.gInterpreter.Declare('#include "common/vhFakeRates.h"')        
         print("Running MC Closure of Fake rates")        
         for ana in analyses:
             #create a plotter that has all MC as data
@@ -579,7 +580,6 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
         
     #ACTION: Final Plots              
     elif action=="final_plots":
-        ROOT.gInterpreter.Declare('#include "common/vhFakeRates.h"')        
         print("Make final Plots")        
         for ana in analyses:
             #create a plotter that has all MC as data
@@ -603,8 +603,32 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
 
 
 #debugging code
-#if __name__ == '__main__':
-#    ROOT.gInterpreter.Declare('#include "common/vhFakeRates.h"')    
+if __name__ == '__main__':
+    sampleDir='/tank/ddp/DDP'
+    prod='2025_12_23'
+    ana='wmn2g'
+    m=20
+    analysis=getAnalysis(sampleDir,prod,ana,background_method='fakerate',era='Run2',br=0.01,signals=signals,lifetimes=[100])
+    
+    print(f"Running {ana} m={m} GeV")
+    stack=mplhep_plotter()
+    stack.add_plotter(analysis['bkg'][m],label='Background',typeP='background',error_mode='w2')               
+    stack.add_plotter(analysis['signal'][m][100],label=r'$m_{\phi}$='+f"{m} GeV,"+" $c\tau=$ 100 mm",typeP='signal',error_mode='w2',color='red')               
+    stack.add_plotter(analysis['data'],label="Data",typeP='data',error_mode='poisson')               
+
+    #add new definition just for test
+    stack.define("loose_muon", "(Muon_pt>5&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&Muon_pfIsoId>1&&Muon_looseId>0)")
+    stack.define("tight_muon", "loose_muon&&Muon_tightId>0&&Muon_pfIsoId>3")
+    
+    stack.define("overlap_muon", "(Muon_pt>3&&abs(Muon_eta)<2.4&&Muon_softId>0)")
+    stack.define("Photon_overlap", "overlapClean(Photon_phi, Photon_eta, Muon_phi[overlap_muon], Muon_eta[overlap_muon],0.8,0.8)")
+    stack.define("Muon_nloose", "Sum(loose_muon)")
+
+    #draw a plot
+    stack.unrolledCustom(f"best_2g_raw_mass_m{m}",f"best_2g_dxy_m{m}",cuts[ana][m]['sr']+"&&(Photon_overlap[best_2g_idx1_m20]==0 && Photon_overlap[best_2g_idx2_m20]==0)",binning[ana][m],alpha=1.0,show=True)
+
+
+
     
 #    ana=getAnalysis('/tank/ddp/DDP','2025_12_23','wmn2g',background_method='fakerate',era='Run2')
 #    ana['wjets'].define("Photon_prompt","prompt_photon(Photon_genPartFlav,Photon_genPartIdx,GenPart_pdgId,GenPart_genPartIdxMother)")

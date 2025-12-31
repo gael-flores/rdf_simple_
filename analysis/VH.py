@@ -38,14 +38,15 @@ eleTrig = {'2024': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
 def muonAna(dataframe, era = '2018'):
 
     # Common Muon ID definitions (No isolation)
-    muons = dataframe.Define("loose_muon", "Muon_pt>5&&Muon_looseId==1&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&Muon_pfIsoId>1")
-    muons = muons.Define("tight_muon", "loose_muon&&Muon_tightId&&Muon_pfIsoId>3")
-    muons = muons.Define("veto_muon", "Muon_pt>5&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&(loose_muon==0)&&(tight_muon==0)")
+    muons = dataframe.Define("loose_muon", "(Muon_pt>5&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&Muon_pfIsoId>1&&Muon_looseId>0)")
+    muons = dataframe.Define("tight_muon", "(loose_muon&&Muon_tightId>0&&Muon_pfIsoId>3)")
+    muons = muons.Define("overlap_muon", "(Muon_pt>3&&abs(Muon_eta)<2.4&&Muon_softId>0)")        
+
     
     muons = muons.Define("Muon_ntight", "Sum(tight_muon)")
     muons = muons.Define("Muon_nloose", "Sum(loose_muon)")
-    muons = muons.Define("Muon_nveto", "Sum(veto_muon)")
-
+    #define a muon for photon overlap
+    
     for trigger in muTrig[era]:
         muons = muons.Define("Muon_pass{}".format(trigger['name']), "matchTrigger(Muon_eta, Muon_phi, Muon_pdgId, TrigObj_eta, TrigObj_phi, TrigObj_pt, TrigObj_id, TrigObj_filterBits, {}, {})".format(trigger['bits'], trigger['pt']))
     muons = muons.Define("Muon_isTrigger", "||".join(["Muon_pass{}".format(trig['name']) for trig in muTrig[era]]))
@@ -73,13 +74,11 @@ def electronAna(dataframe, era = '2018'):
 
     # Common Electron ID definitions
     electrons = dataframe.Define("Electron_scEta","Electron_eta + Electron_deltaEtaSC")
-    electrons = electrons.Define("loose_electron", "Electron_pt>15&&abs(Electron_eta)<2.5&&(abs(Electron_scEta)>1.57||abs(Electron_scEta)<1.44)&&abs(Electron_dxy)<0.2&&abs(Electron_dz)<0.2&&Electron_lostHits<2&&Electron_convVeto&&Electron_cutBased>0")
+    electrons = electrons.Define("loose_electron", "Electron_pt>5&&abs(Electron_eta)<2.5&&(abs(Electron_scEta)>1.57||abs(Electron_scEta)<1.44)&&abs(Electron_dxy)<0.2&&abs(Electron_dz)<0.2&&Electron_lostHits<2&&Electron_convVeto&&Electron_cutBased>0")
     electrons = electrons.Define("tight_electron", "loose_electron&&Electron_cutBased>3")
-    
-    electrons = electrons.Define("veto_electron", "Electron_pt>5&&abs(Electron_eta)<2.5&&(abs(Electron_scEta)>1.57||abs(Electron_scEta)<1.44)&&abs(Electron_dxy)<0.2&&abs(Electron_dz)<0.2&&Electron_lostHits<2&&Electron_convVeto&&(tight_electron==0)&&(loose_electron==0)")
     electrons = electrons.Define("Electron_ntight", "Sum(tight_electron)")
     electrons = electrons.Define("Electron_nloose", "Sum(loose_electron)")
-    electrons = electrons.Define("Electron_nveto", "Sum(veto_electron)")
+
     for trigger in eleTrig[era]:
         electrons = electrons.Define("Electron_pass{}".format(trigger['name']), "matchTrigger(Electron_eta, Electron_phi, Electron_pdgId, TrigObj_eta, TrigObj_phi, TrigObj_pt, TrigObj_id, TrigObj_filterBits, {}, {})".format(trigger['bits'], trigger['pt']))
     electrons = electrons.Define("Electron_isTrigger", "||".join(["Electron_pass{}".format(trig['name']) for trig in eleTrig[era]]))
@@ -101,8 +100,8 @@ def electronAna(dataframe, era = '2018'):
 # Must run muon + electron analyzer first to do overlap with leptons
 def photonAna(dataframe, era = '2018'):
     # Overlap with loose leptons
-    photons = dataframe.Define("Photon_muOverlap", "overlapClean(Photon_phi, Photon_eta, Muon_phi[loose_muon], Muon_eta[loose_muon])")
-    photons = photons.Define("Photon_eleOverlap", "overlapClean(Photon_phi, Photon_eta, Electron_phi[loose_electron], Electron_eta[loose_electron])")
+    photons = dataframe.Define("Photon_muOverlap", "overlapClean(Photon_phi, Photon_eta, Muon_phi[overlap_muon], Muon_eta[overlap_muon],0.8,0.8)")
+    photons = photons.Define("Photon_eleOverlap", "overlapClean(Photon_phi, Photon_eta, Electron_phi[loose_electron], Electron_eta[loose_electron],0.5,0.4)")
     photons = photons.Define("Photon_overlap", "Photon_muOverlap||Photon_eleOverlap")
     
     # Photon Preselection criteria

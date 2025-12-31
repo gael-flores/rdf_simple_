@@ -1089,7 +1089,7 @@ class mplhep_plotter(object):
 
         fig,ax = plt.subplots(1,len(custom_binning),sharey=True,figsize=(25,10))
         plt.subplots_adjust(wspace=0)        
-
+        yields={}
         
         for i,binning in enumerate(custom_binning):
             xedges=binning[0]
@@ -1113,12 +1113,22 @@ class mplhep_plotter(object):
 
                 if p['type']=='data':
                     edg,data,w2=p['plotter'].array1d(var2,cuts+f"*({var1}>={xedges[0]}&&{var1}<{xedges[1]})",(p['name'],p['name'],len(yedges)-1,np.array(yedges)),error_mode=p['error_mode'])
+                    if p['label'] in yields.keys():
+                        yields[p['label']]=yields[p['label']]+np.sum(data)
+                    else:
+                        yields[p['label']]=np.sum(data)
+                        
                     data_hists.append(data)
                     data_w2.append(w2)
                     data_labels.append(p['label'])
                     data_colors.append(p['color'])                                    
                 elif p['type']=='background':
                     edg,data,w2=p['plotter'].array1d(var2,cuts+f"*({var1}>={xedges[0]}&&{var1}<{xedges[1]})",(p['name'],p['name'],len(yedges)-1,np.array(yedges)),error_mode=p['error_mode'])
+                    if p['label'] in yields.keys():
+                        yields[p['label']]=yields[p['label']]+np.sum(data)
+                    else:
+                        yields[p['label']]=np.sum(data)
+                    
                     if bkgExists==False:
                         background_sum=data
                         background_sumw2=w2
@@ -1133,6 +1143,11 @@ class mplhep_plotter(object):
             for p in self.plotters:                
                 if p['type']=='signal':
                     edg,data,w2=p['plotter'].array1d(var2,cuts+f"*({var1}>={xedges[0]}&&{var1}<{xedges[1]})",(p['name'],p['name'],len(yedges)-1,np.array(yedges)),error_mode=p['error_mode'])
+                    if p['label'] in yields.keys():
+                        yields[p['label']]=yields[p['label']]+np.sum(data)
+                    else:
+                        yields[p['label']]=np.sum(data)
+                    
                     if self.stack==True:
                         signal_hists.append(data+background_sum)
                         signal_w2.append(w2+background_sumw2)
@@ -1205,7 +1220,14 @@ class mplhep_plotter(object):
             ax[0].set_ylabel("Events")
         else:
            ax[0].set_ylabel("Event density")
-             
+
+
+        #print yields
+        for label,y in yields.items():
+            print(label,y)
+
+
+           
         if show:
             plt.show()
         

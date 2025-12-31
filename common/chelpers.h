@@ -138,13 +138,13 @@ RVecF Zgg_fsr(RVecF g_pt, RVecF g_eta, RVecF g_phi, const int idx1, const int id
   return out;
 }
 
-RVec<bool> overlapClean(RVecF gphi, RVecF geta, RVecF lphi, RVecF leta){
+RVec<bool> overlapClean(RVecF gphi, RVecF geta, RVecF lphi, RVecF leta,float dphi=0.5,float deta=0.4){
   RVec<bool> out;
   out.reserve(gphi.size());
   for (size_t i = 0; i < gphi.size(); i++){
     bool overlap = false;
     for (size_t j = 0; j < lphi.size(); j++){
-      if (pow(DeltaPhi(gphi[i], lphi[j]),2)/pow(0.5,2) + pow(abs(geta[i] - leta[j]), 2)/pow(0.4,2) < 1){
+      if (pow(DeltaPhi(gphi[i], lphi[j]),2)/(dphi*dphi) + pow(abs(geta[i] - leta[j]), 2)/(deta*deta) < 1){
 	overlap = true;
 	break;
       }
