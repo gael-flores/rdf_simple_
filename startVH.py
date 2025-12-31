@@ -221,8 +221,8 @@ def getPlotter(sample,sampleDir,sampleType,eras,prod,analysis):
         #if we are doing data overrtide the search
         files=[]
         if sampleType=='DATA':
-            if analysis in ['wenu2g','zee2g']:
-                if era==2018:
+            if analysis in ['wen2g','zee2g']:
+                if era=='2018':
                     files = getFiles('EGamma',sampleDir,sampleType,era,prod)
                 else:
                     files = getFiles('SingleElectron',sampleDir,sampleType,era,prod)
@@ -384,12 +384,12 @@ def getSignalPlotter(sampleDir,prod,eras,analysis,mass,lifetime,signals=['ZH','g
                 plotters[-1].addCorrectionFactor('1000', "flat") #to conevrt to pb-1                
                 weight = "(1)"
                 if not modelIndependent:
-                    weight +="*"+xsecs[v]
-                    if "Z" in v:
+                    weight +="*"+xsecs[sig]
+                    if sig in ['Z','ggZ']:
                         weight+="*"+BRs['Z']
-                    elif 'W' in v:
+                    elif sig in ['Wplus','Wminus']:
                         weight+="*"+BRs['W']
-                    elif 'tt' in v:
+                    elif sig in ['tt']:
                         weight+="*"+BRs['ttSemiLeptonic']
                     plotters[-1].addCorrectionFactor(weight, "flat")
                     
@@ -492,7 +492,7 @@ def getAnalysis(sampleDir,prod,ana,era='Run2',masses=[15, 20, 30, 40, 50, 55],li
         
 
 
-def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='VHresults',era='Run2',analyses=analysis,signals=['ZH','ggZH','WH','ttH'],lifetimes=lifetimes,signal_br=0.01):
+def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='VHresults',era='Run2',analyses=analyses,signals=['ZH','ggZH','WH','ttH'],lifetimes=lifetimes,signal_br=0.01):
     if era=='Run2':
         eras=['2016','2017','2018']
     else:
@@ -588,7 +588,7 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
                 print(f"Running {ana} m={m} GeV")
                 stack=mplhep_plotter()
                 stack.add_plotter(analysis['bkg'][m],label='Background',typeP='background',error_mode='poisson_bootstrap')               
-                stack.add_plotter(analysis['signal'][m][100],label=r'$m_{\phi}$='+f"{m} GeV,"+" $c\tau=$ 100 mm",typeP='signal',error_mode='w2',color='red')               
+                stack.add_plotter(analysis['signal'][m][100],label=r'$m_{\phi}$='+f"{m} GeV,"+r" $c\tau =$ 100 mm",typeP='signal',error_mode='w2',color='red')               
                 stack.add_plotter(analysis['data'],label="Data",typeP='data',error_mode='poisson')               
                 #draw a plot
                 stack.unrolledCustom(f"best_2g_raw_mass_m{m}",f"best_2g_dxy_m{m}",cuts[ana][m]['sr'],binning[ana][m],alpha=1.0,xlabel=r"$d_{xy}$",xunits="cm",show=False)
@@ -604,28 +604,28 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
 
 #debugging code
 if __name__ == '__main__':
-    sampleDir='/tank/ddp/DDP'
-    prod='2025_12_23'
-    ana='wmn2g'
-    m=20
-    analysis=getAnalysis(sampleDir,prod,ana,background_method='fakerate',era='Run2',br=0.01,signals=signals,lifetimes=[100])
-    
-    print(f"Running {ana} m={m} GeV")
-    stack=mplhep_plotter()
-    stack.add_plotter(analysis['bkg'][m],label='Background',typeP='background',error_mode='w2')               
-    stack.add_plotter(analysis['signal'][m][100],label=r'$m_{\phi}$='+f"{m} GeV,"+" $c\tau=$ 100 mm",typeP='signal',error_mode='w2',color='red')               
-    stack.add_plotter(analysis['data'],label="Data",typeP='data',error_mode='poisson')               
+#    sampleDir='/tank/ddp/DDP'
+#    prod='2025_12_23'
+#    ana='wmn2g'
+#    m=20
+#    analysis=getAnalysis(sampleDir,prod,ana,background_method='fakerate',era='Run2',br=0.01,signals=['WH','ttH'],lifetimes=[100])
+#    
+#    print(f"Running {ana} m={m} GeV")
+#    stack=mplhep_plotter()
+#    stack.add_plotter(analysis['bkg'][m],label='Background',typeP='background',error_mode='w2')               
+#    stack.add_plotter(analysis['signal'][m][100],label=r'$m_{\phi}$='+f"{m} GeV,"+r" $c\tau =$ 100 mm",typeP='signal',error_mode='w2',color='red')               
+#    stack.add_plotter(analysis['data'],label="Data",typeP='data',error_mode='poisson')               
 
     #add new definition just for test
-    stack.define("loose_muon", "(Muon_pt>5&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&Muon_pfIsoId>1&&Muon_looseId>0)")
-    stack.define("tight_muon", "loose_muon&&Muon_tightId>0&&Muon_pfIsoId>3")
+#    stack.define("loose_muon", "(Muon_pt>5&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&Muon_pfIsoId>1&&Muon_looseId>0)")
+#    stack.define("tight_muon", "loose_muon&&Muon_tightId>0&&Muon_pfIsoId>3")
     
-    stack.define("overlap_muon", "(Muon_pt>3&&abs(Muon_eta)<2.4&&Muon_softId>0)")
-    stack.define("Photon_overlap", "overlapClean(Photon_phi, Photon_eta, Muon_phi[overlap_muon], Muon_eta[overlap_muon],0.8,0.8)")
-    stack.define("Muon_nloose", "Sum(loose_muon)")
+#    stack.define("overlap_muon", "(Muon_pt>3&&abs(Muon_eta)<2.4&&Muon_softId>0)")
+#    stack.define("Photon_overlap", "overlapClean(Photon_phi, Photon_eta, Muon_phi[overlap_muon], Muon_eta[overlap_muon],0.8,0.8)")
+#    stack.define("Muon_nloose", "Sum(loose_muon)")
 
     #draw a plot
-    stack.unrolledCustom(f"best_2g_raw_mass_m{m}",f"best_2g_dxy_m{m}",cuts[ana][m]['sr']+"&&(Photon_overlap[best_2g_idx1_m20]==0 && Photon_overlap[best_2g_idx2_m20]==0)",binning[ana][m],alpha=1.0,show=True)
+#    stack.unrolledCustom(f"best_2g_raw_mass_m{m}",f"best_2g_dxy_m{m}",cuts[ana][m]['sr']+"&&(Photon_overlap[best_2g_idx1_m20]==0 && Photon_overlap[best_2g_idx2_m20]==0)",binning[ana][m],alpha=1.0,show=True)
 
 
 
