@@ -138,7 +138,7 @@ RVecF Zgg_fsr(RVecF g_pt, RVecF g_eta, RVecF g_phi, const int idx1, const int id
   return out;
 }
 
-RVec<bool> overlapClean(RVecF gphi, RVecF geta, RVecF lphi, RVecF leta,float dphi=0.5,float deta=0.4){
+RVec<bool> overlapClean(RVecF gphi, RVecF geta, RVecF lphi, RVecF leta,float dphi,float deta){
   RVec<bool> out;
   out.reserve(gphi.size());
   for (size_t i = 0; i < gphi.size(); i++){
@@ -535,16 +535,7 @@ int getBin(const float val, const std::vector<float> bins){
   if (val <= bins.front())
     return 0;
   auto lower = std::lower_bound(bins.begin(), bins.end(), val); // Finds iterator of bin upper edge
-  //Michalis found an issue with the overflows here. Need extra checks:
-  if (lower==bins.begin()) {
-    return 0;
-  }
-  else if (lower==bins.end()) {
-    return bins.size()-2;
-  }
-  else  {
-    return (int) (std::distance(bins.begin(), lower) - 1);
-  }
+  return (int) (std::distance(bins.begin(), lower) - 1);
 }
 
 //Apply on ID +preselection
