@@ -51,21 +51,27 @@ def muonAna(dataframe, era = '2018'):
         muons = muons.Define("Muon_pass{}".format(trigger['name']), "matchTrigger(Muon_eta, Muon_phi, Muon_pdgId, TrigObj_eta, TrigObj_phi, TrigObj_pt, TrigObj_id, TrigObj_filterBits, {}, {})".format(trigger['bits'], trigger['pt']))
     muons = muons.Define("Muon_isTrigger", "||".join(["Muon_pass{}".format(trig['name']) for trig in muTrig[era]]))
 
+    #For scale factors redefine them so the uncertainty is actually a variation up or down instead of just uncertainty
+    
     muons = muons.Define("mu_SFs_reco", 'scaleFactors_2d(abs(Muon_eta), Muon_pt, MU_RECO_{era}_sf, MU_RECO_{era}_binsX, MU_RECO_{era}_binsY, sample_isMC, Muon_pt>10)'.format(era=era))
     muons = muons.Define("Muon_recoSF_val", "mu_SFs_reco[0]")
-    muons = muons.Define("Muon_recoSF_unc", "mu_SFs_reco[1]")
+    muons = muons.Define("Muon_recoSF_up", "mu_SFs_reco[0]+mu_SFs_reco[1]")
+    muons = muons.Define("Muon_recoSF_down", "mu_SFs_reco[0]-mu_SFs_reco[1]")
     
     muons = muons.Define("mu_SFs_id", 'scaleFactors_2d(abs(Muon_eta), Muon_pt, MU_ID_{era}_sf, MU_ID_{era}_binsX, MU_ID_{era}_binsY, sample_isMC, tight_muon)'.format(era=era))
     muons = muons.Define("Muon_idSF_val", "mu_SFs_id[0]")
-    muons = muons.Define("Muon_idSF_unc", "mu_SFs_id[1]")
+    muons = muons.Define("Muon_idSF_up", "mu_SFs_id[0]+mu_SFs_id[1]")
+    muons = muons.Define("Muon_idSF_down", "mu_SFs_id[0]-mu_SFs_id[1]")
 
     muons = muons.Define("mu_SFs_iso", 'scaleFactors_2d(abs(Muon_eta), Muon_pt, MU_ISO_{era}_sf, MU_ISO_{era}_binsX, MU_ISO_{era}_binsY, sample_isMC, tight_muon)'.format(era=era))
     muons = muons.Define("Muon_isoSF_val", "mu_SFs_iso[0]")
-    muons = muons.Define("Muon_isoSF_unc", "mu_SFs_iso[1]")
+    muons = muons.Define("Muon_isoSF_up", "mu_SFs_iso[0]+mu_SFs_iso[1]")
+    muons = muons.Define("Muon_isoSF_down", "mu_SFs_iso[0]-mu_SFs_iso[1]")
 
     muons = muons.Define("mu_SFs_trig", 'scaleFactors_3d(Muon_charge, Muon_eta, Muon_pt, MU_TRIG_{era}_sf, MU_TRIG_{era}_binsX, MU_TRIG_{era}_binsY, MU_TRIG_{era}_binsZ, sample_isMC, Muon_isTrigger)'.format(era=era))
     muons = muons.Define("Muon_trigSF_val", "mu_SFs_trig[0]")
-    muons = muons.Define("Muon_trigSF_unc", "mu_SFs_trig[1]")
+    muons = muons.Define("Muon_trigSF_up", "mu_SFs_trig[1]-mu_SFs_trig[0]")
+    muons = muons.Define("Muon_trigSF_down", "mu_SFs_trig[0]-mu_SFs_trig[1]")
     
 
     return muons
@@ -82,18 +88,24 @@ def electronAna(dataframe, era = '2018'):
     for trigger in eleTrig[era]:
         electrons = electrons.Define("Electron_pass{}".format(trigger['name']), "matchTrigger(Electron_eta, Electron_phi, Electron_pdgId, TrigObj_eta, TrigObj_phi, TrigObj_pt, TrigObj_id, TrigObj_filterBits, {}, {})".format(trigger['bits'], trigger['pt']))
     electrons = electrons.Define("Electron_isTrigger", "||".join(["Electron_pass{}".format(trig['name']) for trig in eleTrig[era]]))
+
+    #For scale factors redefine them so the uncertainty is actually a variation up or down instead of just uncertainty
+
     
     electrons = electrons.Define("ele_SFs_id", 'scaleFactors_2d(Electron_eta, Electron_pt, ELE_ID_{era}_sf, ELE_ID_{era}_binsX, ELE_ID_{era}_binsY, sample_isMC, tight_electron)'.format(era=era))
     electrons = electrons.Define("Electron_idSF_val", "ele_SFs_id[0]")
-    electrons = electrons.Define("Electron_idSF_unc", "ele_SFs_id[1]")
+    electrons = electrons.Define("Electron_idSF_up", "ele_SFs_id[0]+ele_SFs_id[1]")
+    electrons = electrons.Define("Electron_idSF_down", "ele_SFs_id[0]-ele_SFs_id[1]")
     
     electrons = electrons.Define("ele_SFs_reco", 'scaleFactors_eleReco(Electron_eta, Electron_eta, ELE_RECO_ptBelow20_{era}_sf, ELE_RECO_ptBelow20_{era}_binsX, ELE_RECO_ptBelow20_{era}_binsY,  ELE_RECO_ptAbove20_{era}_sf, ELE_RECO_ptAbove20_{era}_binsX, ELE_RECO_ptAbove20_{era}_binsY, sample_isMC, tight_electron)'.format(era=era))
     electrons = electrons.Define("Electron_recoSF_val", "ele_SFs_reco[0]")
-    electrons = electrons.Define("Electron_recoSF_unc", "ele_SFs_reco[1]")
+    electrons = electrons.Define("Electron_recoSF_up", "ele_SFs_reco[0]+ele_SFs_reco[1]")
+    electrons = electrons.Define("Electron_recoSF_down", "ele_SFs_reco[0]-ele_SFs_reco[1]")
     
     electrons = electrons.Define("ele_SFs_trig", "scaleFactors_2d(Electron_eta, Electron_pt, ELE_TRIG_{era}_sf, ELE_TRIG_{era}_binsX, ELE_TRIG_{era}_binsY, sample_isMC, Electron_pt>35)".format(era=era))
     electrons = electrons.Define("Electron_trigSF_val", "ele_SFs_trig[0]")
-    electrons = electrons.Define("Electron_trigSF_unc", "ele_SFs_trig[1]")
+    electrons = electrons.Define("Electron_trigSF_up", "ele_SFs_trig[0]+ele_SFs_trig[1]")
+    electrons = electrons.Define("Electron_trigSF_down", "ele_SFs_trig[0]-ele_SFs_trig[1]")
     
     return electrons
 
@@ -112,13 +124,19 @@ def photonAna(dataframe, era = '2018'):
 #    photons = photons.Define("Photon_passPhIso" , "passPhIso(Photon_vidNestedWPBitmap)")
 #    photons = photons.Define("Photon_IDandIso" , "Photon_passCutBasedID&&Photon_passPhIso")
 
+
+    #For scale factors redefine them so the uncertainty is actually a variation up or down instead of just uncertainty
+
+
     photons = photons.Define("pho_SFs_id", "scaleFactors_2d(Photon_eta, Photon_pt, PHO_ID_{era}_sf, PHO_ID_{era}_binsX, PHO_ID_{era}_binsY, sample_isMC, Photon_passCutBasedID)".format(era=era))
     photons = photons.Define("Photon_idSF_val", "pho_SFs_id[0]")
-    photons = photons.Define("Photon_idSF_unc", "pho_SFs_id[1]")
+    photons = photons.Define("Photon_idSF_up", "pho_SFs_id[1]+pho_SFs_id[0]")
+    photons = photons.Define("Photon_idSF_down", "pho_SFs_id[0]-pho_SFs_id[1]")
 
     photons = photons.Define("pho_SFs_pix", "getPixelSeedSF(Photon_isScEtaEB, Photon_isScEtaEE, hasPix_UL{}_sf, sample_isMC, !Photon_pixelSeed)".format(era))
     photons = photons.Define("Photon_pixSF_val", "pho_SFs_pix[0]")
-    photons = photons.Define("Photon_pixSF_unc", "pho_SFs_pix[1]")
+    photons = photons.Define("Photon_pixSF_up", "pho_SFs_pix[0]+pho_SFs_pix[1]")
+    photons = photons.Define("Photon_pixSF_down", "pho_SFs_pix[0]-pho_SFs_pix[1]")
 
     photons = photons.Define("Photon_energyScaleUp", "photonEnergyScale(Photon_eta, Photon_seedGain, PHO_scaledown_{}_val, PHO_scaledown_{}_bins, sample_isMC)".format(era, era))
     photons = photons.Define("Photon_energyScaleDown", "photonEnergyScale(Photon_eta, Photon_seedGain, PHO_scaledown_{}_val, PHO_scaleup_{}_bins, sample_isMC)".format(era, era))

@@ -10,7 +10,6 @@ import common.CMS_lumi as CMS_lumi
 from python.VHTools.py_helpers import *
 sty = tdrstyle.setTDRStyle()
 from scipy.stats import chi2,poisson
-### = commented out to test tdrStyle, uncomment if not using
 import matplotlib.pyplot as plt
 import mplhep as mh
 
@@ -809,12 +808,14 @@ class stack_plotter(object):
 
 #MPLHEP specific plotter
 class mplhep_plotter(object):
-    def __init__(self,label='Preliminary',lumi=137.62,defaultCut="1",stack=True,capsize=5):
+    def __init__(self,label=None,lumi=137.62,data=True,com=13,defaultCut="1",stack=True,capsize=5):
         self.plotters = []        
         self.defaultCut=defaultCut
         mh.style.use('CMS')
         self.label=label
         self.lumi=lumi
+        self.com=com
+        self.data=data
         self.stack=stack
         self.capsize=capsize
         
@@ -940,7 +941,11 @@ class mplhep_plotter(object):
 
         #then stack backgrounds and then draw band
         ax.legend(loc=legend_loc)
-        mh.cms.label(self.label, data=True, lumi=self.lumi, ax=ax, loc=0)
+        if self.data==True:
+            mh.cms.label(self.label, data=self.data, lumi=self.lumi, com=self.com,ax=ax, loc=0)
+        else:
+            mh.cms.label(self.label, data=self.data, lumi=None, com=None,rlabel=f'{self.com} TeV',ax=ax, loc=0)
+            
         #fix the lower limit
         lims=plt.ylim()
         plt.ylim(0.0, lims[1])
@@ -1073,7 +1078,15 @@ class mplhep_plotter(object):
 
         #then stack backgrounds and then draw band
         ax[-1].legend(loc=legend_loc)
-#        mh.cms.label(self.label, data=True,ax=ax[0], loc=0)
+
+        #Labels
+        mh.cms.label(self.label,data=self.data,rlabel="", ax=ax[0], loc=0)
+        if self.data==False:
+            mh.cms.label(None,exp='',data=self.data,llabel="", ax=ax[-1], loc=0,lumi=None,com=None,rlabel=f'{self.com} TeV')
+        else:
+            mh.cms.label(None,exp='',data=self.data,llabel="", ax=ax[-1], loc=0,lumi=self.lumi,com=self.com)
+
+        
         #fix the lower limit
         if xlabel!="":
             ax[-1].set_xlabel(f"{xlabel} ({xunits})")
@@ -1159,17 +1172,6 @@ class mplhep_plotter(object):
 
         
 
-            if len(signal_hists)>0:
-                mh.histplot(signal_hists,yedges,
-                            histtype='step',
-                            stack=False,
-                            label=signal_labels,
-                            color=signal_colors,
-                            yerr=None,
-                            sort='label',
-                            ax=ax[i],
-                            density=(True if self.stack==False else False)                        
-                            )                   
             if len(background_hists)>0:
                 #plot background stack
                 if self.stack:
@@ -1177,9 +1179,7 @@ class mplhep_plotter(object):
                                 histtype='fill',
                                 stack=True,
                                 label=background_labels,
-                                sort='label',
-                                ax=ax[i],
-                                density=(True if self.stack==False else False)
+                                ax=ax[i]
                                 )
                     ax[i].fill_between(yedges,
                                        np.append(background_sum-np.sqrt(background_sumw2[0]),0),
@@ -1191,19 +1191,40 @@ class mplhep_plotter(object):
                                 histtype='fill',
                                 stack=False,
                                 label=background_labels,
-                                sort='label',
                                 alpha=alpha,
                                 ax=ax[i],
                                 density=True
                                 )
+            #then signal stack        
+            if len(signal_hists)>0:
+                mh.histplot(signal_hists,yedges,
+                            histtype='step',
+                            stack=False,
+                            label=signal_labels,
+                            color=signal_colors,
+                            yerr=None,
+                            ax=ax[i],
+                            density=(True if self.stack==False else False)                        
+                            )                   
+
+            #Now redraw the background outlines if we are doing stack
+            if len(background_hists)>0 and self.stack:
+                mh.histplot(background_hists,yedges,
+                            histtype='step',
+                            color=['black']*len(background_hists),
+                            stack=True,
+                            label=None,
+                            ax=ax[i]
+                            )
                     
+                    
+            
             if len(data_hists)>0:           
                     mh.histplot(data_hists,yedges,
                                 histtype='errorbar',
                                 stack=False,
                                 label=data_labels,
                                 color=data_colors,
-                                sort='label',
                                 yerr = [np.sqrt(a) for a in data_w2],
                                 capsize=self.capsize,                                
                                 ax=ax[i],
@@ -1212,7 +1233,13 @@ class mplhep_plotter(object):
 
         #then stack backgrounds and then draw band
         ax[-1].legend(loc=legend_loc)
-#        mh.cms.label(self.label, data=True,ax=ax[0], loc=0)
+
+        #Labels
+        mh.cms.label(self.label,data=self.data,rlabel="", ax=ax[0], loc=0)
+        if self.data==False:
+            mh.cms.label(None,exp='',data=self.data,llabel="", ax=ax[-1], loc=0,lumi=None,com=None,rlabel=f'{self.com} TeV')
+        else:
+            mh.cms.label(None,exp='',data=self.data,llabel="", ax=ax[-1], loc=0,lumi=self.lumi,com=self.com)
         #fix the lower limit
         if xlabel!="":
             ax[-1].set_xlabel(f"{xlabel} ({xunits})")
@@ -1231,7 +1258,13 @@ class mplhep_plotter(object):
         if show:
             plt.show()
         
-                    
+
+
+
+
+
+
+            
             
         
 
