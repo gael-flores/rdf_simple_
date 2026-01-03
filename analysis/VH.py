@@ -70,7 +70,7 @@ def muonAna(dataframe, era = '2018'):
 
     muons = muons.Define("mu_SFs_trig", 'scaleFactors_3d(Muon_charge, Muon_eta, Muon_pt, MU_TRIG_{era}_sf, MU_TRIG_{era}_binsX, MU_TRIG_{era}_binsY, MU_TRIG_{era}_binsZ, sample_isMC, Muon_isTrigger)'.format(era=era))
     muons = muons.Define("Muon_trigSF_val", "mu_SFs_trig[0]")
-    muons = muons.Define("Muon_trigSF_up", "mu_SFs_trig[1]-mu_SFs_trig[0]")
+    muons = muons.Define("Muon_trigSF_up", "mu_SFs_trig[0]+mu_SFs_trig[1]")
     muons = muons.Define("Muon_trigSF_down", "mu_SFs_trig[0]-mu_SFs_trig[1]")
     
 
