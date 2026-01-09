@@ -17,8 +17,8 @@ cols = ".*best_2g.*|sample_.*|^Photon_.*|^Muon_.*|nMuon|nElectron|nPhoton|^Z.*|^
 # Bits = trigger bits for HLT path
 # pt = pt threshold for trigger
 muTrig = {'2024': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
-          '2023postBPIX': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
-          '2023preBPIX': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
+          '2023postBPix': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
+          '2023preBPix': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
           '2022postEE': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
           '2022preEE': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
           '2018': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
@@ -29,8 +29,8 @@ muTrig = {'2024': [{'name': 'HLT_IsoMu24', 'bits': 8, 'pt': 24}],
                           {'name': 'HLT_IsoTkMu24', 'bits': 1+8, 'pt': 24}]} # Check if filter bits are correct
 
 eleTrig = {'2024': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
-           '2023postBPIX': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
-           '2023preBPIX': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
+           '2023postBPix': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
+           '2023preBPix': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
            '2022postEE': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
            '2022preEE': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
            '2018': [{'name': 'HLT_Ele32_WPTight_Gsf', 'bits': 2, 'pt': 32}],
@@ -40,7 +40,6 @@ eleTrig = {'2024': [{'name': 'HLT_Ele30_WPTight_Gsf', 'bits': 2, 'pt': 32}],
           
 # Common Object ID:
 def muonAna(dataframe, era = '2018'):
-
     # Common Muon ID definitions (No isolation)
     muons = dataframe.Define("loose_muon", "(Muon_pt>5&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&Muon_pfIsoId>1&&Muon_looseId>0)")
     muons = muons.Define("tight_muon", "(loose_muon&&Muon_tightId>0&&Muon_pfIsoId>3)")
@@ -137,7 +136,7 @@ def photonAna(dataframe, era = '2018'):
     photons = photons.Define("Photon_idSF_up", "pho_SFs_id[1]+pho_SFs_id[0]")
     photons = photons.Define("Photon_idSF_down", "pho_SFs_id[0]-pho_SFs_id[1]")
 
-    photons = photons.Define("pho_SFs_pix", "getPixelSeedSF(Photon_isScEtaEB, Photon_isScEtaEE, hasPix_UL{}_sf, sample_isMC, !Photon_pixelSeed)".format(era))
+    photons = photons.Define("pho_SFs_pix", "getPixelSeedSF(Photon_isScEtaEB, Photon_isScEtaEE, hasPix_{}_sf, sample_isMC, !Photon_pixelSeed)".format(era))
     photons = photons.Define("Photon_pixSF_val", "pho_SFs_pix[0]")
     photons = photons.Define("Photon_pixSF_up", "pho_SFs_pix[0]+pho_SFs_pix[1]")
     photons = photons.Define("Photon_pixSF_down", "pho_SFs_pix[0]-pho_SFs_pix[1]")
@@ -146,9 +145,9 @@ def photonAna(dataframe, era = '2018'):
     photons = photons.Define("Photon_energyScaleDown", "photonEnergyScale(Photon_eta, Photon_seedGain, PHO_scaledown_{}_val, PHO_scaleup_{}_bins, sample_isMC)".format(era, era))
 
     #Find the closest Jet and copy the pileUpId branch
-    photons = photons.Define("Photon_jetPUId", "photon_closest_jet_puID(Photon_jetIdx,Jet_pt,Jet_puId)")    
+    #photons = photons.Define("Photon_jetPUId", "photon_closest_jet_puID(Photon_jetIdx,Jet_pt,Jet_puId)")    
     #Find the closest Tau and copy the decay mode and the mass:
-    photons=photons.Define("Photon_tauMass","photon_closest_one_prong_tau_mass(Photon_eta, Photon_phi,Tau_pt,Tau_eta, Tau_phi,Tau_decayMode,Tau_mass)")
+    #photons=photons.Define("Photon_tauMass","photon_closest_one_prong_tau_mass(Photon_eta, Photon_phi,Tau_pt,Tau_eta, Tau_phi,Tau_decayMode,Tau_mass)")
     return photons    
 
 def genAna(dataframe):
@@ -213,7 +212,7 @@ def zeeH(data,phi_mass,sample):
     zee = dataframe['Events'].Filter("isGoodLumi", "passed_lumiFilter")
     zee = zee.Filter('HLT_passed','passed_HLT')
     if data['isMC']:
-        zee = zee.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{},sample_isMC)".format(data['era']))
+        zee = zee.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_{},sample_isMC)".format(data['era']))
         if data['customNanoAOD']:
             zee = genAna(zee)
     #Apply Lepton ID (no ISO)
@@ -282,7 +281,7 @@ def wenuH(data,phi_mass,sample):
     wen = dataframe['Events'].Filter("isGoodLumi", "passed_lumiFilter")
     wen = wen.Filter('HLT_passed', 'passed_HLT')
     if data['isMC']:
-        wen = wen.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
+        wen = wen.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_{}, sample_isMC)".format(data['era']))
         if data['customNanoAOD']:
             wen = genAna(wen)
 
@@ -337,7 +336,7 @@ def wmunuH(data,phi_mass,sample):
     wmn = wmn.Filter('HLT_passed', 'passed_HLT')
     
     if data['isMC']:
-        wmn = wmn.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
+        wmn = wmn.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_{}, sample_isMC)".format(data['era']))
         if data['customNanoAOD']:
             wmn = genAna(wmn)
     
@@ -388,7 +387,7 @@ def wmugamma(data,sample):
     wmg = wmg.Filter('HLT_passed', 'passed_HLT')
     
     if data['isMC']:
-        wmg = wmg.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
+        wmg = wmg.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_{}, sample_isMC)".format(data['era']))
         if data['customNanoAOD']:
             wmg = genAna(wmg)
     
@@ -425,7 +424,7 @@ def zmumuH(data,phi_mass,sample):
     wmg = wmg.Filter('HLT_passed', 'passed_HLT')
     
     if data['isMC']:
-        wmg = wmg.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{}, sample_isMC)".format(data['era']))
+        wmg = wmg.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_{}, sample_isMC)".format(data['era']))
         if data['customNanoAOD']:
             wmg = genAna(wmg)
     
@@ -456,7 +455,6 @@ def zmumuH(data,phi_mass,sample):
     return actions
 
 def zmumuH(data,phi_mass,sample):
-    
     actions=[]
     #Declare dataframe and load all meta data 
     dataframe =load_meta_data(data)
@@ -469,7 +467,7 @@ def zmumuH(data,phi_mass,sample):
     zmm = dataframe['Events'].Filter("isGoodLumi", "passed_lumiFilter")
     zmm = zmm.Filter('HLT_passed','passed_HLT')
     if data['isMC']:
-        zmm = zmm.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_UL{},sample_isMC)".format(data['era']))
+        zmm = zmm.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_{},sample_isMC)".format(data['era']))
         if data['customNanoAOD']:
             zmm = genAna(zmm)
     #Apply Lepton ID (no ISO)
