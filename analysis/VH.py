@@ -417,47 +417,6 @@ def zmumuH(data,phi_mass,sample):
     actions=[]
     #Declare dataframe and load all meta data 
     dataframe =load_meta_data(data)
-    ####################
-    #ANALYSIS CODE HERE#        
-    ####################
-    wmg = dataframe['Events'].Filter("isGoodLumi", "passed_lumiFilter")
-    wmg = wmg.Filter('HLT_passed', 'passed_HLT')
-    
-    if data['isMC']:
-        wmg = wmg.Define("Pileup_weight", "getPUweight(Pileup_nPU, puWeight_{}, sample_isMC)".format(data['era']))
-        if data['customNanoAOD']:
-            wmg = genAna(wmg)
-    
-    wmg = muonAna(wmg, data['era'])
-    wmg = electronAna(wmg, data['era'])
-    
-    wmg = wmg.Filter("Muon_ntight==1", "exactly_1_tight_muon")
-    ptThresh = 28 if data['era']=='2017' else 25
-    wmg = wmg.Filter("Sum(Muon_pt[tight_muon]>{})>0".format(ptThresh), "muon_pt_over{}".format(ptThresh))
-    wmg = makeW(wmg, "Muon")
-
-    wmg = wmg.Filter("nPhoton==1", "exactly_1photon")
-
-    wmg = photonAna(wmg, data['era'])
-    
-
-    actions.append(wmg.Snapshot('wmugamma', sample+".root", cols,opts))
-    report = ROOT.RDataFrame(1)
-    r = wmg.Report()
-    for cut in r:
-        report = report.Define("report_{}_all".format(cut.GetName()), "{}".format(cut.GetAll()))
-        report = report.Define("report_{}_pass".format(cut.GetName()), "{}".format(cut.GetPass()))
-    actions.append(report.Snapshot("Report_wmugamma", sample+'.root', "", opts))
-
-    for tree in ['Runs']:
-        actions.append(dataframe[tree].Snapshot(tree, sample+".root", "", opts))
-        
-    return actions
-
-def zmumuH(data,phi_mass,sample):
-    actions=[]
-    #Declare dataframe and load all meta data 
-    dataframe =load_meta_data(data)
 
     ####################
     #ANALYSIS CODE HERE#        
@@ -541,4 +500,3 @@ def analysis(data,sample):
     actions.extend(wenuH(data,phi_mass,sample))
     actions.extend(wmugamma(data,sample))
     return actions
-

@@ -33,7 +33,7 @@ Data_redirectors={
 }
 actions=[]
 for sample in args:
-    data=createDataSet(samp.samples[sample],options.splitFactor,options.processPart,Data_redirectors["Global"])
+    data=createDataSet(samp.samples[sample],options.splitFactor,options.processPart,Data_redirectors["US"])
     actions.extend(an.analysis(data,sample))
 ROOT.RDF.RunGraphs(actions)
 
