@@ -145,7 +145,7 @@ def photonAna(dataframe, era = '2018'):
     photons = photons.Define("Photon_energyScaleDown", "photonEnergyScale(Photon_eta, Photon_seedGain, PHO_scaledown_{}_val, PHO_scaleup_{}_bins, sample_isMC)".format(era, era))
 
     #Find the closest Jet and copy the pileUpId branch
-    photons = photons.Define("Photon_jetPUId", "photon_closest_jet_puID(Photon_jetIdx,Jet_pt,Jet_puId)")    
+    #photons = photons.Define("Photon_jetPUId", "photon_closest_jet_puID(Photon_jetIdx,Jet_pt,Jet_puId)")    
     #Find the closest Tau and copy the decay mode and the mass:
     photons=photons.Define("Photon_tauMass","photon_closest_one_prong_tau_mass(Photon_eta, Photon_phi,Tau_pt,Tau_eta, Tau_phi,Tau_decayMode,Tau_mass)")
     return photons    
