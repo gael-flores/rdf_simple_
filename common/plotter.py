@@ -898,7 +898,6 @@ class mplhep_plotter(object):
                         label=signal_labels,
                         color=signal_colors,
                         yerr=None,
-                        sort='label',
                         ax=ax,
                         density=(True if self.stack==False else False)                        
                         )                   
@@ -908,7 +907,6 @@ class mplhep_plotter(object):
                         histtype='fill',
                         stack=self.stack,
                         label=background_labels,
-                        sort='label',
                         ax=ax,
                         alpha=(alpha if self.stack==False else 1.0), 
                         density=(True if self.stack==False else False)
@@ -932,7 +930,6 @@ class mplhep_plotter(object):
                         stack=False,
                         label=data_labels,
                         color=data_colors,
-                        sort='label',
                         yerr = [np.sqrt(a) for a in data_w2],
                         capsize=self.capsize,
                         ax=ax,
@@ -1032,12 +1029,11 @@ class mplhep_plotter(object):
         for i in range(0,len(yedges)-1):
             if len(signal_hists)>0:
                 mh.histplot([arr[i, :] for arr in signal_hists],xedges,
-                            histtype='step',
+                            histtype=('step' if self.stack==True else 'fill'),
                             stack=False,
                             label=signal_labels,
                             color=signal_colors,
                             yerr=None,
-                            sort='label',
                             ax=ax[i],
                             density=(True if self.stack==False else False)                        
                             )                   
@@ -1047,7 +1043,6 @@ class mplhep_plotter(object):
                             histtype=('fill' if self.stack==True else 'step'),
                             stack=self.stack,
                             label=background_labels,
-                            sort='label',
                             ax=ax[i],
                             density=(True if self.stack==False else False)
                             )
@@ -1069,7 +1064,6 @@ class mplhep_plotter(object):
                                 stack=False,
                                 label=data_labels,
                                 color=data_colors,
-                                sort='label',
                                 yerr = [np.array([np.sqrt(a[0,i,:]),np.sqrt(a[1,i,:])]) for a in data_w2],
                                 capsize=self.capsize,                                
                                 ax=ax[i],
@@ -1162,8 +1156,12 @@ class mplhep_plotter(object):
                         yields[p['label']]=np.sum(data)
                     
                     if self.stack==True:
-                        signal_hists.append(data+background_sum)
-                        signal_w2.append(w2+background_sumw2)
+                        if bkgExists:
+                            signal_hists.append(data+background_sum)
+                            signal_w2.append(w2+background_sumw2)                        
+                        else:
+                            signal_hists.append(data)                            
+                            signal_w2.append(w2)
                     else:
                         signal_hists.append(data)
                         signal_w2.append(w2)                    
