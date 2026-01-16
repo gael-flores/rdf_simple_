@@ -28,7 +28,7 @@ samp = importlib.import_module('analysis.{}samples'.format(options.analysis))
 Data_redirectors={
 "Europe": "root://xrootd-cms.infn.it//",
 "US":     "root://cmsxrootd.fnal.gov//",
-"Global": "root://cms-xrd-global.cern.ch// ",
+"Global": "root://cms-xrd-global.cern.ch//",
 "Asia":   "root://xrootd-cms-kr.kisti.re.kr//"
 }
 actions=[]

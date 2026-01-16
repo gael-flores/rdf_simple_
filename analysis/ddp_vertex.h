@@ -1086,6 +1086,7 @@ RVecF minMatchDR(const RVecF& photonEta,const RVecF& photonPhi,const RVecF& genE
 
 
 
+
 //add methods to deal with the systematics of the photon scale
 RVecF ptSmearUp(RVecF pt, RVecF eta, RVecF phi, RVecF scale){
    RVecF out;
