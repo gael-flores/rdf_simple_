@@ -40,14 +40,31 @@ class cnc_datacard_maker(object):
                 nData = ('lnN',str(1-errDown)+'/'+str(1+errUp))
             elif unc['type'] =='weightSym':
                 weight=unc['weight']
-                edges2,data2,w22=plotter.array1d('dummyDCVar',f"({self.cuts})*({weight})",(name,name,2,0,2),error_mode='w2')
+                weightOrig = unc['weightOrig']
+                edges2,data2,w22=plotter.array1d('dummyDCVar',f"({self.cuts})*({weight}/({weightOrig}))",(name,name,2,0,2),error_mode='w2')
                 err  = float(np.sum(data2)/rate)
                 nData = ('lnN',str(err))
+            elif unc['type'] =='replication':
+                cutsUp=self.cuts
+                cutsDown=self.cuts
+                for o,u,d in zip(unc['originals'],unc['replacementsUp'],unc['replacementsDown']):
+                    cutsUp=cutsUp.replace(o,u)
+                    cutsDown=cutsDown.replace(o,d)
+                print(self.cuts,cutsUp,cutsDown)
+                edgesUp,up,wUp=plotter.array1d('dummyDCVar',f"({cutsUp})",(name,name,2,0,2),error_mode='w2')
+                edgesDown,down,wDown=plotter.array1d('dummyDCVar',f"({cutsDown})",(name,name,2,0,2),error_mode='w2')
+                errorUp = float(np.sum(up)/rate)
+                errorDown = float(np.sum(down)/rate)
+                nData = ('lnN',str(errorDown)+'/'+str(errorUp))
             elif unc['type'] =='weightAsymm':
                 weightUp=unc['weightUp']
                 weightDown=unc['weightDown']
-                edges2,up,w2=plotter.array1d('dummyDCVar',f"({self.cuts})*({weightUp})",(name,name,2,0,2),error_mode='w2')
-                edges2,down,w2=plotter.array1d('dummyDCVar',f"({self.cuts})*({weightDown})",(name,name,2,0,2),error_mode='w2')
+                #we also need to cancel out the original weight:
+                weightOrig = unc['weightOrig']
+                edges2,up,w2=plotter.array1d('dummyDCVar',f"({self.cuts})*({weightUp}/({weightOrig}))",(name,name,2,0,2),error_mode='w2')
+                edges2,down,w2=plotter.array1d('dummyDCVar',f"({self.cuts})*({weightDown}/({weightOrig}))",(name,name,2,0,2),error_mode='w2')
+#                print(f"({self.cuts})*({weightUp}/{weightOrig})")
+#                print(unc_name,np.sum(up),np.sum(down),rate)
                 errorUp = float(np.sum(up)/rate)
                 errorDown = float(np.sum(down)/rate)
                 nData = ('lnN',str(errorDown)+'/'+str(errorUp))
