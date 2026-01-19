@@ -8,6 +8,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 from common.plotter import *
 from common.datacard_maker import cnc_datacard_maker
+import gc
 
 ROOT.gInterpreter.Declare('#include "common/chelpers.h"')
 ROOT.gInterpreter.Declare('#include "common/signalEfficiency.h"')
@@ -22,6 +23,12 @@ analysis_status='Preliminary'
 
 masses = [15,20,30,40,50,55]
 lifetimes = [0,10,20,50,100,1000]
+signal_colors={0:'red',
+               10:'lightcoral',
+               20:'chocolate',
+               50:'darkorange',
+               100:'yellowgreen',
+               1000:'lightseagreen'}
 analyses  = ['wmn2g','wen2g','zmm2g','zee2g']
 signals=['ZH','ggZH','WH','ttH']
 
@@ -63,15 +70,17 @@ for v in ['W', 'Z']:
             else:
                 cuts['misID'][v][l][m] = "(1)"
 # Z->ll FSR cuts
-cuts['fsr'] = {}
-for v in ['W', 'Z']:
-    cuts['fsr'][v] = {}
-    for m in masses:
-        cuts['fsr'][v][m] = "(1)"
-        if (v=='W'):
-            cuts['fsr'][v][m] = "(1)"
-        else:
-            cuts['fsr'][v][m] = "(Photon_isFSR[best_2g_idx1_m{m}]==0 && Photon_isFSR[best_2g_idx2_m{m}]==0)".format(m=m)
+#cuts['fsr'] = {}
+#for v in ['W', 'Z']:
+#    cuts['fsr'][v] = {}
+#    for m in masses:
+#        cuts['fsr'][v][m] = "(1)"
+#        if (v=='W'):
+#            cuts['fsr'][v][m] = "(1)"
+#        else:
+#            cuts['fsr'][v][m] = "(Photon_isFSR[best_2g_idx1_m{m}]==0 && Photon_isFSR[best_2g_idx2_m{m}]==0)".format(m=m)
+
+            
 #redefine the cuts here based on the analysis for easier parsing
 for analysis in ['wmn2g','wen2g','zmm2g','zee2g']:
     cuts[analysis]={}
@@ -93,19 +102,16 @@ for analysis in ['wmn2g','wen2g','zmm2g','zee2g']:
                                            cuts['pt'][m],
                                            cuts['photons'][m],
                                            cuts['misID'][v][l][m],
-                                           cuts['fsr'][v][m],
                                            f"((Photon_passCutBasedID[best_2g_idx1_m{m}]+Photon_passCutBasedID[best_2g_idx2_m{m}])==2)"])
         cuts[analysis][m]['precr']='&&'.join([cuts[v][l],
                                               cuts['pt'][m],
                                               cuts['photons'][m],
                                               cuts['misID'][v][l][m],
-                                              cuts['fsr'][v][m],
                                               f"(Photon_passCutBasedID[best_2g_idx1_m{m}]>0)"])                                              
         cuts[analysis][m]['precr_abcd']='&&'.join([cuts[v][l],
                                               cuts['pt'][m],
                                               cuts['photons'][m],
                                               cuts['misID'][v][l][m],
-                                              cuts['fsr'][v][m],
                                               f"((Photon_passCutBasedID[best_2g_idx1_m{m}]+Photon_passCutBasedID[best_2g_idx2_m{m}])==1)"])
 
 
@@ -281,7 +287,7 @@ def getPlotter(sample,sampleDir,sampleType,eras,prod,analysis):
     return p
 
 
-def calculate_fake_rate(sampleDir,prod,eras=['2016','2017','2018'],ptbins=[25.,30.,35.,40.,50.,60.,80.,150.],etabins=[-2.5,-2.0,-1.57,-1.44,-0.8,0.8,1.44,1.57,2.0,2.5],arrayName="fake_rate_VH",doMCClosure=False,outdir='.'):
+def calculate_fake_rate(sampleDir,prod,eras=['2016','2017','2018'],ptbins=[25.,30.,35.,40.,50.,60.,80.,150.],etabins=[-2.5,-2.0,-1.57,-1.44,-0.8,0.8,1.44,1.57,2.0,2.5],arrayName="fake_rate_VH",doMCClosure=False,outdir='.',file_extension='png'):
     def clopper_pearson(k, n, confidence=0.68):
         """
         Compute the Clopper-Pearson interval for a binomial proportion.
@@ -325,7 +331,7 @@ def calculate_fake_rate(sampleDir,prod,eras=['2016','2017','2018'],ptbins=[25.,3
     #make a plot    
     fig, ax = plt.subplots()
 
-    mesh = ax.pcolormesh(xedges, yedges, fake_rate, cmap='viridis', edgecolors='white', linewidth=0.5)
+    mesh = ax.pcolormesh(xedges, yedges, fake_rate, cmap='plasma', edgecolors='white', linewidth=0.5)
     plt.colorbar(mesh, label='fake rate')
 
     # 4. Add labels and uncertainties (The "ROOT TEXT" part)
@@ -353,13 +359,13 @@ def calculate_fake_rate(sampleDir,prod,eras=['2016','2017','2018'],ptbins=[25.,3
             st=st+','
     st=st+'};'
     if doMCClosure:
-        mh.cms.label(data=False, lumi=lumifb['Run2'], ax=ax, loc=0)
+        mh.cms.label(data=False, ax=ax, loc=0)
     else:
-        mh.cms.label("Preliminary", data=True, lumi=lumifb['Run2'], ax=ax, loc=0)
+        mh.cms.label("Preliminary", data=True, lumi=(lumifb[eras[0]] if len(eras)==1 else lumifb['Run2']), ax=ax, loc=0)
     #print it in C++ format
     #note that we remove the last edge on how the code is defined to work
     st=st+'\n'+f'std::vector<float> {arrayName}_xbins = {{'+','.join([str(x) for x in xedges[:-1]])+'};\n'+f'std::vector<float> {arrayName}_ybins = {{'+','.join([str(y) for y in yedges[:-1]])+'};\n'
-    plt.savefig(f'{outdir}/{arrayName}.png', dpi=400, bbox_inches='tight')
+    plt.savefig(f'{outdir}/{arrayName}.{file_extension}', dpi=400, bbox_inches='tight')
     return st
 
 
@@ -533,17 +539,11 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
             analysis=getAnalysis(sampleDir,prod,ana,background_method='fakerate',era=era,signals=signals,lifetimes=lifetimes)
             stack=mplhep_plotter(com=center_of_mass[era],data=False,lumi=None)
             stack.stack=False
-            signal_colors={0:'red',
-                           10:'lightcoral',
-                           20:'chocolate',
-                           50:'darkorange',
-                           100:'yellowgreen',
-                           1000:'lightseagreen'}
             for ctau in lifetimes:
                 stack.add_plotter(analysis['signal'][m][ctau]['sum'],label=r'$c\tau=$'+f"{ctau} mm",typeP='signal',error_mode='w2',color=signal_colors[ctau])
-            stack.hist1d(f"best_2g_raw_mass_m{m}",cuts[ana][m]['sr'],model=('a','a',40,0,40),alpha=0.5,xlabel=r"$m_{\gamma\gamma}$",xunits="GeV",show=False)
+            stack.hist1d(f"best_2g_raw_mass_m{m}",cuts[ana][m]['sr'],model=('a','a',100,8,m+2),alpha=1,xlabel=r"$m_{\gamma\gamma}$",xunits="GeV",show=False,legend_loc='upper left')
             plt.savefig(f'{outputDir}/kinfit_mass_m{m}.{file_extension}', dpi=400, bbox_inches='tight')
-            stack.hist1d(f"best_2g_dxy_m{m}",cuts[ana][m]['sr'],model=('a','a',25,0,100),alpha=0.5,xlabel=r"$d_{xy}$",xunits="cm",show=False)
+            stack.hist1d(f"best_2g_dxy_m{m}",cuts[ana][m]['sr'],model=('a','a',90,-10,80),alpha=1,xlabel=r"$d_{xy}$",xunits="cm",show=False,logscale=False)
             plt.savefig(f'{outputDir}/kinfit_dxy{m}.{file_extension}', dpi=400, bbox_inches='tight')
             
         
@@ -557,13 +557,13 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
             file.write("#ifndef FAKERATES\n")
             file.write("#define FAKERATES\n")
             for e in eras:
-                fr=calculate_fake_rate(sampleDir,prod,[e],arrayName=f"fake_rate_{e}",outdir=outputDir)
+                fr=calculate_fake_rate(sampleDir,prod,[e],arrayName=f"fake_rate_{e}",outdir=outputDir,file_extension=file_extension)
                 file.write(fr)
             #write the average all run fake rate for studies
-            fr=calculate_fake_rate(sampleDir,prod,eras,arrayName="fake_rate",outdir=outputDir)
+            fr=calculate_fake_rate(sampleDir,prod,eras,arrayName="fake_rate",outdir=outputDir,file_extension=file_extension)
             file.write(fr)
             #write the average all run MC fake rate for studies
-            fr=calculate_fake_rate(sampleDir,prod,eras,arrayName="fake_rate_MC",outdir=outputDir,doMCClosure=True)
+            fr=calculate_fake_rate(sampleDir,prod,eras,arrayName="fake_rate_MC",outdir=outputDir,doMCClosure=True,file_extension=file_extension)
             file.write(fr)
             file.write("#endif\n")
     
@@ -655,20 +655,27 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
             
     #ACTION: Final Plots              
     elif action=="final_plots":
-        print("Make final Plots")        
+        print("Make final Plots")
+        mySignals={
+            'wmn2g':['WH','ttH'],
+            'wen2g':['WH','ttH'],
+            'zmm2g':['ZH','ggZH'],
+            'zee2g':['ZH','ggZH']}
+            
+        
         for ana in analyses:
             #create a plotter that has all MC as data
-            analysis=getAnalysis(sampleDir,prod,ana,background_method='fakerate',era=era,br=signal_br,signals=signals,lifetimes=lifetimes)
+            analysis=getAnalysis(sampleDir,prod,ana,background_method='fakerate',era=era,br=signal_br,signals=mySignals[ana],lifetimes=lifetimes)
             for m in masses:
                 print(f"Running {ana} m={m} GeV")
                 stack=mplhep_plotter(label=analysis_status,data=True,lumi=lumifb[era],com=center_of_mass[era])
-                stack.add_plotter(analysis['bkg'][m],label='Background',typeP='background',error_mode='poisson_bootstrap')               
-                stack.add_plotter(analysis['signal'][m][0]['sum'],label=r'$m_{\phi}$='+f"{m} GeV,"+r" $c\tau =$ 0 mm",typeP='signal',error_mode='w2',color='red')
-                stack.add_plotter(analysis['signal'][m][100]['sum'],label=r'$m_{\phi}$='+f"{m} GeV,"+r" $c\tau =$ 100 mm",typeP='signal',error_mode='w2',color='orange')
+                stack.add_plotter(analysis['bkg'][m],label='Background',typeP='background',error_mode='poisson_bootstrap')
+                for ctau in lifetimes:
+                    stack.add_plotter(analysis['signal'][m][ctau]['sum'],label=r'$m_{\phi}$='+f"{m} GeV,"+r" $c\tau =$ 0 mm",typeP='signal',error_mode='w2',color=signal_colors[ctau])
                 if blinded==False:
                     stack.add_plotter(analysis['data'],label="Data",typeP='data',error_mode='poisson')               
                 #draw a plot
-                stack.unrolledCustom(f"best_2g_raw_mass_m{m}",f"best_2g_dxy_m{m}",cuts[ana][m]['sr'],binning[ana][m],alpha=1.0,xlabel=r"$d_{xy}$",xunits="cm",show=False)
+                stack.unrolledCustom(f"best_2g_raw_mass_m{m}",f"best_2g_dxy_m{m}",cuts[ana][m]['sr'],binning[ana][m],alpha=1.0,xlabel=r"$d_{xy}$",xunits="cm",show=False,legend_ax=0,legend_loc='upper left')
                 if blinded:
                     plt.savefig(f'{outputDir}/blinded_prefit_{ana}_{m}_{era}.{file_extension}', dpi=400, bbox_inches='tight')
                 else:
@@ -700,9 +707,9 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
             
         for ana in analyses:
             for e in eras:
-                analysis=getAnalysis(sampleDir,prod,ana,background_method='fakerate',era=e,br=signal_br,signals=signals,lifetimes=lifetimes)
-                for m in masses:
+                for m in masses:                    
                     for ctau in lifetimes:
+                        analysis=getAnalysis(sampleDir,prod,ana,background_method='fakerate',era=e,br=signal_br,masses=[m],signals=signals,lifetimes=[ctau])                        
                         print(f"Making Datacards for {ana} in era {era} for m={m} GeV and ctau={ctau} mm")
                         for ibinx,bin_setup in enumerate(binning[ana][m]):
                             mass_min = bin_setup[0][0]
@@ -717,9 +724,9 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
                                 dcm = cnc_datacard_maker(outDir=outputDir,binname=f"{ana}_m{m}_ctau{ctau}_era{e}_binx{ibinx}_biny{ibiny}",cuts=cutstring)
                                 dcm.add('data','data',analysis['data'],{})
 
-                                for signal in mySignals[ana]:
+                                for signal in mySignals[ana]:                                    
                                     signalUncertainties={
-                                        f'CMS_lumi':{'type':'adhoc','kind':'lnN','value':lumiUnc[e]},                                        
+                                        f'CMS_lumi_{e}':{'type':'adhoc','kind':'lnN','value':lumiUnc[e]},                                        
                                         f'CMS_{signal}_xsec':{'type':'adhoc','kind':'lnN','value':f"{xsecUnc[signal][1]}/{xsecUnc[signal][0]}"},
                                         'CMS_pdf':{'type':'adhoc','kind':'lnN','value':pdfUnc[signal]}
                                     }
@@ -763,11 +770,14 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
                                     
                                 },error_mode='poisson_bootstrap')
                                 #write only bins that have bkg>0 or data>0
-                                if (dcm.rates['bkg']+dcm.data)>0:
+                                signalTot = sum([dcm.rates[s] for s in  mySignals[ana]])
+                                print('total signal :',signalTot)
+                                if (dcm.rates['bkg']+dcm.data)>0 and signalTot>0:
                                     dcm.write()
                                     
-                    
-            
+                        analysis=None
+                        gc.collect()
+                        #This forced garbage collection enables better running in slow machines, eg your laptop
         
 
 

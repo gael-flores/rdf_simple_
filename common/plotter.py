@@ -166,7 +166,7 @@ class plotter_base(object):
                     low[i]=l
                     high[i]=h
                     d=data[i]
-                    print(f"Poisson Bootstrap: Observation = {d} Interval E [{l},{h}]")
+#                    print(f"Poisson Bootstrap: Observation = {d} Interval E [{l},{h}]")
             w2=np.array([np.square(data-low),np.square(high-data)])            
         del hist    
         if include_overflow==False:
@@ -223,7 +223,7 @@ class plotter_base(object):
                         lo=yedges[j-1]
                         hi=yedges[j]
                         cy = f"({var2}>={lo}&&{var2}<{hi})"
-                    print(f"Poisson bootstrap for ({i},{j})","*".join([cx,cy]))
+#                    print(f"Poisson bootstrap for ({i},{j})","*".join([cx,cy]))
                     weights = self.event_weights("*".join([cuts,cx,cy]))
                     if len(weights)>0:
                         l,h = self.poisson_bootstrap_ci(weights, n_bootstraps=self.n_bootstraps,ci_level=0.6827)
@@ -836,7 +836,7 @@ class mplhep_plotter(object):
         for plotter in self.plotters:
             plotter['plotter'].redefine(var, definition)
 
-    def hist1d(self,var,cuts,model,alpha=1.0,xlabel="",xunits="",legend_loc='upper right',show=True):
+    def hist1d(self,var,cuts,model,alpha=1.0,xlabel="",xunits="",legend_loc='upper right',show=True,logscale=False):
         background_hists=[]
         background_edges=[]
         background_w2=[]
@@ -857,6 +857,9 @@ class mplhep_plotter(object):
         for p in self.plotters:
             if p['type']=='data':
                 edges,data,w2=p['plotter'].array1d(var,cuts,model,error_mode=p['error_mode'])
+                if self.stack==False:
+                    w2=w2/np.sum(data)
+                    data=data/np.sum(data)
                 data_hists.append(data)
                 data_edges.append(edges)
                 data_w2.append(w2)
@@ -864,6 +867,10 @@ class mplhep_plotter(object):
                 data_colors.append(p['color'])                                    
             elif p['type']=='background':
                 edges,data,w2=p['plotter'].array1d(var,cuts,model,error_mode=p['error_mode'])
+                if self.stack==False:
+                    w2=w2/np.sum(data)
+                    data=data/np.sum(data)
+                
                 if bkgExists==False:
                     background_sum=data
                     background_sumw2=w2
@@ -880,6 +887,10 @@ class mplhep_plotter(object):
         for p in self.plotters:                   
             if p['type']=='signal':
                 edges,data,w2=p['plotter'].array1d(var,cuts,model,error_mode=p['error_mode'])
+                if self.stack==False:
+                    w2=w2/np.sum(data)
+                    data=data/np.sum(data)
+                
                 if self.stack==True:
                     signal_hists.append(data+background_sum)
                     signal_w2.append(w2+background_sumw2)
@@ -954,8 +965,12 @@ class mplhep_plotter(object):
         if self.stack:
             ax.set_ylabel("Events")
         else:
-           ax.set_ylabel("Event density")
-             
+           ax.set_ylabel("a.u")
+
+        if logscale:            
+            if self.stack==False:
+                ax.set_ylim(0.0001,100)
+            ax.set_yscale('log')    
         if show:
             plt.show()
             
@@ -981,6 +996,10 @@ class mplhep_plotter(object):
         for p in self.plotters:
             if p['type']=='data':
                 xedges,yedges,data,w2=p['plotter'].array2d(var1,var2,cuts,model,error_mode=p['error_mode'])
+                if self.stack==False:
+                    w2=w2/np.sum(data)
+                    data=data/np.sum(data)
+
                 data_hists.append(data)
                 data_edges.append((xedges,yedges))
                 data_w2.append(w2)
@@ -988,6 +1007,10 @@ class mplhep_plotter(object):
                 data_colors.append(p['color'])                                    
             elif p['type']=='background':
                 xedges,yedges,data,w2=p['plotter'].array2d(var1,var2,cuts,model,error_mode=p['error_mode'])
+                if self.stack==False:
+                    w2=w2/np.sum(data)
+                    data=data/np.sum(data)
+                
                 if bkgExists==False:
                     background_sum=data
                     background_sumw2=w2
@@ -1004,6 +1027,10 @@ class mplhep_plotter(object):
         for p in self.plotters:                   
             if p['type']=='signal':
                 xedges,yedges,data,w2=p['plotter'].array2d(var1,var2,cuts,model,error_mode=p['error_mode'])
+                if self.stack==False:
+                    w2=w2/np.sum(data)
+                    data=data/np.sum(data)
+                
                 if self.stack==True:
                     signal_hists.append(data+background_sum)
                     signal_w2.append(w2+background_sumw2)
@@ -1087,12 +1114,12 @@ class mplhep_plotter(object):
         if self.stack:
             ax[0].set_ylabel("Events")
         else:
-           ax[0].set_ylabel("Event density")
+           ax[0].set_ylabel("a.u")
              
         if show:
             plt.show()
         
-    def unrolledCustom(self,var1,var2,cuts,custom_binning,alpha=1.0,xlabel="",xunits="",legend_loc='upper right',show=True):
+    def unrolledCustom(self,var1,var2,cuts,custom_binning,alpha=1.0,xlabel="",xunits="",legend_loc='upper right',legend_ax=-1,show=True):
 
         fig,ax = plt.subplots(1,len(custom_binning),sharey=True,figsize=(25,10))
         plt.subplots_adjust(wspace=0)        
@@ -1120,6 +1147,10 @@ class mplhep_plotter(object):
 
                 if p['type']=='data':
                     edg,data,w2=p['plotter'].array1d(var2,cuts+f"*({var1}>={xedges[0]}&&{var1}<{xedges[1]})",(p['name'],p['name'],len(yedges)-1,np.array(yedges)),error_mode=p['error_mode'])
+                    if self.stack==False:
+                        w2=w2/np.sum(data)
+                        data=data/np.sum(data)
+                    
                     if p['label'] in yields.keys():
                         yields[p['label']]=yields[p['label']]+np.sum(data)
                     else:
@@ -1131,6 +1162,10 @@ class mplhep_plotter(object):
                     data_colors.append(p['color'])                                    
                 elif p['type']=='background':
                     edg,data,w2=p['plotter'].array1d(var2,cuts+f"*({var1}>={xedges[0]}&&{var1}<{xedges[1]})",(p['name'],p['name'],len(yedges)-1,np.array(yedges)),error_mode=p['error_mode'])
+                    if self.stack==False:
+                        w2=w2/np.sum(data)
+                        data=data/np.sum(data)
+                    
                     if p['label'] in yields.keys():
                         yields[p['label']]=yields[p['label']]+np.sum(data)
                     else:
@@ -1150,6 +1185,10 @@ class mplhep_plotter(object):
             for p in self.plotters:                
                 if p['type']=='signal':
                     edg,data,w2=p['plotter'].array1d(var2,cuts+f"*({var1}>={xedges[0]}&&{var1}<{xedges[1]})",(p['name'],p['name'],len(yedges)-1,np.array(yedges)),error_mode=p['error_mode'])
+                    if self.stack==False:
+                        w2=w2/np.sum(data)
+                        data=data/np.sum(data)
+                    
                     if p['label'] in yields.keys():
                         yields[p['label']]=yields[p['label']]+np.sum(data)
                     else:
@@ -1230,7 +1269,7 @@ class mplhep_plotter(object):
                                 )
 
         #then stack backgrounds and then draw band
-        ax[-1].legend(loc=legend_loc)
+        ax[legend_ax].legend(loc=legend_loc)
 
         #Labels
         mh.cms.label(self.label,data=self.data,rlabel="", ax=ax[0], loc=0)
@@ -1244,7 +1283,7 @@ class mplhep_plotter(object):
         if self.stack:
             ax[0].set_ylabel("Events")
         else:
-           ax[0].set_ylabel("Event density")
+           ax[0].set_ylabel("a.u")
 
 
         #print yields

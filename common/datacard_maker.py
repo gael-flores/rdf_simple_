@@ -50,7 +50,7 @@ class cnc_datacard_maker(object):
                 for o,u,d in zip(unc['originals'],unc['replacementsUp'],unc['replacementsDown']):
                     cutsUp=cutsUp.replace(o,u)
                     cutsDown=cutsDown.replace(o,d)
-                print(self.cuts,cutsUp,cutsDown)
+#                print(self.cuts,cutsUp,cutsDown)
                 edgesUp,up,wUp=plotter.array1d('dummyDCVar',f"({cutsUp})",(name,name,2,0,2),error_mode='w2')
                 edgesDown,down,wDown=plotter.array1d('dummyDCVar',f"({cutsDown})",(name,name,2,0,2),error_mode='w2')
                 errorUp = float(np.sum(up)/rate)
@@ -83,10 +83,15 @@ class cnc_datacard_maker(object):
             file.write('imax 1 number of channels\n')
             nbackgrounds = sum([1 for x in self.types.keys() if self.types[x]=='background'])
             nsignals     = sum([1 for x in self.types.keys() if self.types[x]=='signal'])
-            file.write(f"jmax {nbackgrounds} number of backgrounds\n")
-            file.write(f'kmax {len(self.nuisances.keys())} number of nuisance parameters\n')
-            file.write(f'bin {self.binname}\n')
-            file.write(f"observation {self.data}\n") 
+            file.write(f"jmax *\n")
+            file.write(f'kmax {len(self.nuisances.keys())} number of nuisance parameters\n')            
+            file.write(f"bin {self.binname}\n")
+            file.write(f"observation {self.data}\n")
+            file.write('bin\t')
+            for s in self.rates.keys():
+                file.write(f"{self.binname}\t")
+            file.write('\n')
+            
             file.write("process\t")
             for s in self.rates.keys():
                 file.write(f"{s}\t")
