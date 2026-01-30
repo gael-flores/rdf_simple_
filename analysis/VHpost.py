@@ -8,7 +8,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 from common.plotter import *
 from common.datacard_maker import cnc_datacard_maker
-import gc
+
 
 ROOT.gInterpreter.Declare('#include "common/chelpers.h"')
 ROOT.gInterpreter.Declare('#include "common/signalEfficiency.h"')
@@ -415,6 +415,9 @@ def getSignalPlotter(sampleDir,prod,eras,analysis,mass,lifetime,signals=['ZH','g
     for era in eras:
         for sig in V:
             fs=getFiles(f"{sig}H{br}_M{mass}_ctau{lifetime}_{era}",sampleDir,"MC",era,prod)
+            if len(fs)==0:
+                print(f"WARNING! NO FILE FOUND matching pattern: {sig}H{br}_M{mass}_ctau{lifetime}_{era}")
+                continue
             for f in fs:
                 plotters.append(rdf_plotter(f, tree=analysis,isMC=True, report = "Report_" + analysis))
                 plotters[-1].addCorrectionFactor(lumifb[era], "flat")                
@@ -438,13 +441,13 @@ def getSignalPlotter(sampleDir,prod,eras,analysis,mass,lifetime,signals=['ZH','g
                     plotters[-1].addCorrectionFactor('1000', "flat") #to conevrt to pb-1                             
                     plotters[-1].addCorrectionFactor(str(38750./59830), "flat")
                     plotters[-1].addCorrectionFactor(weight, "flat")
-    p = merged_plotter(plotters)
+    p=None
+    if len(plotters)>0:                
+        p = merged_plotter(plotters)
     return p
 
 def getAnalysis(sampleDir,prod,ana,era='Run2',masses=masses,lifetimes=lifetimes,signals=['ZH','ggZH','WH','ttH'],modelIndependent=False,br=0.01,background_method="fakerate"):
     analysis={}
-
-
 
     
     if era=='Run2':
@@ -507,15 +510,19 @@ def getAnalysis(sampleDir,prod,ana,era='Run2',masses=masses,lifetimes=lifetimes,
         i=0
         for ct in lifetimes:
             analysis['signal'][m][ct]={}
-            analysis['signal'][m][ct]['sum']=getSignalPlotter(sampleDir,prod,eras,ana,m,ct,signals,modelIndependent)
-            analysis['signal'][m][ct]['sum'].addCorrectionFactor(leptonSF[ana],'flat')
-            analysis['signal'][m][ct]['sum'].addCorrectionFactor(photonSF[m],'flat')            
-            analysis['signal'][m][ct]['sum'].addCorrectionFactor(str(br),'flat')
+            p=getSignalPlotter(sampleDir,prod,eras,ana,m,ct,signals,modelIndependent)
+            if p!=None:
+                analysis['signal'][m][ct]['sum']=p
+                analysis['signal'][m][ct]['sum'].addCorrectionFactor(leptonSF[ana],'flat')
+                analysis['signal'][m][ct]['sum'].addCorrectionFactor(photonSF[m],'flat')            
+                analysis['signal'][m][ct]['sum'].addCorrectionFactor(str(br),'flat')
             for signal in signals:
-                analysis['signal'][m][ct][signal]=getSignalPlotter(sampleDir,prod,eras,ana,m,ct,[signal],modelIndependent)
-                analysis['signal'][m][ct][signal].addCorrectionFactor(leptonSF[ana],'flat')
-                analysis['signal'][m][ct][signal].addCorrectionFactor(photonSF[m],'flat')            
-                analysis['signal'][m][ct][signal].addCorrectionFactor(str(br),'flat')
+                p=getSignalPlotter(sampleDir,prod,eras,ana,m,ct,[signal],modelIndependent)
+                if p!=None:
+                    analysis['signal'][m][ct][signal]=p
+                    analysis['signal'][m][ct][signal].addCorrectionFactor(leptonSF[ana],'flat')
+                    analysis['signal'][m][ct][signal].addCorrectionFactor(photonSF[m],'flat')            
+                    analysis['signal'][m][ct][signal].addCorrectionFactor(str(br),'flat')
                 
     return analysis
             
@@ -671,11 +678,11 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
                 stack=mplhep_plotter(label=analysis_status,data=True,lumi=lumifb[era],com=center_of_mass[era])
                 stack.add_plotter(analysis['bkg'][m],label='Background',typeP='background',error_mode='poisson_bootstrap')
                 for ctau in lifetimes:
-                    stack.add_plotter(analysis['signal'][m][ctau]['sum'],label=r'$m_{\phi}$='+f"{m} GeV,"+r" $c\tau =$ 0 mm",typeP='signal',error_mode='w2',color=signal_colors[ctau])
+                    stack.add_plotter(analysis['signal'][m][ctau]['sum'],label=r'$m_{\phi}$='+f"{m} GeV,"+r" $c\tau =$ "+f"{ctau} mm",typeP='signal',error_mode='w2',color=signal_colors[ctau])
                 if blinded==False:
                     stack.add_plotter(analysis['data'],label="Data",typeP='data',error_mode='poisson')               
                 #draw a plot
-                stack.unrolledCustom(f"best_2g_raw_mass_m{m}",f"best_2g_dxy_m{m}",cuts[ana][m]['sr'],binning[ana][m],alpha=1.0,xlabel=r"$d_{xy}$",xunits="cm",show=False,legend_ax=0,legend_loc='upper left')
+                stack.unrolledCustom(f"best_2g_raw_mass_m{m}",f"best_2g_dxy_m{m}",cuts[ana][m]['sr'],binning[ana][m],alpha=1.0,xlabel=r"$d_{xy}$",xunits="cm",ylabel=r'$m_{\gamma\gamma}$',yunits='GeV',texty=0.7,show=False,legend_ax=0,legend_loc='upper left')
                 if blinded:
                     plt.savefig(f'{outputDir}/blinded_prefit_{ana}_{m}_{era}.{file_extension}', dpi=400, bbox_inches='tight')
                 else:
@@ -710,7 +717,7 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
                 for m in masses:                    
                     for ctau in lifetimes:
                         analysis=getAnalysis(sampleDir,prod,ana,background_method='fakerate',era=e,br=signal_br,masses=[m],signals=signals,lifetimes=[ctau])                        
-                        print(f"Making Datacards for {ana} in era {era} for m={m} GeV and ctau={ctau} mm")
+                        print(f"Making Datacards for {ana} in era {e} for m={m} GeV and ctau={ctau} mm")
                         for ibinx,bin_setup in enumerate(binning[ana][m]):
                             mass_min = bin_setup[0][0]
                             mass_max=  bin_setup[0][1]
@@ -721,10 +728,13 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
                                 
                                 cutstring = cuts[ana][m]['sr']+f"*(best_2g_raw_mass_m{m}>={mass_min}&&best_2g_raw_mass_m{m}<{mass_max})*(best_2g_dxy_m{m}>={dxy_min}&&best_2g_dxy_m{m}<{dxy_max})"
 
-                                dcm = cnc_datacard_maker(outDir=outputDir,binname=f"{ana}_m{m}_ctau{ctau}_era{e}_binx{ibinx}_biny{ibiny}",cuts=cutstring)
+                                dcm = cnc_datacard_maker(outDir=outputDir,binname=f"{ana}_m{m}_ctau{ctau}_era{e}_binm_{ibinx}_bindxy_{ibiny}",cuts=cutstring)
                                 dcm.add('data','data',analysis['data'],{})
 
-                                for signal in mySignals[ana]:                                    
+                                for signal in mySignals[ana]:
+                                    if not (signal in analysis['signal'][m][ctau].keys()):
+                                        print(f"Signal not found {signal} skipping")
+                                        continue
                                     signalUncertainties={
                                         f'CMS_lumi_{e}':{'type':'adhoc','kind':'lnN','value':lumiUnc[e]},                                        
                                         f'CMS_{signal}_xsec':{'type':'adhoc','kind':'lnN','value':f"{xsecUnc[signal][1]}/{xsecUnc[signal][0]}"},
@@ -765,131 +775,17 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
                                     
                                     
                                 dcm.add('bkg','background',analysis['bkg'][m],uncertainties={
-                                    f"CMS_DDP_{ana}_m{m}_{e}_binx{ibinx}_biny{ibiny}_CR_stats":{'type':'statAsym'},
+                                    f"CMS_DDP_{ana}_{e}_binm_{ibinx}_bindxy_{ibiny}_CR_stats":{'type':'statAsym'},
                                     f"CMS_DDP_fakeRateUnc_{e}":{'type':'weightAsymm','weightUp':'fakeRate_up','weightDown':'fakeRate_down','weightOrig':'fakeRate_val'}
                                     
                                 },error_mode='poisson_bootstrap')
-                                #write only bins that have bkg>0 or data>0
-                                signalTot = sum([dcm.rates[s] for s in  mySignals[ana]])
-                                print('total signal :',signalTot)
-                                if (dcm.rates['bkg']+dcm.data)>0 and signalTot>0:
+                                #write only reasonable cards
+                                write_card_signal = sum([(t=='signal') for s,t in  dcm.types.items()])
+                                write_card_bkg = sum([(t=='background') for s,t in  dcm.types.items()])
+                                
+                                if write_card_signal>0 and write_card_bkg>0:
                                     dcm.write()
                                     
                         analysis=None
-                        gc.collect()
-                        #This forced garbage collection enables better running in slow machines, eg your laptop
+
         
-
-
-
-
-
-#debugging code
-#if __name__ == '__main__':
-#
-#    sampleDir='/tank/ddp/DDP'
-#    prod='2025_12_23'
-#    ana='wmn2g'
-#    m=20
-#    analysis=getAnalysis(sampleDir,prod,ana,background_method='fakerate',era='2016',br=0.01,signals=['WH','ttH'],lifetimes=[100])
-#    print(f"Running {ana} m={m} GeV")
-#    stack=mplhep_plotter()
-#    stack.add_plotter(analysis['bkg'][m],label='Background',typeP='background',error_mode='w2')               
-#    stack.add_plotter(analysis['signal'][m][100],label=r'$m_{\phi}$='+f"{m} GeV,"+r" $c\tau =$ 100 mm",typeP='signal',error_mode='w2',color='red')               
-#    stack.add_plotter(analysis['data'],label="Data",typeP='data',error_mode='poisson')               
-#    stack.define("loose_muon", "(Muon_pt>5&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&Muon_pfIsoId>1&&Muon_looseId>0)")
-#    stack.define("tight_muon", "loose_muon&&Muon_tightId>0&&Muon_pfIsoId>3")
-#   
-#    stack.define("overlap_muon", "(Muon_pt>3&&abs(Muon_eta)<2.4&&Muon_softId>0)")
-#    stack.define("Photon_overlap", "overlapClean(Photon_phi, Photon_eta, Muon_phi[overlap_muon], Muon_eta[overlap_muon],0.8,0.8)")
-#    stack.define("Muon_nloose", "Sum(loose_muon)")
-#    stack.unrolledCustom(f"best_2g_raw_mass_m{m}",f"best_2g_dxy_m{m}",cuts[ana][m]['sr']+"&&(Photon_overlap[best_2g_idx1_m20]==0 && Photon_overlap[best_2g_idx2_m20]==0)",binning[ana][m],alpha=1.0,xlabel=r'$d_{xy}$',xunits='cm',show=True)
-
-
-
-    
-#    ana=getAnalysis('/tank/ddp/DDP','2025_12_23','wmn2g',background_method='fakerate',era='Run2')
-#    ana['wjets'].define("Photon_prompt","prompt_photon(Photon_genPartFlav,Photon_genPartIdx,GenPart_pdgId,GenPart_genPartIdxMother)")
-#    ana['wg'].define("Photon_prompt","prompt_photon(Photon_genPartFlav,Photon_genPartIdx,GenPart_pdgId,GenPart_genPartIdxMother)")
-#    ana['wgg'].define("Photon_prompt","prompt_photon(Photon_genPartFlav,Photon_genPartIdx,GenPart_pdgId,GenPart_genPartIdxMother)")
-#    ana['wjets'].addCorrectionFactor('((Photon_prompt[best_2g_idx1_m20]+Photon_prompt[best_2g_idx2_m20])==0)','flat')
-#    ana['wg'].addCorrectionFactor('((Photon_prompt[best_2g_idx1_m20]+Photon_prompt[best_2g_idx2_m20])==1)','flat')
-#    ana['wgg'].addCorrectionFactor('((Photon_prompt[best_2g_idx1_m20]+Photon_prompt[best_2g_idx2_m20])==2)','flat')
-
-#    abcd=abcd_plotter(cuts['wmn2g'][20]['sr'],
-#                     cuts['wmn2g'][20]['cr'],
-#                     cuts['wmn2g'][20]['ssb'],
-#                     cuts['wmn2g'][20]['csb'],[ana['wjets'],ana['wg'],ana['wgg']])
-
-#    fr=fakerate_plotter(cuts['wmn2g'][20]['sr'],
-#                                cuts['wmn2g'][20]['cr'],
-#                                [ana['wjets'],ana['wg'],ana['wgg']],
-#                                'fakeRate_MC',
-#                                f'fake_rate(Photon_pt[best_2g_idx1_m20],Photon_eta[best_2g_idx1_m20],Photon_pt[best_2g_idx2_m20],Photon_eta[best_2g_idx2_m20],(Photon_cutBased[best_2g_idx1_m20]>0),(Photon_cutBased[best_2g_idx2_m20]>0),fake_rate_MC_vals,fake_rate_MC_xbins,fake_rate_MC_ybins)')                                                  
-
-
-#    bkg_plotter=merged_plotter([ana['wjets'],ana['wg'],ana['wgg']])
-    
-
-
-#    stack=mplhep_plotter()
-#    stack.add_plotter(ana['bkg'][20],name='bkg',label='Background',typeP='background',error_mode='w2')
-#    stack.add_plotter(ana['signal'][20][100],name='sig100',label=r'$m_{\phi}=20$ GeV, $c\tau=100$ mm',typeP='signal',error_mode='w2',color='red')
-#    stack.add_plotter(ana['signal'][20][1000],name='sig1000',label=r'$m_{\phi}=20$ GeV, $c\tau=1000$ mm',typeP='signal',error_mode='w2',color='orange')    
-#    stack.add_plotter(ana['data'],name='data',label='Data',typeP='data',error_mode='w2')
-    
-#    stack.add_plotter(ana['tt'],name='ttjets',label=r'$t\bar{t}$+jets',typeP='background',error_mode='w2')
-#    stack.add_plotter(ana['zjets'],name='zjets',label='DY+jets',typeP='background',error_mode='w2')   
-#    stack.add_plotter(bkg_plotter,name='wjets',label='W+jets',typeP='background',error_mode='w2')
-#    stack.add_plotter(ana['wjets'],name='wjets',label='0 Prompt',typeP='background',error_mode='w2')
-#    stack.add_plotter(ana['wg'],name='wg',label='1 Prompt',typeP='background',error_mode='w2')
-#    stack.add_plotter(ana['wgg'],name='wgg',label='2 Prompt',typeP='background',error_mode='w2')
-#    stack.add_plotter(fr,name='fr',label='Fake Rate estimate',typeP='data',error_mode='w2')
-#    stack.add_plotter(abcd,name='fr',label='ABCD estimate',typeP='data',error_mode='w2')
-
-
-
-#    stack.define("loose_muon", "Muon_pt>5&&Muon_looseId==1&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&Muon_pfIsoId>1")
-#    stack.define("tight_muon", "loose_muon&&Muon_tightId&&Muon_pfIsoId>3")
-#    stack.define("veto_muon", "(Muon_softId>0)")
-
-#    stack.define("drlg1","deltaR_lgamma(Photon_eta[best_2g_idx1_m20], Photon_phi[best_2g_idx1_m20],Muon_eta[veto_muon],Muon_phi[veto_muon])")
-#    stack.define("drlg2","deltaR_lgamma(Photon_eta[best_2g_idx2_m20], Photon_phi[best_2g_idx2_m20],Muon_eta[veto_muon],Muon_phi[veto_muon])")
-
-
-
-#    stack.unrolledCustom("best_2g_raw_mass_m20","best_2g_dxy_m20",cuts['wmn2g'][20]['sr']+"*(drlg1>1&&drlg2>1)",binning['wmn2g'][20],alpha=0.5,xlabel=r"$d_{xy}$",xunits="cm")
-
-
-
-#    ana=getAnalysis('/tank/ddp/DDP','2025_12_23','wmn2g',background_method='fakerate',era='Run2')
-#    stack=mplhep_plotter()
-#    stack.add_plotter(ana['data'],name='data',label='Data',typeP='data',error_mode='poisson')
-#    stack.add_plotter(ana['signal'][20][100],name='signal',label='Signal',typeP='signal',color='red',error_mode='w2')
-#    stack.stack=False
-    
-    
-#    stack.add_plotter(ana['bkg'][20],name='MC',label='MC',typeP='background',error_mode='w2')
-#    stack.add_plotter(ana['wjets'],name='wjets',label='W+jets',typeP='background',error_mode='w2')
-#    stack.add_plotter(ana['zjets'],name='zjets',label='Z+jets',typeP='background',error_mode='w2')
-#    stack.add_plotter(ana['tt'],name='ttjets',label=r'$t\bar{t}$+jets',typeP='background',error_mode='w2')
-
-
-
-#    mc=merged_plotter([ana['wjets'],ana['zjets'],ana['tt']])
-
-#    stack.define("loose_muon", "Muon_pt>5&&Muon_looseId==1&&abs(Muon_eta)<2.4&&abs(Muon_dxy)<0.2&&abs(Muon_dz)<0.5&&Muon_pfIsoId>1")
-#    stack.define("tight_muon", "loose_muon&&Muon_tightId&&Muon_pfIsoId>3")
-#    stack.define("veto_muon", "(Muon_softId>0)")
-
-#    stack.define("drlg1","deltaR_lgamma(Photon_eta[best_2g_idx1_m20], Photon_phi[best_2g_idx1_m20],Muon_eta[veto_muon],Muon_phi[veto_muon])")
-#    stack.define("drlg2","deltaR_lgamma(Photon_eta[best_2g_idx2_m20], Photon_phi[best_2g_idx2_m20],Muon_eta[veto_muon],Muon_phi[veto_muon])")
-
-
-#    stack.define("Photon_muOverlap", "overlapClean(Photon_phi, Photon_eta, Muon_phi[veto_muon], Muon_eta[veto_muon])")
-#    stack.define("overlap", "(Photon_muOverlap[best_2g_idx1_m20]||Photon_muOverlap[best_2g_idx2_m20])")
-#    stack.hist1d('drlg1',cuts['wmn2g'][20]['sr'],('a','a',4,0,4),xlabel=r"$Delta R(\mu,\gamma)$",alpha=0.5)
-    
-    
-
-                    

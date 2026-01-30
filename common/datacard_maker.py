@@ -15,6 +15,9 @@ class cnc_datacard_maker(object):
         plotter.define("dummyDCVar",'1.0')
         edges,data,w2=plotter.array1d('dummyDCVar',self.cuts,(name,name,2,0,2),error_mode=error_mode)
         rate=float(np.sum(data))
+        if typeP!='data' and rate==0.0:
+            print (f"No yield for {name} in this card, skipping this contribution")
+            return
         if typeP=='data':
             self.data=int(rate)
         elif typeP=='signal':
@@ -25,24 +28,35 @@ class cnc_datacard_maker(object):
             self.rates[name]=rate            
         error=np.sqrt(w2)
         for unc_name,unc in uncertainties.items():
+            block=False
             if unc['type'] =='statSym':
                 lower=np.sum(error[0,:])
                 upper=np.sum(error[1,:])
                 err=0.5*(lower+upper)
                 err=float(np.divide(err,data))
+                if err==0.0:
+                    block=True
                 nData = ('lnN',str(1+err))
                 
             elif unc['type'] =='statAsym':
                 lower=np.sum(error[0,:])
                 upper=np.sum(error[1,:])
-                errUp=float(np.divide(upper,rate))
-                errDown=float(np.divide(lower,rate))
-                nData = ('lnN',str(1-errDown)+'/'+str(1+errUp))
+                if upper==rate and lower==rate:
+                    print("I detected the case of a single event where the Poisson bootstrap is applied\n This is fine but I am changing the uncertainty to gmN for this card\n")
+                    nData = ('gmN 1',str(rate))
+                else:
+                    errUp=float(np.divide(upper,rate))
+                    errDown=float(np.divide(lower,rate))
+                    if errUp==0.0 or errDown==0.0:
+                        block=True
+                    nData = ('lnN',str(1-errDown)+'/'+str(1+errUp))
             elif unc['type'] =='weightSym':
                 weight=unc['weight']
                 weightOrig = unc['weightOrig']
                 edges2,data2,w22=plotter.array1d('dummyDCVar',f"({self.cuts})*({weight}/({weightOrig}))",(name,name,2,0,2),error_mode='w2')
                 err  = float(np.sum(data2)/rate)
+                if err==0.0:
+                    block=True
                 nData = ('lnN',str(err))
             elif unc['type'] =='replication':
                 cutsUp=self.cuts
@@ -55,6 +69,8 @@ class cnc_datacard_maker(object):
                 edgesDown,down,wDown=plotter.array1d('dummyDCVar',f"({cutsDown})",(name,name,2,0,2),error_mode='w2')
                 errorUp = float(np.sum(up)/rate)
                 errorDown = float(np.sum(down)/rate)
+                if errorUp==0.0 or errorDown==0.0:
+                    block=True
                 nData = ('lnN',str(errorDown)+'/'+str(errorUp))
             elif unc['type'] =='weightAsymm':
                 weightUp=unc['weightUp']
@@ -64,12 +80,15 @@ class cnc_datacard_maker(object):
                 edges2,up,w2=plotter.array1d('dummyDCVar',f"({self.cuts})*({weightUp}/({weightOrig}))",(name,name,2,0,2),error_mode='w2')
                 edges2,down,w2=plotter.array1d('dummyDCVar',f"({self.cuts})*({weightDown}/({weightOrig}))",(name,name,2,0,2),error_mode='w2')
 #                print(f"({self.cuts})*({weightUp}/{weightOrig})")
-#                print(unc_name,np.sum(up),np.sum(down),rate)
                 errorUp = float(np.sum(up)/rate)
                 errorDown = float(np.sum(down)/rate)
+                if errorUp==0.0 or errorDown==0.0:
+                    block=True
                 nData = ('lnN',str(errorDown)+'/'+str(errorUp))
             elif unc['type'] =='adhoc':
                 nData = (unc['kind'],unc['value'])
+            if block:
+                continue
             if unc_name in self.nuisances.keys():
                 self.nuisances[unc_name]['contribs'][name] = nData[1]
             else:

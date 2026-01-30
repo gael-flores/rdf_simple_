@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+import optparse
+from analysis.VHpost import *
+
+
+#debugging code
+if __name__ == '__main__':
+    parser = optparse.OptionParser()
+    parser.add_option("-o", "--output-directory", dest = "odirectory", default = "VHresults", help = "output directory")
+    parser.add_option("-d", "--directory", dest = "directory", default = "/tank/ddp/DDP", help = "sample directory")
+    parser.add_option("-a", "--analyses", dest = "analyses", default = "wmn2g,wen2g,zmm2g,zee2g", help = "wmn2g,wen2g,zmm2g,zee2g")
+    parser.add_option("-e", "--era", dest = "era", default = "Run2", help = "2016, 2017, 2018, Run2")
+    parser.add_option("-m", "--masses", dest = "masses",default = '15,20,30,40,50,55' ,help = "15,20,30,40,50,55")
+    parser.add_option("-l", "--lifetimes", dest = "lifetimes",default = '0,10,20,50,100,1000',help = "0,10,20,50,100,1000")
+    parser.add_option("-p", "--prod", dest = "prod", default = "2026_01_03", help = "sample production date")
+    parser.add_option("-b", "--blind", dest = "blind", action="store_true", default = False, help = "Blinded")
+    (options,args) = parser.parse_args()
+
+
+
+    runAction(sampleDir=options.directory,
+              prod=options.prod,
+              action=args[0],
+              masses=[int(s) for s in (options.masses.split(','))],
+              outputDir=options.odirectory,
+              era=options.era,
+              analyses=[s for s in options.analyses.split(',')],
+              signals=signals,
+              lifetimes=[int(s) for s in (options.lifetimes.split(','))],
+              signal_br=0.01,
+              blinded=False,
+              file_extension='pdf')
+    
+    
+
+
+                    
