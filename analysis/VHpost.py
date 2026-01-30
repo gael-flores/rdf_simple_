@@ -8,7 +8,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 from common.plotter import *
 from common.datacard_maker import cnc_datacard_maker
-import gc
+
 
 ROOT.gInterpreter.Declare('#include "common/chelpers.h"')
 ROOT.gInterpreter.Declare('#include "common/signalEfficiency.h"')
@@ -415,6 +415,9 @@ def getSignalPlotter(sampleDir,prod,eras,analysis,mass,lifetime,signals=['ZH','g
     for era in eras:
         for sig in V:
             fs=getFiles(f"{sig}H{br}_M{mass}_ctau{lifetime}_{era}",sampleDir,"MC",era,prod)
+            if len(fs)==0:
+                print(f"WARNING! NO FILE FOUND matching pattern: {sig}H{br}_M{mass}_ctau{lifetime}_{era}")
+                continue
             for f in fs:
                 plotters.append(rdf_plotter(f, tree=analysis,isMC=True, report = "Report_" + analysis))
                 plotters[-1].addCorrectionFactor(lumifb[era], "flat")                
@@ -438,13 +441,13 @@ def getSignalPlotter(sampleDir,prod,eras,analysis,mass,lifetime,signals=['ZH','g
                     plotters[-1].addCorrectionFactor('1000', "flat") #to conevrt to pb-1                             
                     plotters[-1].addCorrectionFactor(str(38750./59830), "flat")
                     plotters[-1].addCorrectionFactor(weight, "flat")
-    p = merged_plotter(plotters)
+    p=None
+    if len(plotters)>0:                
+        p = merged_plotter(plotters)
     return p
 
 def getAnalysis(sampleDir,prod,ana,era='Run2',masses=masses,lifetimes=lifetimes,signals=['ZH','ggZH','WH','ttH'],modelIndependent=False,br=0.01,background_method="fakerate"):
     analysis={}
-
-
 
     
     if era=='Run2':
@@ -507,15 +510,19 @@ def getAnalysis(sampleDir,prod,ana,era='Run2',masses=masses,lifetimes=lifetimes,
         i=0
         for ct in lifetimes:
             analysis['signal'][m][ct]={}
-            analysis['signal'][m][ct]['sum']=getSignalPlotter(sampleDir,prod,eras,ana,m,ct,signals,modelIndependent)
-            analysis['signal'][m][ct]['sum'].addCorrectionFactor(leptonSF[ana],'flat')
-            analysis['signal'][m][ct]['sum'].addCorrectionFactor(photonSF[m],'flat')            
-            analysis['signal'][m][ct]['sum'].addCorrectionFactor(str(br),'flat')
+            p=getSignalPlotter(sampleDir,prod,eras,ana,m,ct,signals,modelIndependent)
+            if p!=None:
+                analysis['signal'][m][ct]['sum']=p
+                analysis['signal'][m][ct]['sum'].addCorrectionFactor(leptonSF[ana],'flat')
+                analysis['signal'][m][ct]['sum'].addCorrectionFactor(photonSF[m],'flat')            
+                analysis['signal'][m][ct]['sum'].addCorrectionFactor(str(br),'flat')
             for signal in signals:
-                analysis['signal'][m][ct][signal]=getSignalPlotter(sampleDir,prod,eras,ana,m,ct,[signal],modelIndependent)
-                analysis['signal'][m][ct][signal].addCorrectionFactor(leptonSF[ana],'flat')
-                analysis['signal'][m][ct][signal].addCorrectionFactor(photonSF[m],'flat')            
-                analysis['signal'][m][ct][signal].addCorrectionFactor(str(br),'flat')
+                p=getSignalPlotter(sampleDir,prod,eras,ana,m,ct,[signal],modelIndependent)
+                if p!=None:
+                    analysis['signal'][m][ct][signal]=p
+                    analysis['signal'][m][ct][signal].addCorrectionFactor(leptonSF[ana],'flat')
+                    analysis['signal'][m][ct][signal].addCorrectionFactor(photonSF[m],'flat')            
+                    analysis['signal'][m][ct][signal].addCorrectionFactor(str(br),'flat')
                 
     return analysis
             
@@ -671,11 +678,11 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
                 stack=mplhep_plotter(label=analysis_status,data=True,lumi=lumifb[era],com=center_of_mass[era])
                 stack.add_plotter(analysis['bkg'][m],label='Background',typeP='background',error_mode='poisson_bootstrap')
                 for ctau in lifetimes:
-                    stack.add_plotter(analysis['signal'][m][ctau]['sum'],label=r'$m_{\phi}$='+f"{m} GeV,"+r" $c\tau =$ 0 mm",typeP='signal',error_mode='w2',color=signal_colors[ctau])
+                    stack.add_plotter(analysis['signal'][m][ctau]['sum'],label=r'$m_{\phi}$='+f"{m} GeV,"+r" $c\tau =$ "+f"{ctau} mm",typeP='signal',error_mode='w2',color=signal_colors[ctau])
                 if blinded==False:
                     stack.add_plotter(analysis['data'],label="Data",typeP='data',error_mode='poisson')               
                 #draw a plot
-                stack.unrolledCustom(f"best_2g_raw_mass_m{m}",f"best_2g_dxy_m{m}",cuts[ana][m]['sr'],binning[ana][m],alpha=1.0,xlabel=r"$d_{xy}$",xunits="cm",show=False,legend_ax=0,legend_loc='upper left')
+                stack.unrolledCustom(f"best_2g_raw_mass_m{m}",f"best_2g_dxy_m{m}",cuts[ana][m]['sr'],binning[ana][m],alpha=1.0,xlabel=r"$d_{xy}$",xunits="cm",ylabel=r'$m_{\gamma\gamma}$',yunits='GeV',texty=0.7,show=False,legend_ax=0,legend_loc='upper left')
                 if blinded:
                     plt.savefig(f'{outputDir}/blinded_prefit_{ana}_{m}_{era}.{file_extension}', dpi=400, bbox_inches='tight')
                 else:
@@ -710,7 +717,7 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
                 for m in masses:                    
                     for ctau in lifetimes:
                         analysis=getAnalysis(sampleDir,prod,ana,background_method='fakerate',era=e,br=signal_br,masses=[m],signals=signals,lifetimes=[ctau])                        
-                        print(f"Making Datacards for {ana} in era {era} for m={m} GeV and ctau={ctau} mm")
+                        print(f"Making Datacards for {ana} in era {e} for m={m} GeV and ctau={ctau} mm")
                         for ibinx,bin_setup in enumerate(binning[ana][m]):
                             mass_min = bin_setup[0][0]
                             mass_max=  bin_setup[0][1]
@@ -721,10 +728,13 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
                                 
                                 cutstring = cuts[ana][m]['sr']+f"*(best_2g_raw_mass_m{m}>={mass_min}&&best_2g_raw_mass_m{m}<{mass_max})*(best_2g_dxy_m{m}>={dxy_min}&&best_2g_dxy_m{m}<{dxy_max})"
 
-                                dcm = cnc_datacard_maker(outDir=outputDir,binname=f"{ana}_m{m}_ctau{ctau}_era{e}_binx{ibinx}_biny{ibiny}",cuts=cutstring)
+                                dcm = cnc_datacard_maker(outDir=outputDir,binname=f"{ana}_m{m}_ctau{ctau}_era{e}_binm_{ibinx}_bindxy_{ibiny}",cuts=cutstring)
                                 dcm.add('data','data',analysis['data'],{})
 
-                                for signal in mySignals[ana]:                                    
+                                for signal in mySignals[ana]:
+                                    if not (signal in analysis['signal'][m][ctau].keys()):
+                                        print(f"Signal not found {signal} skipping")
+                                        continue
                                     signalUncertainties={
                                         f'CMS_lumi_{e}':{'type':'adhoc','kind':'lnN','value':lumiUnc[e]},                                        
                                         f'CMS_{signal}_xsec':{'type':'adhoc','kind':'lnN','value':f"{xsecUnc[signal][1]}/{xsecUnc[signal][0]}"},
@@ -765,17 +775,17 @@ def runAction(sampleDir,prod,action='fakerate_closure',masses=masses,outputDir='
                                     
                                     
                                 dcm.add('bkg','background',analysis['bkg'][m],uncertainties={
-                                    f"CMS_DDP_{ana}_m{m}_{e}_binx{ibinx}_biny{ibiny}_CR_stats":{'type':'statAsym'},
+                                    f"CMS_DDP_{ana}_{e}_binm_{ibinx}_bindxy_{ibiny}_CR_stats":{'type':'statAsym'},
                                     f"CMS_DDP_fakeRateUnc_{e}":{'type':'weightAsymm','weightUp':'fakeRate_up','weightDown':'fakeRate_down','weightOrig':'fakeRate_val'}
                                     
                                 },error_mode='poisson_bootstrap')
-                                #write only bins that have bkg>0 or data>0
-                                signalTot = sum([dcm.rates[s] for s in  mySignals[ana]])
-                                print('total signal :',signalTot)
-                                if (dcm.rates['bkg']+dcm.data)>0 and signalTot>0:
+                                #write only reasonable cards
+                                write_card_signal = sum([(t=='signal') for s,t in  dcm.types.items()])
+                                write_card_bkg = sum([(t=='background') for s,t in  dcm.types.items()])
+                                
+                                if write_card_signal>0 and write_card_bkg>0:
                                     dcm.write()
                                     
                         analysis=None
-                        gc.collect()
-                        #This forced garbage collection enables better running in slow machines, eg your laptop
+
         
