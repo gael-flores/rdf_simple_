@@ -1,0 +1,23 @@
+samples_data_2018 = {
+#Jet HT 2018 Data
+'JetHT_2018A':{'dataset':'/JetHT/Run2018A-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD',
+                    'triggers':["(1)"],
+                    'veto_triggers':[],
+                    'era':'2018',
+                    'jobs':8},
+'JetHT_2018B':{'dataset':'/JetHT/Run2018B-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD',
+                    'triggers':["(1)"],
+                    'veto_triggers':[],
+                    'era': '2018',
+                    'jobs':8},
+'JetHT_2018C':{'dataset':'/JetHT/Run2018C-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD',
+                    'triggers':["(1)"],
+                    'veto_triggers':[],
+                    'era': '2018',
+                    'jobs':8},
+'JetHT_2018D':{'dataset':'/JetHT/Run2018D-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD',
+                    'triggers':["(1)"],
+                    'veto_triggers':[],
+                    'era': '2018',
+                    'jobs':8},
+}
